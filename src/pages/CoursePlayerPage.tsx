@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Menu, X, CheckCircle, Play, MessageCircle, FileText, Save, Send, Users, Search, Award, Moon, Sun, Upload } from 'lucide-react';
+import { ArrowLeft, Menu, X, CheckCircle, Play, MessageCircle, FileText, Save, Send, Users } from 'lucide-react';
 import VideoPlayer from '../components/VideoPlayer';
 import CourseContent from '../components/CourseContent';
-import FileUpload from '../components/FileUpload';
 
 const CoursePlayerPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -54,8 +53,6 @@ const CoursePlayerPage: React.FC = () => {
   const [groupMessage, setGroupMessage] = useState('');
   const [showChatModal, setShowChatModal] = useState(false);
   const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showFileUpload, setShowFileUpload] = useState(false);
 
   // Mock groups data for the current course
   const courseGroups = [
@@ -246,11 +243,6 @@ const CoursePlayerPage: React.FC = () => {
     setGroupMessage('');
   };
 
-  const handleFileUpload = (files: File[]) => {
-    console.log('Files uploaded:', files);
-    // Handle file upload logic here
-    alert(`${files.length} file(s) uploaded successfully!`);
-  };
   const handleLikeQuestion = (questionId: string) => {
     setQuestions(questions.map(q => 
       q.id === questionId ? { ...q, likes: q.likes + 1 } : q
@@ -300,324 +292,22 @@ const CoursePlayerPage: React.FC = () => {
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">{currentLesson.title}</h2>
               <div className="flex items-center text-gray-300 text-sm">
-                {currentLesson.type === 'video' && <Play className="w-4 h-4 mr-2" />}
-                {currentLesson.type === 'article' && <FileText className="w-4 h-4 mr-2" />}
-                {(currentLesson.type === 'quiz' || currentLesson.type === 'exam') && <Award className="w-4 h-4 mr-2" />}
+                <Play className="w-4 h-4 mr-2" />
                 <span>{currentLesson.duration}</span>
                 <span className="mx-2">•</span>
                 <span className="capitalize">{currentLesson.type}</span>
               </div>
             </div>
             
-            {/* Content based on lesson type */}
-            {currentLesson.type === 'video' && (
-              <div className="aspect-video">
-                <VideoPlayer
-                  videoUrl={currentLesson.videoUrl || ''}
-                  youtubeUrl={currentLesson.youtubeUrl}
-                  title={currentLesson.title}
-                  onProgress={handleVideoProgress}
-                  onComplete={handleVideoComplete}
-                />
-              </div>
-            )}
-
-            {currentLesson.type === 'article' && (
-              <div className={`rounded-lg p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 ${
-                isDarkMode 
-                  ? 'bg-gray-800 text-gray-100' 
-                  : 'bg-white text-gray-900'
-              }`}>
-                {/* Theme Toggle */}
-                <div className="flex justify-between items-center mb-6">
-                  <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {currentLesson.title}
-                  </h1>
-                  <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isDarkMode 
-                        ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                    title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                  >
-                    {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </button>
-                </div>
-
-                <div className="prose max-w-none">
-                  <div className="space-y-6">
-                    <p className={`text-lg leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Welcome to this comprehensive article on React fundamentals. In this lesson, we'll explore the core concepts that make React such a powerful library for building user interfaces.
-                    </p>
-                    
-                    <h2 className={`text-2xl font-semibold mt-8 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      What is React?
-                    </h2>
-                    <p className={`leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      React is a JavaScript library for building user interfaces, particularly web applications. It was developed by Facebook and is now maintained by Facebook and the community. React allows developers to create large web applications that can change data, without reloading the page.
-                    </p>
-                    
-                    <h2 className={`text-2xl font-semibold mt-8 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Key Features of React
-                    </h2>
-                    <ul className="list-disc pl-6 space-y-2">
-                      <li className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                        <strong className={isDarkMode ? 'text-white' : 'text-gray-900'}>Component-Based:</strong> Build encapsulated components that manage their own state
-                      </li>
-                      <li className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                        <strong className={isDarkMode ? 'text-white' : 'text-gray-900'}>Declarative:</strong> React makes it painless to create interactive UIs
-                      </li>
-                      <li className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                        <strong className={isDarkMode ? 'text-white' : 'text-gray-900'}>Learn Once, Write Anywhere:</strong> Develop new features without rewriting existing code
-                      </li>
-                      <li className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                        <strong className={isDarkMode ? 'text-white' : 'text-gray-900'}>Virtual DOM:</strong> Efficient updating and rendering of components
-                      </li>
-                    </ul>
-                    
-                    <h2 className={`text-2xl font-semibold mt-8 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Getting Started
-                    </h2>
-                    <p className={`leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      To get started with React, you'll need to have Node.js installed on your computer. Once you have Node.js, you can create a new React application using Create React App:
-                    </p>
-                    
-                    <div className={`rounded-lg p-4 my-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                      <code className="text-sm">
-                        npx create-react-app my-app<br/>
-                        cd my-app<br/>
-                        npm start
-                      </code>
-                    </div>
-                    
-                    <h2 className={`text-2xl font-semibold mt-8 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Your First Component
-                    </h2>
-                    <p className={`leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Here's a simple example of a React component:
-                    </p>
-                    
-                    <div className={`rounded-lg p-4 my-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                      <pre className="text-sm overflow-x-auto">
-{`function Welcome(props) {
-  return <h1>Hello, {props.name}</h1>;
-}
-
-function App() {
-  return (
-    <div>
-      <Welcome name="Sara" />
-      <Welcome name="Cahal" />
-      <Welcome name="Edite" />
-    </div>
-  );
-}`}
-                      </pre>
-                    </div>
-                    
-                    <h2 className={`text-2xl font-semibold mt-8 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Conclusion
-                    </h2>
-                    <p className={`leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      React is a powerful tool for building modern web applications. Its component-based architecture and declarative nature make it easy to build and maintain complex user interfaces. In the next lessons, we'll dive deeper into React concepts like state, props, and lifecycle methods.
-                    </p>
-                    
-                    <div className={`mt-8 p-4 border-l-4 rounded ${
-                      isDarkMode 
-                        ? 'bg-blue-900 border-blue-400 text-blue-200' 
-                        : 'bg-blue-50 border-blue-400 text-blue-800'
-                    }`}>
-                      <p>
-                        <strong className={isDarkMode ? 'text-blue-100' : 'text-blue-900'}>Next Steps:</strong> Practice creating your own React components and experiment with different props and state configurations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(currentLesson.type === 'quiz' || currentLesson.type === 'exam') && (
-              <div className={`rounded-lg p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 ${
-                isDarkMode 
-                  ? 'bg-gray-800 text-gray-100' 
-                  : 'bg-white text-gray-900'
-              }`}>
-                <div className="max-w-4xl mx-auto">
-                  {/* Theme Toggle */}
-                  <div className="flex justify-end mb-4">
-                    <button
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        isDarkMode 
-                          ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                    >
-                      {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                  </div>
-
-                  <div className="text-center mb-8">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                      isDarkMode ? 'bg-purple-900' : 'bg-purple-100'
-                    }`}>
-                      {currentLesson.type === 'quiz' ? (
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          isDarkMode ? 'bg-green-700' : 'bg-green-600'
-                        }`}>
-                          <span className="text-white text-lg font-bold">?</span>
-                        </div>
-                      ) : (
-                        <Award className={`w-8 h-8 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
-                      )}
-                    </div>
-                    <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {currentLesson.title}
-                    </h1>
-                    <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
-                      {currentLesson.type === 'quiz' 
-                        ? 'Test your knowledge with this interactive quiz'
-                        : 'Final examination - demonstrate your mastery of the concepts'
-                      }
-                    </p>
-                  </div>
-
-                  <div className={`rounded-lg p-6 mb-8 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                    <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Instructions
-                    </h2>
-                    <ul className={`space-y-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      <li className="flex items-start">
-                        <CheckCircle className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                          isDarkMode ? 'text-green-400' : 'text-green-500'
-                        }`} />
-                        <span>Read each question carefully before selecting your answer</span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                          isDarkMode ? 'text-green-400' : 'text-green-500'
-                        }`} />
-                        <span>You can change your answers before submitting</span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                          isDarkMode ? 'text-green-400' : 'text-green-500'
-                        }`} />
-                        <span>
-                          {currentLesson.type === 'quiz' 
-                            ? 'You have unlimited attempts for this quiz'
-                            : 'This is a final exam - you have only one attempt'
-                          }
-                        </span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                          isDarkMode ? 'text-green-400' : 'text-green-500'
-                        }`} />
-                        <span>Time limit: {currentLesson.duration}</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className={`border rounded-lg p-6 ${
-                      isDarkMode 
-                        ? 'bg-gray-700 border-gray-600' 
-                        : 'bg-white border-gray-200'
-                    }`}>
-                      <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Question 1 of 5
-                      </h3>
-                      <p className={`mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                        What is the primary purpose of React's Virtual DOM?
-                      </p>
-                      <div className="space-y-3">
-                        {[
-                          'To replace the real DOM entirely',
-                          'To improve performance by minimizing direct DOM manipulation',
-                          'To add styling to components',
-                          'To handle server-side rendering only'
-                        ].map((option, index) => (
-                          <label key={index} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                            isDarkMode 
-                              ? 'border-gray-600 hover:bg-gray-600' 
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}>
-                            <input
-                              type="radio"
-                              name="question1"
-                              value={option}
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className={`ml-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className={`border rounded-lg p-6 ${
-                      isDarkMode 
-                        ? 'bg-gray-700 border-gray-600' 
-                        : 'bg-white border-gray-200'
-                    }`}>
-                      <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Question 2 of 5
-                      </h3>
-                      <p className={`mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                        Which hook is used to manage state in functional components?
-                      </p>
-                      <div className="space-y-3">
-                        {[
-                          'useEffect',
-                          'useState',
-                          'useContext',
-                          'useReducer'
-                        ].map((option, index) => (
-                          <label key={index} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                            isDarkMode 
-                              ? 'border-gray-600 hover:bg-gray-600' 
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}>
-                            <input
-                              type="radio"
-                              name="question2"
-                              value={option}
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className={`ml-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex items-center justify-between">
-                    <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      Progress: 2 of 5 questions completed
-                    </div>
-                    <div className="space-x-4">
-                      <button className={`px-6 py-2 border rounded-lg transition-colors ${
-                        isDarkMode 
-                          ? 'border-gray-600 text-gray-200 hover:bg-gray-700' 
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}>
-                        Save Progress
-                      </button>
-                      <button className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                        {currentLesson.type === 'quiz' ? 'Submit Quiz' : 'Submit Exam'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="aspect-video">
+              <VideoPlayer
+                videoUrl={currentLesson.videoUrl || ''}
+                youtubeUrl={currentLesson.youtubeUrl}
+                title={currentLesson.title}
+                onProgress={handleVideoProgress}
+                onComplete={handleVideoComplete}
+              />
+            </div>
 
             {/* Lesson Content Tabs */}
             <div className="mt-8">
