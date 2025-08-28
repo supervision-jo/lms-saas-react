@@ -57,7 +57,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
 
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set([quiz.questions[0]?.id]));
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [draggedQuestion, setDraggedQuestion] = useState<string | null>(null);
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -546,5 +545,3 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
 };
 
 export default QuizBuilder;
-
-export default QuizBuilder

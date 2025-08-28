@@ -53,8 +53,6 @@ const CourseBuilderPage: React.FC = () => {
   const [currentQuiz, setCurrentQuiz] = useState<any>(null);
   const [draggedItem, setDraggedItem] = useState<{ type: 'module' | 'lesson', id: string, moduleId?: string } | null>(null);
   const [editingLesson, setEditingLesson] = useState<{ moduleId: string, lessonId: string } | null>(null);
-  const [editingArticle, setEditingArticle] = useState<{ moduleId: string, lessonId: string } | null>(null);
-  const [uploadingMaterial, setUploadingMaterial] = useState<{ moduleId: string, lessonId: string } | null>(null);
 
   const addModule = () => {
     const newModule: Module = {
@@ -118,10 +116,6 @@ const CourseBuilderPage: React.FC = () => {
       setShowQuizBuilder(true);
     } else if (type === 'video') {
       setEditingLesson({ moduleId, lessonId: newLesson.id });
-    } else if (type === 'article') {
-      setEditingArticle({ moduleId, lessonId: newLesson.id });
-    } else if (type === 'material') {
-      setUploadingMaterial({ moduleId, lessonId: newLesson.id });
     }
   };
 
@@ -172,7 +166,6 @@ const CourseBuilderPage: React.FC = () => {
     
     if (!draggedItem) return;
 
-    // Handle module reordering
     if (draggedItem.type === 'module' && targetType === 'module' && draggedItem.id !== targetId) {
       // Reorder modules
       const draggedIndex = course.modules.findIndex(m => m.id === draggedItem.id);
@@ -188,9 +181,7 @@ const CourseBuilderPage: React.FC = () => {
       });
       
       setCourse({ ...course, modules: newModules });
-    } 
-    // Handle lesson reordering within the same module
-    else if (draggedItem.type === 'lesson' && targetType === 'lesson' && draggedItem.moduleId === targetModuleId && draggedItem.id !== targetId) {
+    } else if (draggedItem.type === 'lesson' && targetType === 'lesson' && draggedItem.moduleId === targetModuleId) {
       // Reorder lessons within the same module
       const moduleIndex = course.modules.findIndex(m => m.id === targetModuleId);
       if (moduleIndex === -1) return;
@@ -198,8 +189,6 @@ const CourseBuilderPage: React.FC = () => {
       const module = course.modules[moduleIndex];
       const draggedLessonIndex = module.lessons.findIndex(l => l.id === draggedItem.id);
       const targetLessonIndex = module.lessons.findIndex(l => l.id === targetId);
-      
-      if (draggedLessonIndex === -1 || targetLessonIndex === -1) return;
       
       const newLessons = [...module.lessons];
       const [draggedLesson] = newLessons.splice(draggedLessonIndex, 1);
@@ -606,24 +595,6 @@ const CourseBuilderPage: React.FC = () => {
                                           <Link className="w-4 h-4" />
                                         </button>
                                       )}
-                                      {lesson.type === 'article' && (
-                                        <button
-                                          onClick={() => setEditingArticle({ moduleId: module.id, lessonId: lesson.id })}
-                                          className="p-1 text-green-400 hover:text-green-600 transition-colors"
-                                          title="Edit Article"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
-                                      )}
-                                      {lesson.type === 'material' && (
-                                        <button
-                                          onClick={() => setUploadingMaterial({ moduleId: module.id, lessonId: lesson.id })}
-                                          className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                          title="Upload Material"
-                                        >
-                                          <Upload className="w-4 h-4" />
-                                        </button>
-                                      )}
                                       {lesson.type === 'quiz' && (
                                         <button
                                           onClick={() => editQuiz(module.id, lesson.id)}
@@ -866,230 +837,6 @@ const CourseBuilderPage: React.FC = () => {
                 className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
               >
                 Save Video
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Article Editor Modal */}
-      {editingArticle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Edit Article</h3>
-              <p className="text-gray-600 mt-1">Create rich text content for your lesson</p>
-            </div>
-            
-            <div className="p-6">
-              {(() => {
-                const module = course.modules.find(m => m.id === editingArticle.moduleId);
-                const lesson = module?.lessons.find(l => l.id === editingArticle.lessonId);
-                
-                return (
-                  <div className="space-y-6">
-                    {/* Article Title */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Article Title
-                      </label>
-                      <input
-                        type="text"
-                        value={lesson?.title || ''}
-                        onChange={(e) => {
-                          if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { title: e.target.value });
-                          }
-                        }}
-                        placeholder="Enter article title"
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* Article Content */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Article Content
-                      </label>
-                      <textarea
-                        value={lesson?.content || ''}
-                        onChange={(e) => {
-                          if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { content: e.target.value });
-                          }
-                        }}
-                        placeholder="Write your article content here..."
-                        rows={15}
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                      />
-                      <p className="mt-1 text-sm text-gray-500">
-                        You can use markdown formatting for rich text content
-                      </p>
-                    </div>
-
-                    {/* Reading Time */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Estimated Reading Time
-                      </label>
-                      <input
-                        type="text"
-                        value={lesson?.duration || ''}
-                        onChange={(e) => {
-                          if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { duration: e.target.value });
-                          }
-                        }}
-                        placeholder="e.g., 5 min read"
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
-              <button
-                onClick={() => setEditingArticle(null)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setEditingArticle(null)}
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Save Article
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Material Upload Modal */}
-      {uploadingMaterial && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Upload Material</h3>
-              <p className="text-gray-600 mt-1">Add downloadable resources for your students</p>
-            </div>
-            
-            <div className="p-6">
-              {(() => {
-                const module = course.modules.find(m => m.id === uploadingMaterial.moduleId);
-                const lesson = module?.lessons.find(l => l.id === uploadingMaterial.lessonId);
-                
-                return (
-                  <div className="space-y-6">
-                    {/* Material Title */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Material Title
-                      </label>
-                      <input
-                        type="text"
-                        value={lesson?.title || ''}
-                        onChange={(e) => {
-                          if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { title: e.target.value });
-                          }
-                        }}
-                        placeholder="Enter material title"
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* File Upload Area */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Upload File
-                      </label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer">
-                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                        <p className="text-sm text-gray-500">PDF, DOC, ZIP, or any file type (Max 50MB)</p>
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file && uploadingMaterial) {
-                              // Simulate file upload
-                              const fileUrl = URL.createObjectURL(file);
-                              updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { 
-                                fileUrl: fileUrl,
-                                fileName: file.name,
-                                fileSize: Math.round(file.size / 1024) + ' KB'
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* File URL Alternative */}
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300" />
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Or provide a download link</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Download URL
-                      </label>
-                      <input
-                        type="url"
-                        value={lesson?.fileUrl || ''}
-                        onChange={(e) => {
-                          if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { fileUrl: e.target.value });
-                          }
-                        }}
-                        placeholder="https://example.com/file.pdf"
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* File Description */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Description
-                      </label>
-                      <textarea
-                        value={lesson?.content || ''}
-                        onChange={(e) => {
-                          if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { content: e.target.value });
-                          }
-                        }}
-                        placeholder="Describe what this material contains..."
-                        rows={3}
-                        className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
-              <button
-                onClick={() => setUploadingMaterial(null)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setUploadingMaterial(null)}
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Save Material
               </button>
             </div>
           </div>
