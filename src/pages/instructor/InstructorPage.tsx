@@ -475,43 +475,29 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
                     </div>
                   ))}
                 </div>
-
-                {/* Pagination */}
-                <div className="mt-8 flex items-center justify-between">
-                  <div className="text-sm text-gray-700">
-                    Showing 1-3 of 45 reviews
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                      disabled
-                    >
-                      Previous
-                    </button>
-                    <button className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg">
-                      1
-                    </button>
-                    <button className="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                      2
-                    </button>
-                    <button className="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                      3
-                    </button>
-                    <span className="px-3 py-2 text-sm text-gray-500">...</span>
-                    <button className="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                      15
-                    </button>
-                    <button className="px-3 py-2 text-sm text-gray-700 hover:text-gray-900">
-                      Next
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Quick Actions
+              </h3>
+              <div className="space-y-3">
+                <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  View All Reviews
+                </button>
+                <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  Download Reports
+                </button>
+                <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  Manage Payouts
+                </button>
+              </div>
+            </div>
+
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 This Month
@@ -538,72 +524,28 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
 
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Course Content
+                Tips for Success
               </h3>
-              <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Study Groups
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                        <span className="text-gray-700">
-                          Frontend Developers
-                        </span>
-                      </div>
-                      <span className="text-gray-500">12 members</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-gray-700">Backend Engineers</span>
-                      </div>
-                      <span className="text-gray-500">8 members</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-                        <span className="text-gray-700">UI/UX Designers</span>
-                      </div>
-                      <span className="text-gray-500">15 members</span>
-                    </div>
-                  </div>
-                  <button className="w-full mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium">
-                    <span
-                      onClick={() => onNavigate && onNavigate("course-builder")}
-                    >
-                      Manage Groups
-                    </span>
-                  </button>
+              <div className="space-y-3 text-sm">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="font-medium text-blue-900">
+                    Engage with Students
+                  </p>
+                  <p className="text-blue-700">
+                    Respond to questions and reviews promptly
+                  </p>
                 </div>
-
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Course Modules
-                  </h4>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Getting Started</span>
-                      <span>8 lessons</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>React Components</span>
-                      <span>12 lessons</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>State Management</span>
-                      <span>10 lessons</span>
-                    </div>
-                  </div>
-                  <button className="w-full mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium">
-                    <span
-                      onClick={() => onNavigate && onNavigate("course-builder")}
-                    >
-                      Edit Curriculum
-                    </span>
-                  </button>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="font-medium text-green-900">Update Content</p>
+                  <p className="text-green-700">
+                    Keep your courses current and relevant
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <p className="font-medium text-purple-900">Promote Courses</p>
+                  <p className="text-purple-700">
+                    Share on social media and networks
+                  </p>
                 </div>
               </div>
             </div>

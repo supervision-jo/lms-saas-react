@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, RotateCcw, ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  RotateCcw,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 
 interface AnswerOption {
   id: string;
@@ -33,11 +40,15 @@ interface QuizPreviewProps {
 
 const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [questionId: string]: Set<string> }>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [questionId: string]: Set<string>;
+  }>({});
   const [showResults, setShowResults] = useState(false);
   const [timeLeft, setTimeLeft] = useState(quiz.totalTimeLimit || 0);
   const [isTimeUp, setIsTimeUp] = useState(false);
-  const [questionStartTime, setQuestionStartTime] = useState<{ [questionId: string]: number }>({});
+  const [questionStartTime, setQuestionStartTime] = useState<{
+    [questionId: string]: number;
+  }>({});
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
 
@@ -56,28 +67,28 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
   useEffect(() => {
     // Track time spent on each question
     if (currentQuestion && !questionStartTime[currentQuestion.id]) {
-      setQuestionStartTime(prev => ({
+      setQuestionStartTime((prev) => ({
         ...prev,
-        [currentQuestion.id]: Date.now()
+        [currentQuestion.id]: Date.now(),
       }));
     }
   }, [currentQuestion, questionStartTime]);
 
   const toggleAnswer = (questionId: string, optionId: string) => {
     if (showResults || isTimeUp) return;
-    
+
     const currentAnswers = selectedAnswers[questionId] || new Set();
     const newAnswers = new Set(currentAnswers);
-    
+
     if (newAnswers.has(optionId)) {
       newAnswers.delete(optionId);
     } else {
       newAnswers.add(optionId);
     }
-    
+
     setSelectedAnswers({
       ...selectedAnswers,
-      [questionId]: newAnswers
+      [questionId]: newAnswers,
     });
   };
 
@@ -105,17 +116,20 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     let maxScore = 0;
     const questionResults: { [questionId: string]: boolean } = {};
 
-    quiz.questions.forEach(question => {
+    quiz.questions.forEach((question) => {
       maxScore += question.points;
       const userAnswers = selectedAnswers[question.id] || new Set();
-      const correctAnswers = question.options.filter(option => option.isCorrect);
-      const selectedCorrect = Array.from(userAnswers).filter(id => 
-        question.options.find(option => option.id === id)?.isCorrect
+      const correctAnswers = question.options.filter(
+        (option) => option.isCorrect
       );
-      
-      const isCorrect = selectedCorrect.length === correctAnswers.length && 
-                       userAnswers.size === correctAnswers.length;
-      
+      const selectedCorrect = Array.from(userAnswers).filter(
+        (id) => question.options.find((option) => option.id === id)?.isCorrect
+      );
+
+      const isCorrect =
+        selectedCorrect.length === correctAnswers.length &&
+        userAnswers.size === correctAnswers.length;
+
       if (isCorrect) {
         totalScore += question.points;
         questionResults[question.id] = true;
@@ -127,27 +141,30 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     return { totalScore, maxScore, questionResults };
   };
 
-  const { totalScore, maxScore, questionResults } = showResults ? calculateResults() : { totalScore: 0, maxScore: 0, questionResults: {} };
+  const { totalScore, maxScore, questionResults } = showResults
+    ? calculateResults()
+    : { totalScore: 0, maxScore: 0, questionResults: {} };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getQuestionStatus = (questionIndex: number) => {
     const question = quiz.questions[questionIndex];
-    const hasAnswers = selectedAnswers[question.id] && selectedAnswers[question.id].size > 0;
-    
+    const hasAnswers =
+      selectedAnswers[question.id] && selectedAnswers[question.id].size > 0;
+
     if (showResults) {
-      return questionResults[question.id] ? 'correct' : 'incorrect';
+      return questionResults[question.id] ? "correct" : "incorrect";
     }
-    
+
     if (questionIndex === currentQuestionIndex) {
-      return 'current';
+      return "current";
     }
-    
-    return hasAnswers ? 'answered' : 'unanswered';
+
+    return hasAnswers ? "answered" : "unanswered";
   };
 
   return (
@@ -162,17 +179,23 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                 <p className="text-gray-600 mt-1">{quiz.description}</p>
               )}
               <p className="text-sm text-gray-500 mt-2">
-                {quiz.questions.length} question{quiz.questions.length !== 1 ? 's' : ''} • {maxScore} total point{maxScore !== 1 ? 's' : ''}
+                {quiz.questions.length} question
+                {quiz.questions.length !== 1 ? "s" : ""} • {maxScore} total
+                point{maxScore !== 1 ? "s" : ""}
               </p>
             </div>
-            
+
             {quiz.totalTimeLimit && (
-              <div className={`flex items-center px-4 py-2 rounded-lg ${
-                timeLeft <= 60 && !showResults ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-              }`}>
+              <div
+                className={`flex items-center px-4 py-2 rounded-lg ${
+                  timeLeft <= 60 && !showResults
+                    ? "bg-red-100 text-red-700"
+                    : "bg-blue-100 text-blue-700"
+                }`}
+              >
                 <Clock className="w-4 h-4 mr-2" />
                 <span className="font-mono font-semibold">
-                  {showResults ? 'Completed' : formatTime(timeLeft)}
+                  {showResults ? "Completed" : formatTime(timeLeft)}
                 </span>
               </div>
             )}
@@ -186,16 +209,17 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
             <div className="space-y-2">
               {quiz.questions.map((question, index) => {
                 const status = getQuestionStatus(index);
-                let statusClass = 'bg-white border-gray-200 text-gray-700';
-                
-                if (status === 'current') {
-                  statusClass = 'bg-purple-100 border-purple-300 text-purple-700';
-                } else if (status === 'answered') {
-                  statusClass = 'bg-blue-100 border-blue-300 text-blue-700';
-                } else if (status === 'correct') {
-                  statusClass = 'bg-green-100 border-green-300 text-green-700';
-                } else if (status === 'incorrect') {
-                  statusClass = 'bg-red-100 border-red-300 text-red-700';
+                let statusClass = "bg-white border-gray-200 text-gray-700";
+
+                if (status === "current") {
+                  statusClass =
+                    "bg-purple-100 border-purple-300 text-purple-700";
+                } else if (status === "answered") {
+                  statusClass = "bg-blue-100 border-blue-300 text-blue-700";
+                } else if (status === "correct") {
+                  statusClass = "bg-green-100 border-green-300 text-green-700";
+                } else if (status === "incorrect") {
+                  statusClass = "bg-red-100 border-red-300 text-red-700";
                 }
 
                 return (
@@ -204,21 +228,25 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                     onClick={() => !showResults && goToQuestion(index)}
                     disabled={showResults}
                     className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${statusClass} ${
-                      showResults ? 'cursor-default' : 'hover:bg-gray-100'
+                      showResults ? "cursor-default" : "hover:bg-gray-100"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">Q{index + 1}</span>
                       <div className="flex items-center">
-                        {status === 'correct' && <CheckCircle className="w-4 h-4" />}
-                        {status === 'incorrect' && <XCircle className="w-4 h-4" />}
-                        {status === 'answered' && !showResults && (
+                        {status === "correct" && (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                        {status === "incorrect" && (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        {status === "answered" && !showResults && (
                           <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                         )}
                       </div>
                     </div>
                     <div className="text-xs mt-1 opacity-75">
-                      {question.points} point{question.points !== 1 ? 's' : ''}
+                      {question.points} point{question.points !== 1 ? "s" : ""}
                     </div>
                   </button>
                 );
@@ -227,7 +255,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
 
             {showResults && (
               <div className="mt-6 p-4 bg-white rounded-lg border">
-                <h4 className="font-semibold text-gray-900 mb-2">Final Score</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Final Score
+                </h4>
                 <div className="text-2xl font-bold text-purple-600">
                   {totalScore}/{maxScore}
                 </div>
@@ -246,20 +276,27 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Question {currentQuestionIndex + 1} of {quiz.questions.length}
+                      Question {currentQuestionIndex + 1} of{" "}
+                      {quiz.questions.length}
                     </h3>
                     <span className="text-sm text-gray-500">
-                      {currentQuestion.points} point{currentQuestion.points !== 1 ? 's' : ''}
+                      {currentQuestion.points} point
+                      {currentQuestion.points !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  
+
                   <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                    <p className="text-lg text-gray-900">{currentQuestion.question}</p>
+                    <p className="text-lg text-gray-900">
+                      {currentQuestion.question}
+                    </p>
                   </div>
-                  
+
                   {isTimeUp && (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-700 font-medium">Time's up! Your answers have been submitted automatically.</p>
+                      <p className="text-red-700 font-medium">
+                        Time's up! Your answers have been submitted
+                        automatically.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -267,16 +304,20 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                 {/* Options */}
                 <div className="space-y-3 mb-8">
                   {currentQuestion.options.map((option, index) => {
-                    const isSelected = selectedAnswers[currentQuestion.id]?.has(option.id) || false;
-                    
+                    const isSelected =
+                      selectedAnswers[currentQuestion.id]?.has(option.id) ||
+                      false;
+
                     return (
                       <div
                         key={option.id}
-                        onClick={() => toggleAnswer(currentQuestion.id, option.id)}
+                        onClick={() =>
+                          toggleAnswer(currentQuestion.id, option.id)
+                        }
                         className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
                           isSelected
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-25'
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-gray-200 hover:border-purple-300 hover:bg-purple-25"
                         }`}
                       >
                         <div className="flex items-center">
@@ -284,19 +325,23 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                             <span className="text-sm font-medium text-gray-500 mr-3">
                               {String.fromCharCode(65 + index)}.
                             </span>
-                            
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              isSelected
-                                ? 'border-purple-500 bg-purple-500'
-                                : 'border-gray-300'
-                            }`}>
+
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                isSelected
+                                  ? "border-purple-500 bg-purple-500"
+                                  : "border-gray-300"
+                              }`}
+                            >
                               {isSelected && (
                                 <div className="w-2 h-2 bg-white rounded-full" />
                               )}
                             </div>
                           </div>
-                          
-                          <span className="text-gray-900 flex-1">{option.text}</span>
+
+                          <span className="text-gray-900 flex-1">
+                            {option.text}
+                          </span>
                         </div>
                       </div>
                     );
@@ -310,14 +355,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                     disabled={currentQuestionIndex === 0}
                     className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                       currentQuestionIndex === 0
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Previous
                   </button>
-                  
+
                   <div className="flex space-x-3">
                     {currentQuestionIndex === quiz.questions.length - 1 ? (
                       <button
@@ -343,28 +388,39 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
               /* Results View */
               <div>
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Quiz Complete!</h3>
-                  <div className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold ${
-                    totalScore === maxScore
-                      ? 'bg-green-100 text-green-800'
-                      : totalScore >= maxScore * 0.7
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    Final Score: {totalScore}/{maxScore} ({Math.round((totalScore / maxScore) * 100)}%)
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    Quiz Complete!
+                  </h3>
+                  <div
+                    className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold ${
+                      totalScore === maxScore
+                        ? "bg-green-100 text-green-800"
+                        : totalScore >= maxScore * 0.7
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    Final Score: {totalScore}/{maxScore} (
+                    {Math.round((totalScore / maxScore) * 100)}%)
                   </div>
                 </div>
 
                 {/* Question Review */}
                 <div className="space-y-6">
                   {quiz.questions.map((question, questionIndex) => {
-                    const userAnswers = selectedAnswers[question.id] || new Set();
+                    const userAnswers =
+                      selectedAnswers[question.id] || new Set();
                     const isQuestionCorrect = questionResults[question.id];
-                    
+
                     return (
-                      <div key={question.id} className={`border-2 rounded-lg p-6 ${
-                        isQuestionCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                      }`}>
+                      <div
+                        key={question.id}
+                        className={`border-2 rounded-lg p-6 ${
+                          isQuestionCorrect
+                            ? "border-green-200 bg-green-50"
+                            : "border-red-200 bg-red-50"
+                        }`}
+                      >
                         <div className="flex items-start justify-between mb-4">
                           <h4 className="font-semibold text-gray-900">
                             Question {questionIndex + 1}: {question.question}
@@ -375,28 +431,36 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                             ) : (
                               <XCircle className="w-5 h-5 text-red-600 mr-2" />
                             )}
-                            <span className={`font-semibold ${
-                              isQuestionCorrect ? 'text-green-800' : 'text-red-800'
-                            }`}>
-                              {isQuestionCorrect ? question.points : 0}/{question.points} pts
+                            <span
+                              className={`font-semibold ${
+                                isQuestionCorrect
+                                  ? "text-green-800"
+                                  : "text-red-800"
+                              }`}
+                            >
+                              {isQuestionCorrect ? question.points : 0}/
+                              {question.points} pts
                             </span>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2 mb-4">
                           {question.options.map((option, optionIndex) => {
                             const isSelected = userAnswers.has(option.id);
                             const isCorrect = option.isCorrect;
-                            
-                            let optionClass = 'border-gray-200 bg-white';
+
+                            let optionClass = "border-gray-200 bg-white";
                             if (isCorrect) {
-                              optionClass = 'border-green-500 bg-green-100';
+                              optionClass = "border-green-500 bg-green-100";
                             } else if (isSelected && !isCorrect) {
-                              optionClass = 'border-red-500 bg-red-100';
+                              optionClass = "border-red-500 bg-red-100";
                             }
-                            
+
                             return (
-                              <div key={option.id} className={`p-3 rounded border-2 ${optionClass}`}>
+                              <div
+                                key={option.id}
+                                className={`p-3 rounded border-2 ${optionClass}`}
+                              >
                                 <div className="flex items-center">
                                   <span className="text-sm font-medium text-gray-500 mr-3">
                                     {String.fromCharCode(65 + optionIndex)}.
@@ -417,11 +481,15 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                             );
                           })}
                         </div>
-                        
+
                         {question.explanation && (
                           <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                            <h5 className="font-semibold text-blue-900 mb-1">Explanation:</h5>
-                            <p className="text-blue-800 text-sm">{question.explanation}</p>
+                            <h5 className="font-semibold text-blue-900 mb-1">
+                              Explanation:
+                            </h5>
+                            <p className="text-blue-800 text-sm">
+                              {question.explanation}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -450,7 +518,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                 Edit Quiz
               </button>
             </div>
-            
+
             {showResults && (
               <button
                 onClick={handleReset}

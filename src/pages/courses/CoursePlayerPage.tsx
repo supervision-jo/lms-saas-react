@@ -1,170 +1,174 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import {
-  ArrowLeft,
-  Menu,
-  X,
-  CheckCircle,
-  Play,
-  MessageCircle,
-  FileText,
-  Save,
+  ChevronLeft,
+  BookOpen,
+  MessageSquare,
+  Star,
   Send,
-  Users,
-  Search,
   Award,
-  Moon,
-  Sun,
+  FileText,
+  Download,
+  Heart,
+  ThumbsUp,
+  Reply,
 } from "lucide-react";
 import VideoPlayer from "../../components/reusable-components/VideoPlayer";
 import CourseContent from "../../components/course/CourseContent";
 
 const CoursePlayerPage: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentLessonId, setCurrentLessonId] = useState("1");
-  const [activeTab, setActiveTab] = useState("notes");
+  const [showNotes, setShowNotes] = useState(true);
+  const [showQA, setShowQA] = useState(false);
   const [notes, setNotes] = useState("");
-  const [questions, setQuestions] = useState([
+  const [newQuestion, setNewQuestion] = useState("");
+  const [qaData, setQaData] = useState([
     {
       id: "1",
-      user: "Sarah Johnson",
-      avatar:
+      student: "Sarah Johnson",
+      studentImage:
         "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100",
       question: "What is the difference between React and Angular?",
-      timestamp: "Jan 15, 2024 at 5:30 PM",
+      timestamp: "5:30",
+      date: "Jan 15, 2024",
+      fullTimestamp: "Jan 15, 2024 at 5:30 PM",
       likes: 12,
+      isLiked: false,
       replies: [
         {
           id: "1",
-          user: "John Doe",
-          avatar:
+          author: "John Doe",
+          authorImage:
             "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
           isInstructor: true,
-          reply:
-            "Great question! React is a library focused on building UI components, while Angular is a full framework with more built-in features like routing, forms, and HTTP client. You can learn more about React at reactjs.org and Angular at angular.io.",
+          content:
+            'Great question! React is a library focused on building UI components, while Angular is a full framework with more built-in features like routing, forms, and HTTP client. You can learn more about React at <a href="https://reactjs.org" target="_blank" class="text-purple-600 hover:text-purple-800 underline">reactjs.org</a> and Angular at <a href="https://angular.io" target="_blank" class="text-purple-600 hover:text-purple-800 underline">angular.io</a>.',
           timestamp: "2 hours ago",
+          date: "Jan 15, 2024",
           likes: 8,
+          isLiked: true,
         },
       ],
     },
     {
       id: "2",
-      user: "Mike Chen",
-      avatar:
+      student: "Mike Chen",
+      studentImage:
         "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100",
       question: "Can you explain JSX in more detail?",
-      timestamp: "Jan 15, 2024 at 8:15 PM",
+      timestamp: "8:15",
+      date: "Jan 15, 2024",
+      fullTimestamp: "Jan 15, 2024 at 8:15 PM",
       likes: 7,
+      isLiked: true,
       replies: [
         {
-          id: "1",
-          user: "John Doe",
-          avatar:
+          id: "2",
+          author: "John Doe",
+          authorImage:
             "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
           isInstructor: true,
-          reply:
-            "JSX is a syntax extension for JavaScript that allows you to write HTML-like code in your JavaScript files. It gets compiled to regular JavaScript function calls. Check out the official JSX documentation at React JSX Guide for more details.",
+          content:
+            'JSX is a syntax extension for JavaScript that allows you to write HTML-like code in your JavaScript files. It gets compiled to regular JavaScript function calls. Check out the official JSX documentation at <a href="https://reactjs.org/docs/introducing-jsx.html" target="_blank" class="text-purple-600 hover:text-purple-800 underline">React JSX Guide</a> for more details.',
           timestamp: "1 hour ago",
+          date: "Jan 15, 2024",
           likes: 5,
+          isLiked: false,
         },
       ],
     },
   ]);
-  const [newQuestion, setNewQuestion] = useState("");
-  // const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [groupMessage, setGroupMessage] = useState("");
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  // const [showFileUpload, setShowFileUpload] = useState(false);
-
-  // Mock groups data for the current course
-  const courseGroups = [
-    {
-      id: "1",
-      name: "Frontend Developers",
-      description: "Students focusing on React and frontend technologies",
-      color: "bg-blue-500",
-      members: [
-        {
-          id: "1",
-          name: "John Doe",
-          avatar:
-            "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-          isOnline: true,
-        },
-        {
-          id: "2",
-          name: "Jane Smith",
-          avatar:
-            "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100",
-          isOnline: false,
-        },
-        {
-          id: "3",
-          name: "Mike Johnson",
-          avatar:
-            "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100",
-          isOnline: true,
-        },
-      ],
-      messages: [
-        {
-          id: "1",
-          user: "Jane Smith",
-          avatar:
-            "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100",
-          message: "Hey everyone! How are you finding this React lesson?",
-          timestamp: "2 hours ago",
-        },
-        {
-          id: "2",
-          user: "Mike Johnson",
-          avatar:
-            "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100",
-          message: "Really helpful! The JSX explanation was clear.",
-          timestamp: "1 hour ago",
-        },
-      ],
-    },
-    {
-      id: "2",
-      name: "Backend Engineers",
-      description: "Students working on server-side development",
-      color: "bg-green-500",
-      members: [
-        {
-          id: "4",
-          name: "Sarah Wilson",
-          avatar:
-            "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100",
-          isOnline: true,
-        },
-        {
-          id: "5",
-          name: "Alex Brown",
-          avatar:
-            "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100",
-          isOnline: false,
-        },
-      ],
-      messages: [
-        {
-          id: "1",
-          user: "Sarah Wilson",
-          avatar:
-            "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100",
-          message: "Anyone working on the backend integration for React apps?",
-          timestamp: "3 hours ago",
-        },
-      ],
-    },
-  ];
+  const [examAnswers, setExamAnswers] = useState<{ [key: string]: string }>({});
+  const [examSubmitted, setExamSubmitted] = useState(false);
+  const [examScore, setExamScore] = useState<number | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
+  const [showExam, setShowExam] = useState(false);
 
   const courseData = {
-    id: "1",
     title: "Complete React Developer Course with Redux, Hooks, and GraphQL",
-    instructor: "John Doe",
+    progress: 35,
+  };
+
+  const currentLesson = {
+    id: "1",
+    title: "What is React?",
+    videoUrl:
+      "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
+    description:
+      "In this lesson, we will explore what React is and why it has become one of the most popular JavaScript libraries for building user interfaces.",
+    duration: "15:30",
+  };
+
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    return {
+      dateTime: now.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      date: now.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+      time: now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  };
+
+  const examData = {
+    id: "1",
+    title: "Module 1 Final Exam",
+    description: "Test your knowledge of React fundamentals",
+    timeLimit: 30,
+    passingScore: 70,
+    questions: [
+      {
+        id: "1",
+        question: "What is React?",
+        type: "multiple-choice" as const,
+        options: [
+          "A JavaScript library for building user interfaces",
+          "A database management system",
+          "A web server framework",
+          "A CSS preprocessor",
+        ],
+        correctAnswer: "A JavaScript library for building user interfaces",
+      },
+      {
+        id: "2",
+        question: "JSX stands for JavaScript XML.",
+        type: "true-false" as const,
+        correctAnswer: "true",
+      },
+      {
+        id: "3",
+        question:
+          "Which hook is used for managing state in functional components?",
+        type: "multiple-choice" as const,
+        options: ["useEffect", "useState", "useContext", "useReducer"],
+        correctAnswer: "useState",
+      },
+      {
+        id: "4",
+        question: "What is the main benefit of using React components?",
+        type: "short-answer" as const,
+        correctAnswer: "Reusability and modularity",
+      },
+      {
+        id: "5",
+        question: "React components must return a single parent element.",
+        type: "true-false" as const,
+        correctAnswer: "false",
+      },
+    ],
   };
 
   const modules = [
@@ -172,7 +176,7 @@ const CoursePlayerPage: React.FC = () => {
       id: "1",
       title: "Getting Started with React",
       totalDuration: "3h 45m",
-      lessonCount: 8,
+      lessonCount: 15,
       lessons: [
         {
           id: "1",
@@ -181,7 +185,6 @@ const CoursePlayerPage: React.FC = () => {
           type: "video" as const,
           isCompleted: false,
           isFree: true,
-          youtubeUrl: "https://www.youtube.com/watch?v=Tn6-PIqc4UM",
         },
         {
           id: "2",
@@ -190,8 +193,6 @@ const CoursePlayerPage: React.FC = () => {
           type: "video" as const,
           isCompleted: true,
           isFree: true,
-          videoUrl:
-            "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
         },
         {
           id: "3",
@@ -200,10 +201,17 @@ const CoursePlayerPage: React.FC = () => {
           type: "video" as const,
           isCompleted: false,
           isFree: false,
-          youtubeUrl: "https://youtu.be/SqcY0GlETPk",
         },
         {
           id: "4",
+          title: "React Fundamentals Guide",
+          duration: "12m",
+          type: "article" as const,
+          isCompleted: false,
+          isFree: true,
+        },
+        {
+          id: "5",
           title: "Understanding JSX",
           duration: "18m",
           type: "video" as const,
@@ -211,33 +219,26 @@ const CoursePlayerPage: React.FC = () => {
           isFree: false,
         },
         {
-          id: "5",
-          title: "React Basics Guide",
+          id: "6",
+          title: "Quick Knowledge Check",
           duration: "10m",
-          type: "article" as const,
+          type: "quiz" as const,
           isCompleted: false,
-          isFree: false,
+          isFree: true,
         },
         {
-          id: "6",
-          title: "Setup Files",
+          id: "7",
+          title: "React Setup Files & Resources",
           duration: "5m",
           type: "material" as const,
           isCompleted: false,
           isFree: false,
-        },
-        {
-          id: "7",
-          title: "Knowledge Check Quiz",
-          duration: "15m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
+          fileUrl: "/downloads/react-setup.zip",
         },
         {
           id: "8",
-          title: "Module 1 Final Exam",
-          duration: "30m",
+          title: "Module 1 Assessment",
+          duration: "25m",
           type: "exam" as const,
           isCompleted: false,
           isFree: false,
@@ -248,7 +249,7 @@ const CoursePlayerPage: React.FC = () => {
       id: "2",
       title: "React Components and Props",
       totalDuration: "4h 20m",
-      lessonCount: 8,
+      lessonCount: 18,
       lessons: [
         {
           id: "9",
@@ -297,6 +298,7 @@ const CoursePlayerPage: React.FC = () => {
           type: "material" as const,
           isCompleted: false,
           isFree: false,
+          fileUrl: "/downloads/components-examples.pdf",
         },
         {
           id: "15",
@@ -318,1298 +320,1070 @@ const CoursePlayerPage: React.FC = () => {
     },
   ];
 
-  const getCurrentLesson = () => {
-    for (const module of modules) {
-      const lesson = module.lessons.find((l) => l.id === currentLessonId);
-      if (lesson) return lesson;
-    }
-    return modules[0].lessons[0];
-  };
-
-  const currentLesson = getCurrentLesson();
-
   const handleLessonSelect = (lessonId: string) => {
     setCurrentLessonId(lessonId);
+    // Load saved notes for the new lesson
+    setNotes(savedNotes[lessonId] || "");
+    // Reset reply state when switching lessons
+    setReplyingTo(null);
+    setReplyText("");
+
+    // Handle different lesson types
+    const allLessons = modules.flatMap((m) => m.lessons);
+    const selectedLesson = allLessons.find((l) => l.id === lessonId);
+
+    if (selectedLesson?.type === "exam") {
+      setShowExam(true);
+      setShowNotes(false);
+      setShowQA(false);
+    } else {
+      setShowExam(false);
+    }
+
+    console.log("Playing lesson:", lessonId);
   };
 
-  const handleVideoProgress = (progress: number) => {
+  const handleProgress = (progress: number) => {
     console.log("Video progress:", progress);
   };
 
-  const handleVideoComplete = () => {
-    console.log("Video completed");
-    // Mark lesson as completed and move to next lesson
+  const handleComplete = () => {
+    console.log("Lesson completed");
   };
 
   const handleSaveNotes = () => {
-    console.log("Saving notes:", notes);
-    // Save notes to backend
+    // Save notes for current lesson
+    setSavedNotes((prev) => ({
+      ...prev,
+      [currentLessonId]: notes,
+    }));
+
+    // Show success message (you could add a toast notification here)
+    alert("Notes saved successfully!");
+    console.log("Notes saved for lesson:", currentLessonId, notes);
   };
 
   const handleAskQuestion = () => {
-    if (!newQuestion.trim()) return;
+    if (newQuestion.trim()) {
+      const currentTime = getCurrentDateTime();
+      const newQA = {
+        id: Date.now().toString(),
+        student: "You", // Current user
+        studentImage:
+          "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100", // Provide a default or current user's image
+        question: newQuestion,
+        timestamp: currentTime.time,
+        date: currentTime.date,
+        fullTimestamp: `${currentTime.date} at ${currentTime.time}`,
+        likes: 0,
+        isLiked: false,
+        replies: [],
+      };
 
-    const question = {
-      id: Date.now().toString(),
-      user: "Current User",
-      avatar:
-        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-      question: newQuestion,
-      timestamp: new Date().toLocaleString(),
-      likes: 0,
-      replies: [],
-    };
-
-    setQuestions([question, ...questions]);
-    setNewQuestion("");
+      setQaData((prev) => [newQA, ...prev]);
+      setNewQuestion("");
+      console.log("New question added:", newQA);
+    }
   };
 
-  const handleJoinGroup = (groupId: string) => {
-    console.log("Joining group:", groupId);
-    // Add user to group logic here
+  const handleReply = (questionId: string) => {
+    if (replyText.trim()) {
+      const currentTime = getCurrentDateTime();
+      const newReply = {
+        id: Date.now().toString(),
+        author: "You", // Current user
+        authorImage:
+          "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100",
+        isInstructor: false,
+        content: replyText,
+        timestamp: "just now",
+        date: currentTime.date,
+        likes: 0,
+        isLiked: false,
+      };
+
+      setQaData((prev) =>
+        prev.map((qa) =>
+          qa.id === questionId
+            ? { ...qa, replies: [...qa.replies, newReply] }
+            : qa
+        )
+      );
+
+      setReplyText("");
+      setReplyingTo(null);
+      console.log("Reply added to question:", questionId, newReply);
+    }
   };
 
-  // const handleLeaveGroup = (groupId: string) => {
-  //   console.log("Leaving group:", groupId);
-  //   // Remove user from group logic here
-  // };
-
-  const handleSendGroupMessage = (groupId: string) => {
-    if (!groupMessage.trim()) return;
-
-    console.log("Sending message to group:", groupId, groupMessage);
-    // Add message to group logic here
-    setGroupMessage("");
+  const handleExamAnswer = (questionId: string, answer: string) => {
+    setExamAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
   };
 
-  const handleShowChat = (group: any) => {
-    setActiveChatGroup(group);
-    setShowChatModal(true);
+  const handleSubmitExam = () => {
+    // Calculate score
+    let correct = 0;
+    examData.questions.forEach((question) => {
+      if (examAnswers[question.id] === question.correctAnswer) {
+        correct++;
+      }
+    });
+    const score = Math.round((correct / examData.questions.length) * 100);
+    setExamScore(score);
+    setExamSubmitted(true);
   };
 
-  const handleCloseChatModal = () => {
-    setShowChatModal(false);
-    setActiveChatGroup(null);
-    setGroupMessage("");
+  const resetExam = () => {
+    setExamAnswers({});
+    setExamSubmitted(false);
+    setExamScore(null);
   };
 
-  // const handleFileUpload = (files: File[]) => {
-  //   console.log("Files uploaded:", files);
-  //   // Handle file upload logic here
-  //   alert(`${files.length} file(s) uploaded successfully!`);
-  // };
   const handleLikeQuestion = (questionId: string) => {
-    setQuestions(
-      questions.map((q) =>
-        q.id === questionId ? { ...q, likes: q.likes + 1 } : q
+    setQaData((prev) =>
+      prev.map((qa) =>
+        qa.id === questionId
+          ? {
+              ...qa,
+              isLiked: !qa.isLiked,
+              likes: qa.isLiked ? qa.likes - 1 : qa.likes + 1,
+            }
+          : qa
+      )
+    );
+  };
+
+  const handleLikeReply = (questionId: string, replyId: string) => {
+    setQaData((prev) =>
+      prev.map((qa) =>
+        qa.id === questionId
+          ? {
+              ...qa,
+              replies: qa.replies.map((reply) =>
+                reply.id === replyId
+                  ? {
+                      ...reply,
+                      isLiked: !reply.isLiked,
+                      likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1,
+                    }
+                  : reply
+              ),
+            }
+          : qa
       )
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => window.history.back()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                {isSidebarOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">
-                  {courseData.title}
-                </h1>
-                <p className="text-sm text-gray-600">{courseData.instructor}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-sm text-gray-600">
-                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                <span>Progress: 68%</span>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => window.history.back()}
+              className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span className="ml-2 font-medium">Back to Course Details</span>
+            </button>
+            <div>
+              <h1 className="font-semibold text-lg truncate max-w-md">
+                {courseData.title}
+              </h1>
+              <div className="flex items-center text-sm text-gray-400">
+                <span>Progress: {courseData.progress}%</span>
+                <div className="w-20 h-2 bg-gray-700 rounded-full ml-2">
+                  <div
+                    className="h-full bg-purple-600 rounded-full transition-all duration-300"
+                    style={{ width: `${courseData.progress}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Video Player */}
-        <div className="flex-1 bg-black p-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {currentLesson.title}
-              </h2>
-              <div className="flex items-center text-gray-300 text-sm">
-                {currentLesson.type === "video" && (
-                  <Play className="w-4 h-4 mr-2" />
-                )}
-                {currentLesson.type === "article" && (
-                  <FileText className="w-4 h-4 mr-2" />
-                )}
-                {(currentLesson.type === "quiz" ||
-                  currentLesson.type === "exam") && (
-                  <Award className="w-4 h-4 mr-2" />
-                )}
-                <span>{currentLesson.duration}</span>
-                <span className="mx-2">•</span>
-                <span className="capitalize">{currentLesson.type}</span>
-              </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowNotes(!showNotes)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showNotes ? "bg-purple-600" : "hover:bg-gray-700"
+                }`}
+              >
+                <BookOpen className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowQA(!showQA)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showQA ? "bg-purple-600" : "hover:bg-gray-700"
+                }`}
+              >
+                <MessageSquare className="w-5 h-5" />
+              </button>
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <Star className="w-5 h-5" />
+              </button>
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <Award className="w-5 h-5" />
+              </button>
             </div>
+          </div>
+        </div>
+      </header>
 
-            {/* Content based on lesson type */}
-            {currentLesson.type === "video" && (
-              <div className="aspect-video">
-                <VideoPlayer
-                  videoUrl={currentLesson.videoUrl || ""}
-                  youtubeUrl={currentLesson.youtubeUrl}
-                  title={currentLesson.title}
-                  onProgress={handleVideoProgress}
-                  onComplete={handleVideoComplete}
-                />
-              </div>
-            )}
+      <div className="flex min-h-screen">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Video Player */}
+          <div className="flex-1 p-4">
+            <div className="max-w-5xl mx-auto">
+              {(() => {
+                const allLessons = modules.flatMap((m) => m.lessons);
+                const currentLessonData = allLessons.find(
+                  (l) => l.id === currentLessonId
+                );
 
-            {currentLesson.type === "article" && (
-              <div
-                className={`rounded-lg p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 ${
-                  isDarkMode
-                    ? "bg-gray-800 text-gray-100"
-                    : "bg-white text-gray-900"
-                }`}
-              >
-                {/* Theme Toggle */}
-                <div className="flex justify-between items-center mb-6">
-                  <h1
-                    className={`text-3xl font-bold ${
-                      isDarkMode ? "text-white" : "text-gray-900"
-                    }`}
-                  >
-                    {currentLesson.title}
-                  </h1>
-                  <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isDarkMode
-                        ? "bg-gray-700 text-yellow-400 hover:bg-gray-600"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                    title={
-                      isDarkMode
-                        ? "Switch to light mode"
-                        : "Switch to dark mode"
-                    }
-                  >
-                    {isDarkMode ? (
-                      <Sun className="w-5 h-5" />
-                    ) : (
-                      <Moon className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="prose max-w-none">
-                  <div className="space-y-6">
-                    <p
-                      className={`text-lg leading-relaxed ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Welcome to this comprehensive article on React
-                      fundamentals. In this lesson, we'll explore the core
-                      concepts that make React such a powerful library for
-                      building user interfaces.
-                    </p>
-
-                    <h2
-                      className={`text-2xl font-semibold mt-8 mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      What is React?
-                    </h2>
-                    <p
-                      className={`leading-relaxed ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      React is a JavaScript library for building user
-                      interfaces, particularly web applications. It was
-                      developed by Facebook and is now maintained by Facebook
-                      and the community. React allows developers to create large
-                      web applications that can change data, without reloading
-                      the page.
-                    </p>
-
-                    <h2
-                      className={`text-2xl font-semibold mt-8 mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      Key Features of React
-                    </h2>
-                    <ul className="list-disc pl-6 space-y-2">
-                      <li
-                        className={
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }
-                      >
-                        <strong
-                          className={
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          }
-                        >
-                          Component-Based:
-                        </strong>{" "}
-                        Build encapsulated components that manage their own
-                        state
-                      </li>
-                      <li
-                        className={
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }
-                      >
-                        <strong
-                          className={
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          }
-                        >
-                          Declarative:
-                        </strong>{" "}
-                        React makes it painless to create interactive UIs
-                      </li>
-                      <li
-                        className={
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }
-                      >
-                        <strong
-                          className={
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          }
-                        >
-                          Learn Once, Write Anywhere:
-                        </strong>{" "}
-                        Develop new features without rewriting existing code
-                      </li>
-                      <li
-                        className={
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }
-                      >
-                        <strong
-                          className={
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          }
-                        >
-                          Virtual DOM:
-                        </strong>{" "}
-                        Efficient updating and rendering of components
-                      </li>
-                    </ul>
-
-                    <h2
-                      className={`text-2xl font-semibold mt-8 mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      Getting Started
-                    </h2>
-                    <p
-                      className={`leading-relaxed ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      To get started with React, you'll need to have Node.js
-                      installed on your computer. Once you have Node.js, you can
-                      create a new React application using Create React App:
-                    </p>
-
-                    <div
-                      className={`rounded-lg p-4 my-4 ${
-                        isDarkMode ? "bg-gray-900" : "bg-gray-100"
-                      }`}
-                    >
-                      <code className="text-sm">
-                        npx create-react-app my-app
-                        <br />
-                        cd my-app
-                        <br />
-                        npm start
-                      </code>
-                    </div>
-
-                    <h2
-                      className={`text-2xl font-semibold mt-8 mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      Your First Component
-                    </h2>
-                    <p
-                      className={`leading-relaxed ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      Here's a simple example of a React component:
-                    </p>
-
-                    <div
-                      className={`rounded-lg p-4 my-4 ${
-                        isDarkMode ? "bg-gray-900" : "bg-gray-100"
-                      }`}
-                    >
-                      <pre className="text-sm overflow-x-auto">
-                        {`function Welcome(props) {
-  return <h1>Hello, {props.name}</h1>;
-}
-
-function App() {
-  return (
-    <div>
-      <Welcome name="Sara" />
-      <Welcome name="Cahal" />
-      <Welcome name="Edite" />
-    </div>
-  );
-}`}
-                      </pre>
-                    </div>
-
-                    <h2
-                      className={`text-2xl font-semibold mt-8 mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      Conclusion
-                    </h2>
-                    <p
-                      className={`leading-relaxed ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      React is a powerful tool for building modern web
-                      applications. Its component-based architecture and
-                      declarative nature make it easy to build and maintain
-                      complex user interfaces. In the next lessons, we'll dive
-                      deeper into React concepts like state, props, and
-                      lifecycle methods.
-                    </p>
-
-                    <div
-                      className={`mt-8 p-4 border-l-4 rounded ${
-                        isDarkMode
-                          ? "bg-blue-900 border-blue-400 text-blue-200"
-                          : "bg-blue-50 border-blue-400 text-blue-800"
-                      }`}
-                    >
-                      <p>
-                        <strong
-                          className={
-                            isDarkMode ? "text-blue-100" : "text-blue-900"
-                          }
-                        >
-                          Next Steps:
-                        </strong>{" "}
-                        Practice creating your own React components and
-                        experiment with different props and state
-                        configurations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(currentLesson.type === "quiz" ||
-              currentLesson.type === "exam") && (
-              <div
-                className={`rounded-lg p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 ${
-                  isDarkMode
-                    ? "bg-gray-800 text-gray-100"
-                    : "bg-white text-gray-900"
-                }`}
-              >
-                <div className="max-w-4xl mx-auto">
-                  {/* Theme Toggle */}
-                  <div className="flex justify-end mb-4">
-                    <button
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        isDarkMode
-                          ? "bg-gray-700 text-yellow-400 hover:bg-gray-600"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                      title={
-                        isDarkMode
-                          ? "Switch to light mode"
-                          : "Switch to dark mode"
-                      }
-                    >
-                      {isDarkMode ? (
-                        <Sun className="w-5 h-5" />
-                      ) : (
-                        <Moon className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="text-center mb-8">
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                        isDarkMode ? "bg-purple-900" : "bg-purple-100"
-                      }`}
-                    >
-                      {currentLesson.type === "quiz" ? (
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            isDarkMode ? "bg-green-700" : "bg-green-600"
-                          }`}
-                        >
-                          <span className="text-white text-lg font-bold">
-                            ?
-                          </span>
+                if (currentLessonData?.type === "article") {
+                  return (
+                    <div className="bg-white rounded-lg p-8 shadow-lg">
+                      <div className="max-w-4xl mx-auto">
+                        <div className="flex items-center mb-6">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                            <FileText className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h1 className="text-3xl font-bold text-gray-900">
+                              {currentLessonData.title}
+                            </h1>
+                            <p className="text-gray-600 mt-1">
+                              Reading time: {currentLessonData.duration}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <Award
-                          className={`w-8 h-8 ${
-                            isDarkMode ? "text-red-400" : "text-red-600"
-                          }`}
-                        />
-                      )}
-                    </div>
-                    <h1
-                      className={`text-3xl font-bold mb-2 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      {currentLesson.title}
-                    </h1>
-                    <p
-                      className={isDarkMode ? "text-gray-300" : "text-gray-600"}
-                    >
-                      {currentLesson.type === "quiz"
-                        ? "Test your knowledge with this interactive quiz"
-                        : "Final examination - demonstrate your mastery of the concepts"}
-                    </p>
-                  </div>
 
-                  <div
-                    className={`rounded-lg p-6 mb-8 ${
-                      isDarkMode ? "bg-gray-700" : "bg-gray-50"
-                    }`}
-                  >
-                    <h2
-                      className={`text-xl font-semibold mb-4 ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      Instructions
-                    </h2>
-                    <ul
-                      className={`space-y-2 ${
-                        isDarkMode ? "text-gray-300" : "text-gray-700"
-                      }`}
-                    >
-                      <li className="flex items-start">
-                        <CheckCircle
-                          className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                            isDarkMode ? "text-green-400" : "text-green-500"
-                          }`}
-                        />
-                        <span>
-                          Read each question carefully before selecting your
-                          answer
-                        </span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle
-                          className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                            isDarkMode ? "text-green-400" : "text-green-500"
-                          }`}
-                        />
-                        <span>
-                          You can change your answers before submitting
-                        </span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle
-                          className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                            isDarkMode ? "text-green-400" : "text-green-500"
-                          }`}
-                        />
-                        <span>
-                          {currentLesson.type === "quiz"
-                            ? "You have unlimited attempts for this quiz"
-                            : "This is a final exam - you have only one attempt"}
-                        </span>
-                      </li>
-                      <li className="flex items-start">
-                        <CheckCircle
-                          className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${
-                            isDarkMode ? "text-green-400" : "text-green-500"
-                          }`}
-                        />
-                        <span>Time limit: {currentLesson.duration}</span>
-                      </li>
-                    </ul>
-                  </div>
+                        <div className="prose prose-lg max-w-none">
+                          <h2>Introduction to React Fundamentals</h2>
+                          <p>
+                            React is a powerful JavaScript library for building
+                            user interfaces, particularly web applications. It
+                            was created by Facebook and has become one of the
+                            most popular tools for front-end development.
+                          </p>
 
-                  <div className="space-y-6">
-                    <div
-                      className={`border rounded-lg p-6 ${
-                        isDarkMode
-                          ? "bg-gray-700 border-gray-600"
-                          : "bg-white border-gray-200"
-                      }`}
-                    >
-                      <h3
-                        className={`text-lg font-semibold mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Question 1 of 5
-                      </h3>
-                      <p
-                        className={`mb-4 ${
-                          isDarkMode ? "text-gray-200" : "text-gray-800"
-                        }`}
-                      >
-                        What is the primary purpose of React's Virtual DOM?
-                      </p>
-                      <div className="space-y-3">
-                        {[
-                          "To replace the real DOM entirely",
-                          "To improve performance by minimizing direct DOM manipulation",
-                          "To add styling to components",
-                          "To handle server-side rendering only",
-                        ].map((option, index) => (
-                          <label
-                            key={index}
-                            className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                              isDarkMode
-                                ? "border-gray-600 hover:bg-gray-600"
-                                : "border-gray-200 hover:bg-gray-50"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="question1"
-                              value={option}
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span
-                              className={`ml-3 ${
-                                isDarkMode ? "text-gray-200" : "text-gray-700"
-                              }`}
-                            >
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                          <h3>Key Concepts</h3>
+                          <ul>
+                            <li>
+                              <strong>Components:</strong> The building blocks
+                              of React applications
+                            </li>
+                            <li>
+                              <strong>JSX:</strong> A syntax extension that
+                              allows you to write HTML-like code in JavaScript
+                            </li>
+                            <li>
+                              <strong>Props:</strong> Properties passed to
+                              components
+                            </li>
+                            <li>
+                              <strong>State:</strong> Data that changes over
+                              time in your component
+                            </li>
+                          </ul>
 
-                    <div
-                      className={`border rounded-lg p-6 ${
-                        isDarkMode
-                          ? "bg-gray-700 border-gray-600"
-                          : "bg-white border-gray-200"
-                      }`}
-                    >
-                      <h3
-                        className={`text-lg font-semibold mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Question 2 of 5
-                      </h3>
-                      <p
-                        className={`mb-4 ${
-                          isDarkMode ? "text-gray-200" : "text-gray-800"
-                        }`}
-                      >
-                        Which hook is used to manage state in functional
-                        components?
-                      </p>
-                      <div className="space-y-3">
-                        {[
-                          "useEffect",
-                          "useState",
-                          "useContext",
-                          "useReducer",
-                        ].map((option, index) => (
-                          <label
-                            key={index}
-                            className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                              isDarkMode
-                                ? "border-gray-600 hover:bg-gray-600"
-                                : "border-gray-200 hover:bg-gray-50"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="question2"
-                              value={option}
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span
-                              className={`ml-3 ${
-                                isDarkMode ? "text-gray-200" : "text-gray-700"
-                              }`}
-                            >
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                          <h3>Why Choose React?</h3>
+                          <p>React offers several advantages:</p>
+                          <ol>
+                            <li>
+                              Component-based architecture for reusable code
+                            </li>
+                            <li>Virtual DOM for efficient updates</li>
+                            <li>Large ecosystem and community support</li>
+                            <li>Backed by Facebook with regular updates</li>
+                          </ol>
 
-                  <div className="mt-8 flex items-center justify-between">
-                    <div
-                      className={`text-sm ${
-                        isDarkMode ? "text-gray-300" : "text-gray-600"
-                      }`}
-                    >
-                      Progress: 2 of 5 questions completed
-                    </div>
-                    <div className="space-x-4">
-                      <button
-                        className={`px-6 py-2 border rounded-lg transition-colors ${
-                          isDarkMode
-                            ? "border-gray-600 text-gray-200 hover:bg-gray-700"
-                            : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        Save Progress
-                      </button>
-                      <button className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                        {currentLesson.type === "quiz"
-                          ? "Submit Quiz"
-                          : "Submit Exam"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Lesson Content Tabs */}
-            <div className="mt-8">
-              <div className="flex space-x-1 mb-6">
-                <button
-                  onClick={() => setActiveTab("notes")}
-                  className={`flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    activeTab === "notes"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Lesson Notes
-                </button>
-                <button
-                  onClick={() => setActiveTab("qa")}
-                  className={`flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    activeTab === "qa"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Q&A ({questions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("groups")}
-                  className={`flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    activeTab === "groups"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Groups ({courseGroups.length})
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                {activeTab === "notes" && (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-white">
-                        Lesson Notes
-                      </h3>
-                      <button
-                        onClick={handleSaveNotes}
-                        className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center text-sm"
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Notes
-                      </button>
-                    </div>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Take notes while watching..."
-                      className="w-full h-64 bg-gray-700 text-white rounded-lg p-4 border border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none"
-                    />
-                  </div>
-                )}
-
-                {activeTab === "qa" && (
-                  <div>
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">
-                        Questions & Answers
-                      </h3>
-
-                      {/* Ask Question */}
-                      <div className="bg-gray-700 rounded-lg p-4 mb-6">
-                        <h4 className="text-white font-medium mb-3">
-                          Ask a Question
-                        </h4>
-                        <textarea
-                          value={newQuestion}
-                          onChange={(e) => setNewQuestion(e.target.value)}
-                          placeholder="Type your question here..."
-                          className="w-full h-24 bg-gray-600 text-white rounded-lg p-3 border border-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none mb-3"
-                        />
-                        <button
-                          onClick={handleAskQuestion}
-                          disabled={!newQuestion.trim()}
-                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Send className="w-4 h-4 mr-2" />
-                          Ask Question
-                        </button>
-                      </div>
-
-                      {/* Questions List */}
-                      <div className="space-y-4">
-                        {questions.map((question) => (
-                          <div
-                            key={question.id}
-                            className="bg-gray-700 rounded-lg p-4"
-                          >
-                            <div className="flex items-start mb-3">
-                              <img
-                                src={question.avatar}
-                                alt={question.user}
-                                className="w-10 h-10 rounded-full mr-3"
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center mb-1">
-                                  <h5 className="font-medium text-white mr-2">
-                                    {question.user}
-                                  </h5>
-                                  <span className="text-xs text-gray-400">
-                                    {question.timestamp}
-                                  </span>
-                                </div>
-                                <p className="text-gray-300 mb-3">
-                                  {question.question}
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-6">
+                            <div className="flex">
+                              <div className="flex-shrink-0">
+                                <svg
+                                  className="h-5 w-5 text-blue-400"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="ml-3">
+                                <p className="text-sm text-blue-700">
+                                  <strong>Pro Tip:</strong> Practice building
+                                  small components as you learn. Start with
+                                  simple elements like buttons and cards before
+                                  moving to complex features.
                                 </p>
-                                <div className="flex items-center space-x-4 text-sm">
-                                  <button
-                                    onClick={() =>
-                                      handleLikeQuestion(question.id)
-                                    }
-                                    className="flex items-center text-gray-400 hover:text-purple-400 transition-colors"
-                                  >
-                                    ❤️ {question.likes}
-                                  </button>
-                                  <button className="text-gray-400 hover:text-white transition-colors">
-                                    Reply
-                                  </button>
-                                </div>
                               </div>
                             </div>
+                          </div>
 
-                            {/* Replies */}
-                            {question.replies.map((reply) => (
+                          <h3>Next Steps</h3>
+                          <p>
+                            In the following lessons, we'll dive deeper into
+                            each of these concepts and start building real React
+                            applications. Make sure you have your development
+                            environment set up before proceeding.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (currentLessonData?.type === "quiz") {
+                  return (
+                    <div className="bg-white rounded-lg p-8 shadow-lg">
+                      <div className="max-w-4xl mx-auto">
+                        <div className="flex items-center mb-6">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                            <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-bold">
+                                ?
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <h1 className="text-3xl font-bold text-gray-900">
+                              {currentLessonData.title}
+                            </h1>
+                            <p className="text-gray-600 mt-1">
+                              Quick assessment • {currentLessonData.duration}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                            <h3 className="text-xl font-bold text-green-800 mb-3">
+                              Question 1 of 3
+                            </h3>
+                            <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
+                              What does JSX stand for?
+                            </p>
+                            <div className="space-y-2">
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q1"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  JavaScript XML
+                                </span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q1"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  JavaScript Extension
+                                </span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q1"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  Java Syntax Extension
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-3">
+                              Question 2 of 3
+                            </h3>
+                            <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
+                              React components must return a single parent
+                              element.
+                            </p>
+                            <div className="space-y-2">
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q2"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  True
+                                </span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q2"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  False
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-3">
+                              Question 3 of 3
+                            </h3>
+                            <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
+                              Which company created React?
+                            </p>
+                            <div className="space-y-2">
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q3"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  Google
+                                </span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q3"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  Facebook (Meta)
+                                </span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="q3"
+                                  className="h-5 w-5 text-green-600"
+                                />
+                                <span className="ml-4 text-base font-medium text-gray-700">
+                                  Microsoft
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-4">
+                            <div className="text-base font-medium text-gray-600">
+                              Progress: 0/3 questions answered
+                            </div>
+                            <button className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold text-base">
+                              Submit Quiz
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (currentLessonData?.type === "material") {
+                  return (
+                    <div className="bg-white rounded-lg p-8 shadow-lg">
+                      <div className="max-w-4xl mx-auto text-center">
+                        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <Download className="w-10 h-10 text-orange-600" />
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                          {currentLessonData.title}
+                        </h1>
+                        <p className="text-gray-600 mb-8">
+                          Download essential files and resources for this course
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                          <div className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300">
+                            <div className="flex items-center justify-center mb-4">
+                              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-blue-600" />
+                              </div>
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">
+                              Starter Code
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Complete React project setup with all dependencies
+                            </p>
+                            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                              Download ZIP (2.3 MB)
+                            </button>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300">
+                            <div className="flex items-center justify-center mb-4">
+                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-green-600" />
+                              </div>
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">
+                              Cheat Sheet
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Quick reference guide for React concepts
+                            </p>
+                            <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                              Download PDF (1.1 MB)
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="flex items-center">
+                            <svg
+                              className="h-5 w-5 text-yellow-400 mr-2"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <p className="text-sm text-yellow-700">
+                              <strong>Note:</strong> Make sure to extract the
+                              files to your preferred development folder before
+                              starting the exercises.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <VideoPlayer
+                      videoUrl={currentLesson.videoUrl}
+                      title={currentLesson.title}
+                      onProgress={handleProgress}
+                      onComplete={handleComplete}
+                    />
+                  );
+                }
+              })()}
+            </div>
+          </div>
+
+          {/* Lesson Info */}
+          <div className="bg-gray-800 p-6 border-b border-gray-700">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">{currentLesson.title}</h2>
+                <span className="text-gray-400">{currentLesson.duration}</span>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                {currentLesson.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Tabs for Notes and Q&A */}
+          {!showExam && (
+            <div className="bg-gray-800 border-b border-gray-700">
+              <div className="max-w-5xl mx-auto px-6">
+                <div className="flex space-x-8">
+                  <button
+                    onClick={() => {
+                      setShowNotes(true);
+                      setShowQA(false);
+                    }}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      showNotes
+                        ? "border-purple-500 text-purple-400"
+                        : "border-transparent text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    📝 Lesson Notes
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowQA(true);
+                      setShowNotes(false);
+                    }}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      showQA
+                        ? "border-purple-500 text-purple-400"
+                        : "border-transparent text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    💬 Q&A ({qaData.length})
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notes Section */}
+          {showNotes && !showExam && (
+            <div className="bg-gray-800 p-6 border-b border-gray-700">
+              <div className="max-w-5xl mx-auto">
+                <div className="bg-gray-900 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">
+                      Lesson Notes
+                    </h3>
+                    <button
+                      onClick={handleSaveNotes}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    >
+                      Save Notes
+                    </button>
+                  </div>
+                  <textarea
+                    placeholder="Take notes while watching..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full h-40 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
+                  />
+                  {savedNotes[currentLessonId] && (
+                    <p className="text-green-400 text-sm mt-2">
+                      ✓ Notes saved for this lesson
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Exam Section */}
+          {showExam && (
+            <div className="bg-gray-800 p-6">
+              <div className="max-w-4xl mx-auto">
+                {!examSubmitted ? (
+                  <div className="bg-gray-900 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                          {examData.title}
+                        </h3>
+                        <p className="text-gray-300">{examData.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white font-semibold">
+                          Time Limit: {examData.timeLimit} minutes
+                        </div>
+                        <div className="text-gray-400 text-sm">
+                          Passing Score: {examData.passingScore}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      {examData.questions.map((question, index) => (
+                        <div
+                          key={question.id}
+                          className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                        >
+                          <h4 className="text-white font-medium mb-4">
+                            {index + 1}. {question.question}
+                          </h4>
+
+                          {question.type === "multiple-choice" && (
+                            <div className="space-y-2">
+                              {question.options?.map((option, optionIndex) => (
+                                <label
+                                  key={optionIndex}
+                                  className="flex items-center cursor-pointer"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`question-${question.id}`}
+                                    value={option}
+                                    checked={
+                                      examAnswers[question.id] === option
+                                    }
+                                    onChange={(e) =>
+                                      handleExamAnswer(
+                                        question.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                                  />
+                                  <span className="ml-3 text-gray-300">
+                                    {option}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+
+                          {question.type === "true-false" && (
+                            <div className="space-y-2">
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`question-${question.id}`}
+                                  value="true"
+                                  checked={examAnswers[question.id] === "true"}
+                                  onChange={(e) =>
+                                    handleExamAnswer(
+                                      question.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                                />
+                                <span className="ml-3 text-gray-300">True</span>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`question-${question.id}`}
+                                  value="false"
+                                  checked={examAnswers[question.id] === "false"}
+                                  onChange={(e) =>
+                                    handleExamAnswer(
+                                      question.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                                />
+                                <span className="ml-3 text-gray-300">
+                                  False
+                                </span>
+                              </label>
+                            </div>
+                          )}
+
+                          {question.type === "short-answer" && (
+                            <textarea
+                              value={examAnswers[question.id] || ""}
+                              onChange={(e) =>
+                                handleExamAnswer(question.id, e.target.value)
+                              }
+                              placeholder="Type your answer here..."
+                              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              rows={3}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-8 flex items-center justify-between">
+                      <div className="text-gray-400">
+                        Questions answered: {Object.keys(examAnswers).length} /{" "}
+                        {examData.questions.length}
+                      </div>
+                      <button
+                        onClick={handleSubmitExam}
+                        disabled={
+                          Object.keys(examAnswers).length !==
+                          examData.questions.length
+                        }
+                        className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Submit Exam
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-900 rounded-lg p-8 text-center">
+                    <div
+                      className={`text-6xl mb-4 ${
+                        examScore! >= examData.passingScore
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {examScore! >= examData.passingScore ? "🎉" : "😞"}
+                    </div>
+                    <h3 className="text-3xl font-bold text-white mb-2">
+                      {examScore! >= examData.passingScore
+                        ? "Congratulations!"
+                        : "Try Again"}
+                    </h3>
+                    <p className="text-xl text-gray-300 mb-6">
+                      Your Score:{" "}
+                      <span
+                        className={`font-bold ${
+                          examScore! >= examData.passingScore
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {examScore}%
+                      </span>
+                    </p>
+                    <p className="text-gray-400 mb-8">
+                      {examScore! >= examData.passingScore
+                        ? `You passed! You need ${examData.passingScore}% to pass.`
+                        : `You need ${examData.passingScore}% to pass. You can retake this exam.`}
+                    </p>
+
+                    <div className="space-y-4">
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="text-white font-semibold mb-3">
+                          Results Breakdown:
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div className="text-center">
+                            <div className="text-green-400 font-bold text-lg">
+                              {
+                                examData.questions.filter(
+                                  (q) => examAnswers[q.id] === q.correctAnswer
+                                ).length
+                              }
+                            </div>
+                            <div className="text-gray-400">Correct</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-red-400 font-bold text-lg">
+                              {
+                                examData.questions.filter(
+                                  (q) => examAnswers[q.id] !== q.correctAnswer
+                                ).length
+                              }
+                            </div>
+                            <div className="text-gray-400">Incorrect</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-blue-400 font-bold text-lg">
+                              {examData.questions.length}
+                            </div>
+                            <div className="text-gray-400">Total</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-center space-x-4">
+                        <button
+                          onClick={resetExam}
+                          className="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                        >
+                          Retake Exam
+                        </button>
+                        <button
+                          onClick={() => setShowExam(false)}
+                          className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                          Continue Learning
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Q&A Section */}
+          {showQA && !showExam && (
+            <div className="bg-gray-800 p-6 min-h-screen">
+              <div className="max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Questions List */}
+                  <div className="lg:col-span-2">
+                    <h3 className="text-lg font-semibold text-white mb-4">
+                      Questions & Answers
+                    </h3>
+                    <div className="space-y-4">
+                      {qaData.map((qa) => (
+                        <div
+                          key={qa.id}
+                          className="bg-gray-900 rounded-lg p-5 border border-gray-700"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <img
+                                src={qa.studentImage}
+                                alt={qa.student}
+                                className="w-8 h-8 rounded-full object-cover border-2 border-purple-500"
+                              />
+                              <div>
+                                <h4 className="font-medium text-white hover:text-purple-300 cursor-pointer transition-colors">
+                                  {qa.student}
+                                </h4>
+                                <p className="text-sm text-gray-400">
+                                  {qa.fullTimestamp ||
+                                    `${qa.date} at ${qa.timestamp}`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-gray-300 mb-4 ml-11 leading-relaxed">
+                            <p>{qa.question}</p>
+                          </div>
+
+                          {/* Question Actions */}
+                          <div className="ml-11 mb-4 flex items-center space-x-4">
+                            <button
+                              onClick={() => handleLikeQuestion(qa.id)}
+                              className={`flex items-center space-x-1 text-sm transition-colors ${
+                                qa.isLiked
+                                  ? "text-red-400 hover:text-red-300"
+                                  : "text-gray-400 hover:text-red-400"
+                              }`}
+                            >
+                              <Heart
+                                className={`w-4 h-4 ${
+                                  qa.isLiked ? "fill-current" : ""
+                                }`}
+                              />
+                              <span>{qa.likes}</span>
+                            </button>
+                            <button
+                              onClick={() => setReplyingTo(qa.id)}
+                              className="flex items-center space-x-1 text-sm text-gray-400 hover:text-purple-400 transition-colors"
+                            >
+                              <Reply className="w-4 h-4" />
+                              <span>Reply</span>
+                            </button>
+                          </div>
+
+                          {/* Replies */}
+                          <div className="ml-11 space-y-3">
+                            {qa.replies.map((reply) => (
                               <div
                                 key={reply.id}
-                                className="ml-12 mt-4 bg-gray-600 rounded-lg p-3"
+                                className="bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500"
                               >
-                                <div className="flex items-start">
-                                  <img
-                                    src={reply.avatar}
-                                    alt={reply.user}
-                                    className="w-8 h-8 rounded-full mr-3"
-                                  />
-                                  <div className="flex-1">
-                                    <div className="flex items-center mb-1">
-                                      <h6 className="font-medium text-white mr-2">
-                                        {reply.user}
-                                      </h6>
-                                      {reply.isInstructor && (
-                                        <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-xs font-medium">
-                                          Instructor
-                                        </span>
-                                      )}
-                                      <span className="text-xs text-gray-400 ml-2">
-                                        {reply.timestamp}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <img
+                                      src={reply.authorImage}
+                                      alt={reply.author}
+                                      className="w-6 h-6 rounded-full object-cover border border-gray-500"
+                                    />
+                                    <span className="font-medium text-white hover:text-purple-300 cursor-pointer transition-colors">
+                                      {reply.author}
+                                    </span>
+                                    {reply.isInstructor && (
+                                      <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded-full font-medium">
+                                        Instructor
                                       </span>
-                                    </div>
-                                    <p className="text-gray-300 mb-2">
-                                      {reply.reply}
-                                    </p>
-                                    <button className="flex items-center text-gray-400 hover:text-purple-400 transition-colors text-sm">
-                                      👍 {reply.likes}
-                                    </button>
+                                    )}
                                   </div>
+                                  <span className="text-xs text-gray-400">
+                                    {reply.timestamp}
+                                  </span>
+                                </div>
+                                <div
+                                  className="text-gray-300 text-sm leading-relaxed"
+                                  dangerouslySetInnerHTML={{
+                                    __html: reply.content,
+                                  }}
+                                />
+
+                                {/* Reply Actions */}
+                                <div className="flex items-center space-x-4 mt-3">
+                                  <button
+                                    onClick={() =>
+                                      handleLikeReply(qa.id, reply.id)
+                                    }
+                                    className={`flex items-center space-x-1 text-xs transition-colors ${
+                                      reply.isLiked
+                                        ? "text-blue-400 hover:text-blue-300"
+                                        : "text-gray-400 hover:text-blue-400"
+                                    }`}
+                                  >
+                                    <ThumbsUp
+                                      className={`w-3 h-3 ${
+                                        reply.isLiked ? "fill-current" : ""
+                                      }`}
+                                    />
+                                    <span>{reply.likes}</span>
+                                  </button>
                                 </div>
                               </div>
                             ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {activeTab === "groups" && (
-                  <div>
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">
-                        Study Groups
-                      </h3>
-                      <p className="text-gray-300 text-sm mb-6">
-                        Join study groups to collaborate with fellow students
-                        and discuss course content.
-                      </p>
-
-                      {/* Groups List */}
-                      <div className="space-y-4">
-                        {courseGroups.map((group) => (
-                          <div
-                            key={group.id}
-                            className="bg-gray-700 rounded-lg p-4"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-4 h-4 rounded-full ${group.color} mr-3`}
+                          {/* Reply Section */}
+                          <div className="mt-4 ml-11">
+                            {replyingTo === qa.id && (
+                              <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
+                                <div className="flex items-center mb-3">
+                                  <img
+                                    src="https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100"
+                                    alt="You"
+                                    className="w-6 h-6 rounded-full object-cover border border-gray-500 mr-2"
+                                  />
+                                  <span className="text-sm text-gray-300">
+                                    Replying to {qa.student}
+                                  </span>
+                                </div>
+                                <textarea
+                                  placeholder="Write your reply..."
+                                  value={replyText}
+                                  onChange={(e) => setReplyText(e.target.value)}
+                                  className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
-                                <div>
-                                  <h4 className="font-semibold text-white">
-                                    {group.name}
-                                  </h4>
-                                  <p className="text-gray-300 text-sm">
-                                    {group.description}
-                                  </p>
+                                <div className="flex justify-end space-x-3 mt-3">
+                                  <button
+                                    onClick={() => setReplyingTo(null)}
+                                    className="px-4 py-2 text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleReply(qa.id)}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors"
+                                  >
+                                    Reply
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs text-gray-400">
-                                  {group.members.length} member
-                                  {group.members.length !== 1 ? "s" : ""}
-                                </span>
-                                <button
-                                  onClick={() => handleJoinGroup(group.id)}
-                                  className="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 transition-colors"
-                                >
-                                  Join
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Group Members */}
-                            <div className="flex items-center mb-3">
-                              <span className="text-gray-400 text-sm mr-3">
-                                Members:
-                              </span>
-                              <div className="flex -space-x-2">
-                                {group.members.slice(0, 5).map((member) => (
-                                  <div key={member.id} className="relative">
-                                    <img
-                                      src={member.avatar}
-                                      alt={member.name}
-                                      className="w-6 h-6 rounded-full border-2 border-gray-700"
-                                      title={member.name}
-                                    />
-                                    {member.isOnline && (
-                                      <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-gray-700"></div>
-                                    )}
-                                  </div>
-                                ))}
-                                {group.members.length > 5 && (
-                                  <div className="w-6 h-6 rounded-full bg-gray-600 border-2 border-gray-700 flex items-center justify-center text-xs text-white">
-                                    +{group.members.length - 5}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Recent Messages */}
-                            <div className="border-t border-gray-600 pt-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-400 text-sm">
-                                  Recent Discussion:
-                                </span>
-                                <button
-                                  onClick={() => handleShowChat(group)}
-                                  className="text-purple-400 hover:text-purple-300 text-xs"
-                                >
-                                  Show Chat
-                                </button>
-                              </div>
-
-                              {group.messages.length > 0 ? (
-                                <div className="space-y-2">
-                                  {group.messages.slice(-2).map((message) => (
-                                    <div
-                                      key={message.id}
-                                      className="flex items-start space-x-2"
-                                    >
-                                      <img
-                                        src={message.avatar}
-                                        alt={message.user}
-                                        className="w-5 h-5 rounded-full"
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center space-x-2">
-                                          <span className="text-white text-sm font-medium">
-                                            {message.user}
-                                          </span>
-                                          <span className="text-gray-400 text-xs">
-                                            {message.timestamp}
-                                          </span>
-                                        </div>
-                                        <p className="text-gray-300 text-sm">
-                                          {message.message}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-gray-500 text-sm italic">
-                                  No messages yet. Start the conversation!
-                                </p>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-
-                      {courseGroups.length === 0 && (
-                        <div className="text-center py-8">
-                          <Users className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                          <h4 className="text-lg font-medium text-white mb-2">
-                            No Study Groups Yet
-                          </h4>
-                          <p className="text-gray-400">
-                            Study groups will appear here when they're created
-                            by your instructor.
-                          </p>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Right Sidebar - Course Content */}
-      <div
-        className={`${
-          isSidebarOpen ? "w-96" : "w-0"
-        } transition-all duration-300 overflow-hidden bg-white shadow-lg`}
-      >
-        <CourseContent
-          modules={modules}
-          currentLessonId={currentLessonId}
-          onLessonSelect={handleLessonSelect}
-          isEnrolled={true}
-        />
-      </div>
-
-      {/* Group Chat Modal */}
-      {showChatModal && activeChatGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex">
-            {/* Left Sidebar - Group Info & Members */}
-            <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
-              {/* Group Header */}
-              <div className="p-6 border-b border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div
-                      className={`w-5 h-5 rounded-full ${activeChatGroup.color} mr-3`}
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-white">
-                        {activeChatGroup.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        {activeChatGroup.members.length} members
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleCloseChatModal}
-                    className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <p className="text-gray-300 text-sm">
-                  {activeChatGroup.description}
-                </p>
-              </div>
-
-              {/* Members List */}
-              <div className="flex-1 p-6 overflow-y-auto">
-                <h4 className="text-white font-semibold mb-4 flex items-center">
-                  <Users className="w-4 h-4 mr-2" />
-                  Members ({activeChatGroup.members.length})
-                </h4>
-                <div className="space-y-3">
-                  {activeChatGroup.members.map((member: any) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      <div className="relative">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-10 h-10 rounded-full"
-                        />
-                        {member.isOnline && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800"></div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-white font-medium text-sm">
-                          {member.name}
-                        </div>
-                        <div className="text-gray-400 text-xs">
-                          {member.isOnline ? "Online" : "Offline"}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Group Actions */}
-              <div className="p-6 border-t border-gray-700">
-                <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors text-sm">
-                  Leave Group
-                </button>
-              </div>
-            </div>
-
-            {/* Right Side - Chat Area */}
-            <div className="flex-1 flex flex-col">
-              {/* Chat Header */}
-              <div className="p-6 border-b border-gray-700 bg-gray-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Group Chat</h3>
-                    <p className="text-gray-400 text-sm">
-                      {
-                        activeChatGroup.members.filter((m: any) => m.isOnline)
-                          .length
-                      }{" "}
-                      online now
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition-colors">
-                      <Search className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="flex-1 p-6 overflow-y-auto bg-gray-900">
-                <div className="space-y-6">
-                  {/* Extended mock messages for long chat */}
-                  {[
-                    ...activeChatGroup.messages,
-                    {
-                      id: "3",
-                      user: "Sarah Wilson",
-                      avatar:
-                        "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Has anyone finished the React Hooks section yet? I'm having trouble with useEffect.",
-                      timestamp: "30 minutes ago",
-                    },
-                    {
-                      id: "4",
-                      user: "Alex Chen",
-                      avatar:
-                        "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Yes! The key is understanding the dependency array. Let me share a helpful resource.",
-                      timestamp: "25 minutes ago",
-                    },
-                    {
-                      id: "5",
-                      user: "Emily Rodriguez",
-                      avatar:
-                        "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "I found this article really helpful: https://react.dev/reference/react/useEffect",
-                      timestamp: "20 minutes ago",
-                    },
-                    {
-                      id: "6",
-                      user: "David Kim",
-                      avatar:
-                        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Thanks Emily! That article cleared up a lot of confusion for me.",
-                      timestamp: "15 minutes ago",
-                    },
-                    {
-                      id: "7",
-                      user: "Lisa Zhang",
-                      avatar:
-                        "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Should we schedule a study session for this weekend? We could go through the exercises together.",
-                      timestamp: "10 minutes ago",
-                    },
-                    {
-                      id: "8",
-                      user: "Tom Wilson",
-                      avatar:
-                        "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Great idea! I'm free Saturday afternoon. What time works for everyone?",
-                      timestamp: "8 minutes ago",
-                    },
-                    {
-                      id: "9",
-                      user: "Sarah Wilson",
-                      avatar:
-                        "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Saturday 2 PM works for me! Should we use Zoom or Discord?",
-                      timestamp: "5 minutes ago",
-                    },
-                    {
-                      id: "10",
-                      user: "Alex Chen",
-                      avatar:
-                        "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg?auto=compress&cs=tinysrgb&w=100",
-                      message:
-                        "Discord would be great! I can create a server for our study group.",
-                      timestamp: "2 minutes ago",
-                    },
-                  ].map((message: any) => (
-                    <div
-                      key={message.id}
-                      className="flex items-start space-x-4"
-                    >
-                      <img
-                        src={message.avatar}
-                        alt={message.user}
-                        className="w-10 h-10 rounded-full flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="font-semibold text-white text-sm">
-                            {message.user}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {message.timestamp}
-                          </span>
-                        </div>
-                        <div className="bg-gray-800 rounded-2xl px-4 py-3 max-w-2xl">
-                          <p className="text-gray-200 leading-relaxed">
-                            {message.message}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {activeChatGroup.messages.length === 0 && (
-                    <div className="text-center py-12">
-                      <MessageCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                      <h4 className="text-xl font-semibold text-white mb-2">
-                        No messages yet
+                  {/* Ask Question */}
+                  <div className="lg:col-span-1">
+                    <div className="bg-gray-900 rounded-lg p-5 sticky top-4 border border-gray-700">
+                      <h4 className="font-medium text-white mb-3">
+                        Ask a Question
                       </h4>
-                      <p className="text-gray-400">
-                        Start the conversation with your study group!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Message Input */}
-              <div className="p-6 border-t border-gray-700 bg-gray-800">
-                <div className="flex items-end space-x-4">
-                  <div className="flex-1">
-                    <textarea
-                      value={groupMessage}
-                      onChange={(e) => setGroupMessage(e.target.value)}
-                      placeholder={`Message ${activeChatGroup.name}...`}
-                      className="w-full bg-gray-700 text-white border border-gray-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                      rows={3}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendGroupMessage(activeChatGroup.id);
-                        }
-                      }}
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center space-x-2">
-                        <button className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors">
-                          <span className="text-lg">😊</span>
-                        </button>
-                        <button className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors">
-                          📎
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        Press Enter to send, Shift+Enter for new line
-                      </span>
+                      <textarea
+                        placeholder="Type your question here..."
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        className="w-full h-32 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400 text-sm"
+                      />
+                      <button
+                        onClick={handleAskQuestion}
+                        className="w-full mt-3 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center font-medium"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Ask Question
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleSendGroupMessage(activeChatGroup.id)}
-                    disabled={!groupMessage.trim()}
-                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white p-3 rounded-xl transition-colors disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Sidebar */}
+        <div className="w-80 bg-white text-gray-900 border-l border-gray-700 overflow-y-auto min-h-screen">
+          <CourseContent
+            modules={modules}
+            currentLessonId={currentLessonId}
+            onLessonSelect={handleLessonSelect}
+            isEnrolled={true}
+          />
+        </div>
+      </div>
     </div>
   );
 };

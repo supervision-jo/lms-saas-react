@@ -72,12 +72,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     new Set([quiz.questions[0]?.id])
   );
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState<
-    number | null
-  >(null);
-  const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState<
-    number | null
-  >(null);
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -200,56 +194,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
       newExpanded.add(questionId);
     }
     setExpandedQuestions(newExpanded);
-  };
-
-  // Question drag and drop handlers
-  const handleQuestionDragStart = (
-    e: React.DragEvent,
-    questionIndex: number
-  ) => {
-    setDraggedQuestionIndex(questionIndex);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleQuestionDragOver = (
-    e: React.DragEvent,
-    questionIndex: number
-  ) => {
-    e.preventDefault();
-    setDragOverQuestionIndex(questionIndex);
-  };
-
-  const handleQuestionDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    setDragOverQuestionIndex(null);
-
-    if (draggedQuestionIndex === null || draggedQuestionIndex === dropIndex) {
-      setDraggedQuestionIndex(null);
-      return;
-    }
-
-    const newQuestions = [...quiz.questions];
-    const draggedQuestion = newQuestions[draggedQuestionIndex];
-
-    // Remove the dragged question
-    newQuestions.splice(draggedQuestionIndex, 1);
-
-    // Insert at new position
-    const insertIndex =
-      draggedQuestionIndex < dropIndex ? dropIndex - 1 : dropIndex;
-    newQuestions.splice(insertIndex, 0, draggedQuestion);
-
-    setQuiz({
-      ...quiz,
-      questions: newQuestions,
-    });
-
-    setDraggedQuestionIndex(null);
-  };
-
-  const handleQuestionDragEnd = () => {
-    setDraggedQuestionIndex(null);
-    setDragOverQuestionIndex(null);
   };
 
   const validateQuiz = (): boolean => {
@@ -393,20 +337,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           <div className="space-y-4">
             {quiz.questions.map((question, questionIndex) => {
               const isExpanded = expandedQuestions.has(question.id);
-              const isDragging = draggedQuestionIndex === questionIndex;
-              const isDragOver = dragOverQuestionIndex === questionIndex;
 
               return (
                 <div
                   key={question.id}
-                  draggable
-                  onDragStart={(e) => handleQuestionDragStart(e, questionIndex)}
-                  onDragOver={(e) => handleQuestionDragOver(e, questionIndex)}
-                  onDrop={(e) => handleQuestionDrop(e, questionIndex)}
-                  onDragEnd={handleQuestionDragEnd}
-                  className={`border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 ${
-                    isDragging ? "opacity-50 transform rotate-2" : ""
-                  } ${isDragOver ? "border-purple-400 bg-purple-50" : ""}`}
+                  className="border border-gray-200 rounded-lg overflow-hidden"
                 >
                   {/* Question Header */}
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
