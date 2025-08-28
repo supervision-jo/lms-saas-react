@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Menu, X, CheckCircle, Play, MessageCircle, FileText, Save, Send, Users } from 'lucide-react';
+import { ArrowLeft, Menu, X, CheckCircle, Play, MessageCircle, FileText, Save, Send } from 'lucide-react';
 import VideoPlayer from '../components/VideoPlayer';
 import CourseContent from '../components/CourseContent';
 
@@ -51,8 +51,6 @@ const CoursePlayerPage: React.FC = () => {
   const [newQuestion, setNewQuestion] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [groupMessage, setGroupMessage] = useState('');
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
 
   // Mock groups data for the current course
   const courseGroups = [
@@ -232,17 +230,6 @@ const CoursePlayerPage: React.FC = () => {
     setGroupMessage('');
   };
   const handleLikeQuestion = (questionId: string) => {
-  const handleShowChat = (group: any) => {
-    setActiveChatGroup(group);
-    setShowChatModal(true);
-  };
-
-  const handleCloseChatModal = () => {
-    setShowChatModal(false);
-    setActiveChatGroup(null);
-    setGroupMessage('');
-  };
-
     setQuestions(questions.map(q => 
       q.id === questionId ? { ...q, likes: q.likes + 1 } : q
     ));
@@ -520,10 +507,10 @@ const CoursePlayerPage: React.FC = () => {
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-gray-400 text-sm">Recent Discussion:</span>
                                 <button
-                                  onClick={() => handleShowChat(group)}
+                                  onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
                                   className="text-purple-400 hover:text-purple-300 text-xs"
                                 >
-                                  Show Chat
+                                  {selectedGroup === group.id ? 'Hide' : 'Show'} Chat
                                 </button>
                               </div>
                               
@@ -548,6 +535,33 @@ const CoursePlayerPage: React.FC = () => {
                                 </div>
                               ) : (
                                 <p className="text-gray-500 text-sm italic">No messages yet. Start the conversation!</p>
+                              )}
+                              
+                              {/* Group Chat Interface */}
+                              {selectedGroup === group.id && (
+                                <div className="mt-4 pt-3 border-t border-gray-600">
+                                  <div className="flex space-x-2">
+                                    <input
+                                      type="text"
+                                      value={groupMessage}
+                                      onChange={(e) => setGroupMessage(e.target.value)}
+                                      placeholder="Type a message to the group..."
+                                      className="flex-1 bg-gray-600 text-white rounded px-3 py-2 text-sm border border-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          handleSendGroupMessage(group.id);
+                                        }
+                                      }}
+                                    />
+                                    <button
+                                      onClick={() => handleSendGroupMessage(group.id)}
+                                      disabled={!groupMessage.trim()}
+                                      className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                    >
+                                      <Send className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -581,88 +595,6 @@ const CoursePlayerPage: React.FC = () => {
           isEnrolled={true}
         />
       </div>
-
-      {/* Group Chat Modal */}
-      {showChatModal && activeChatGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
-              <div className="flex items-center">
-                <div className={`w-4 h-4 rounded-full ${activeChatGroup.color} mr-3`} />
-                <div>
-                  <h3 className="text-lg font-semibold">{activeChatGroup.name}</h3>
-                  <p className="text-purple-100 text-sm">{activeChatGroup.members.length} members</p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseChatModal}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 p-6 max-h-96 overflow-y-auto bg-gray-50">
-              <div className="space-y-4">
-                {activeChatGroup.messages.map((message: any) => (
-                  <div key={message.id} className="flex items-start space-x-3">
-                    <img
-                      src={message.avatar}
-                      alt={message.user}
-                      className="w-8 h-8 rounded-full"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-gray-900">{message.user}</span>
-                        <span className="text-xs text-gray-500">{message.timestamp}</span>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                        <p className="text-gray-800">{message.message}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {activeChatGroup.messages.length === 0 && (
-                  <div className="text-center py-8">
-                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h4>
-                    <p className="text-gray-500">Start the conversation with your study group!</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Message Input */}
-            <div className="p-6 border-t border-gray-200 bg-white">
-              <div className="flex space-x-3">
-                <input
-                  type="text"
-                  value={groupMessage}
-                  onChange={(e) => setGroupMessage(e.target.value)}
-                  placeholder={`Type a message to ${activeChatGroup.name}...`}
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSendGroupMessage(activeChatGroup.id);
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => handleSendGroupMessage(activeChatGroup.id)}
-                  disabled={!groupMessage.trim()}
-                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
