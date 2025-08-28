@@ -1,5 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Settings, SkipBack, SkipForward } from 'lucide-react';
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Settings,
+  SkipBack,
+  SkipForward,
+} from "lucide-react";
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -9,7 +19,13 @@ interface VideoPlayerProps {
   onComplete?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, onProgress, onComplete }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  videoUrl,
+  youtubeUrl,
+  title,
+  onProgress,
+  onComplete,
+}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -17,7 +33,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -25,9 +41,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
   const getYouTubeVideoId = (url: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
@@ -39,7 +55,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
 
   useEffect(() => {
     if (youtubeVideoId) return; // Skip for YouTube videos
-    
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -61,14 +77,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
       }
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('ended', handleEnded);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("ended", handleEnded);
 
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("ended", handleEnded);
     };
   }, [onProgress, onComplete]);
 
@@ -121,8 +137,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
       } else {
         container.requestFullscreen();
       }
-    } catch (error) {
-      console.log('Fullscreen not supported');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.log("Fullscreen not supported", error);
     }
   };
 
@@ -130,7 +147,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
     const video = videoRef.current;
     if (!video) return;
 
-    video.currentTime = Math.max(0, Math.min(duration, video.currentTime + seconds));
+    video.currentTime = Math.max(
+      0,
+      Math.min(duration, video.currentTime + seconds)
+    );
   };
 
   const changePlaybackRate = (rate: number) => {
@@ -144,13 +164,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   // If YouTube URL is provided, render YouTube embed
   if (youtubeVideoId) {
     return (
-      <div 
+      <div
         ref={containerRef}
         className="relative bg-black rounded-lg overflow-hidden aspect-video"
       >
@@ -167,7 +187,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="relative bg-black rounded-lg overflow-hidden group"
       onMouseEnter={() => setShowControls(true)}
@@ -193,7 +213,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
       )}
 
       {/* Controls */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent transition-opacity duration-300 ${
+          showControls ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <div className="p-4">
           {/* Progress bar */}
           <div className="mb-4">
@@ -209,21 +233,41 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button onClick={togglePlay} className="text-white hover:text-purple-400 transition-colors">
-                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+              <button
+                onClick={togglePlay}
+                className="text-white hover:text-purple-400 transition-colors"
+              >
+                {isPlaying ? (
+                  <Pause className="w-6 h-6" />
+                ) : (
+                  <Play className="w-6 h-6" />
+                )}
               </button>
-              
-              <button onClick={() => skip(-10)} className="text-white hover:text-purple-400 transition-colors">
+
+              <button
+                onClick={() => skip(-10)}
+                className="text-white hover:text-purple-400 transition-colors"
+              >
                 <SkipBack className="w-5 h-5" />
               </button>
-              
-              <button onClick={() => skip(10)} className="text-white hover:text-purple-400 transition-colors">
+
+              <button
+                onClick={() => skip(10)}
+                className="text-white hover:text-purple-400 transition-colors"
+              >
                 <SkipForward className="w-5 h-5" />
               </button>
 
               <div className="flex items-center space-x-2">
-                <button onClick={toggleMute} className="text-white hover:text-purple-400 transition-colors">
-                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                <button
+                  onClick={toggleMute}
+                  className="text-white hover:text-purple-400 transition-colors"
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-5 h-5" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
                 </button>
                 <input
                   type="range"
@@ -252,7 +296,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
                       <button
                         key={rate}
                         onClick={() => changePlaybackRate(rate)}
-                        className={`block w-full text-left px-3 py-1 text-sm hover:bg-purple-600 rounded ${playbackRate === rate ? 'text-purple-400' : 'text-white'}`}
+                        className={`block w-full text-left px-3 py-1 text-sm hover:bg-purple-600 rounded ${
+                          playbackRate === rate
+                            ? "text-purple-400"
+                            : "text-white"
+                        }`}
                       >
                         {rate}x
                       </button>
@@ -261,7 +309,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, 
                 </div>
               </div>
 
-              <button onClick={toggleFullscreen} className="text-white hover:text-purple-400 transition-colors">
+              <button
+                onClick={toggleFullscreen}
+                className="text-white hover:text-purple-400 transition-colors"
+              >
                 <Maximize className="w-5 h-5" />
               </button>
             </div>

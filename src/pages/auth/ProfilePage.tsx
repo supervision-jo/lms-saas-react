@@ -1,79 +1,147 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit, Award, BookOpen, Clock } from 'lucide-react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState } from "react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Camera,
+  Save,
+  Edit,
+  Award,
+  BookOpen,
+  Clock,
+} from "lucide-react";
 
-interface ProfilePageProps {
-  onNavigate: (page: string) => void;
-}
-
-const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
+const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
 
   const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    bio: 'Passionate learner and software developer with 5+ years of experience in web development. Love exploring new technologies and sharing knowledge with others.',
-    joinDate: 'January 2023',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200',
+    name: "John Doe",
+    email: "john.doe@example.com",
+    phone: "+1 (555) 123-4567",
+    location: "San Francisco, CA",
+    bio: "Passionate learner and software developer with 5+ years of experience in web development. Love exploring new technologies and sharing knowledge with others.",
+    joinDate: "January 2023",
+    avatar:
+      "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200",
   });
 
   const achievements = [
-    { id: '1', title: 'First Course Completed', icon: '🎓', date: '2024-01-15', description: 'Completed your first course' },
-    { id: '2', title: 'Week Streak', icon: '🔥', date: '2024-01-20', description: 'Learned for 7 consecutive days' },
-    { id: '3', title: 'Fast Learner', icon: '⚡', date: '2024-01-25', description: 'Completed 3 courses in one month' },
-    { id: '4', title: 'Quiz Master', icon: '🧠', date: '2024-02-01', description: 'Scored 100% on 5 quizzes' },
-    { id: '5', title: 'Community Helper', icon: '🤝', date: '2024-02-05', description: 'Helped 10 fellow students' },
-    { id: '6', title: 'Dedicated Student', icon: '📚', date: '2024-02-10', description: 'Spent 100+ hours learning' },
+    {
+      id: "1",
+      title: "First Course Completed",
+      icon: "🎓",
+      date: "2024-01-15",
+      description: "Completed your first course",
+    },
+    {
+      id: "2",
+      title: "Week Streak",
+      icon: "🔥",
+      date: "2024-01-20",
+      description: "Learned for 7 consecutive days",
+    },
+    {
+      id: "3",
+      title: "Fast Learner",
+      icon: "⚡",
+      date: "2024-01-25",
+      description: "Completed 3 courses in one month",
+    },
+    {
+      id: "4",
+      title: "Quiz Master",
+      icon: "🧠",
+      date: "2024-02-01",
+      description: "Scored 100% on 5 quizzes",
+    },
+    {
+      id: "5",
+      title: "Community Helper",
+      icon: "🤝",
+      date: "2024-02-05",
+      description: "Helped 10 fellow students",
+    },
+    {
+      id: "6",
+      title: "Dedicated Student",
+      icon: "📚",
+      date: "2024-02-10",
+      description: "Spent 100+ hours learning",
+    },
   ];
 
   const certificates = [
     {
-      id: '1',
-      title: 'Complete React Developer Course',
-      issueDate: '2024-01-30',
-      instructor: 'John Doe',
-      thumbnail: 'https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300',
+      id: "1",
+      title: "Complete React Developer Course",
+      issueDate: "2024-01-30",
+      instructor: "John Doe",
+      thumbnail:
+        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300",
     },
     {
-      id: '2',
-      title: 'Python for Data Science',
-      issueDate: '2024-02-15',
-      instructor: 'Jane Smith',
-      thumbnail: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300',
+      id: "2",
+      title: "Python for Data Science",
+      issueDate: "2024-02-15",
+      instructor: "Jane Smith",
+      thumbnail:
+        "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300",
     },
     {
-      id: '3',
-      title: 'UI/UX Design Fundamentals',
-      issueDate: '2024-02-28',
-      instructor: 'Alex Brown',
-      thumbnail: 'https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300',
+      id: "3",
+      title: "UI/UX Design Fundamentals",
+      issueDate: "2024-02-28",
+      instructor: "Alex Brown",
+      thumbnail:
+        "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300",
     },
   ];
 
   const learningStats = [
-    { label: 'Courses Completed', value: '12', icon: BookOpen, color: 'text-blue-600' },
-    { label: 'Hours Learned', value: '156', icon: Clock, color: 'text-green-600' },
-    { label: 'Certificates Earned', value: '8', icon: Award, color: 'text-purple-600' },
-    { label: 'Current Streak', value: '23 days', icon: Calendar, color: 'text-orange-600' },
+    {
+      label: "Courses Completed",
+      value: "12",
+      icon: BookOpen,
+      color: "text-blue-600",
+    },
+    {
+      label: "Hours Learned",
+      value: "156",
+      icon: Clock,
+      color: "text-green-600",
+    },
+    {
+      label: "Certificates Earned",
+      value: "8",
+      icon: Award,
+      color: "text-purple-600",
+    },
+    {
+      label: "Current Streak",
+      value: "23 days",
+      icon: Calendar,
+      color: "text-orange-600",
+    },
   ];
 
   const handleSave = () => {
     setIsEditing(false);
-    console.log('Profile saved:', profileData);
+    console.log("Profile saved:", profileData);
   };
 
   const handleDownloadCertificate = (certificate: any) => {
-    console.log('Downloading certificate for:', certificate.title);
+    console.log("Downloading certificate for:", certificate.title);
     // Create a mock download
-    const link = document.createElement('a');
-    link.href = '#';
+    const link = document.createElement("a");
+    link.href = "#";
     link.download = `${certificate.title}-certificate.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    alert('Certificate download started!');
+    alert("Certificate download started!");
   };
 
   return (
@@ -92,19 +160,21 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                 <Camera className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">{profileData.name}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">
+                  {profileData.name}
+                </h1>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? 'Cancel' : 'Edit Profile'}
+                  {isEditing ? "Cancel" : "Edit Profile"}
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600 mb-4">
                 <div className="flex items-center justify-center md:justify-start">
                   <Mail className="w-4 h-4 mr-2" />
@@ -123,7 +193,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                   <span>Joined {profileData.joinDate}</span>
                 </div>
               </div>
-              
+
               <p className="text-gray-700 leading-relaxed">{profileData.bio}</p>
             </div>
           </div>
@@ -132,11 +202,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
         {/* Learning Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {learningStats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm p-6 text-center">
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-sm p-6 text-center"
+            >
               <div className="flex items-center justify-center mb-3">
                 <stat.icon className={`w-8 h-8 ${stat.color}`} />
               </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                {stat.value}
+              </p>
               <p className="text-sm text-gray-600">{stat.label}</p>
             </div>
           ))}
@@ -147,17 +222,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: 'profile', label: 'Profile Settings' },
-                { id: 'achievements', label: 'Achievements' },
-                { id: 'certificates', label: 'Certificates' },
+                { id: "profile", label: "Profile Settings" },
+                { id: "achievements", label: "Achievements" },
+                { id: "certificates", label: "Certificates" },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.id
-                      ? 'border-purple-500 text-purple-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? "border-purple-500 text-purple-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   {tab.label}
@@ -168,56 +243,87 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'profile' && (
+        {activeTab === "profile" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Profile Settings</h3>
-            
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Profile Settings
+            </h3>
+
             {isEditing ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Full Name
+                    </label>
                     <input
                       type="text"
                       value={profileData.name}
-                      onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                      onChange={(e) =>
+                        setProfileData({ ...profileData, name: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
                     <input
                       type="email"
                       value={profileData.email}
-                      onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          email: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone
+                    </label>
                     <input
                       type="tel"
                       value={profileData.phone}
-                      onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          phone: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
                     <input
                       type="text"
                       value={profileData.location}
-                      onChange={(e) => setProfileData({...profileData, location: e.target.value})}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          location: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bio
+                  </label>
                   <textarea
                     rows={4}
                     value={profileData.bio}
-                    onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, bio: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
@@ -241,24 +347,34 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Full Name
+                    </label>
                     <p className="text-gray-900">{profileData.name}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
                     <p className="text-gray-900">{profileData.email}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone
+                    </label>
                     <p className="text-gray-900">{profileData.phone}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
                     <p className="text-gray-900">{profileData.location}</p>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bio
+                  </label>
                   <p className="text-gray-900">{profileData.bio}</p>
                 </div>
               </div>
@@ -266,15 +382,24 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
           </div>
         )}
 
-        {activeTab === 'achievements' && (
+        {activeTab === "achievements" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Achievements</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Achievements
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {achievements.map((achievement) => (
-                <div key={achievement.id} className="border border-gray-200 rounded-lg p-6 text-center hover:border-purple-300 transition-colors">
+                <div
+                  key={achievement.id}
+                  className="border border-gray-200 rounded-lg p-6 text-center hover:border-purple-300 transition-colors"
+                >
                   <div className="text-4xl mb-3">{achievement.icon}</div>
-                  <h4 className="font-semibold text-gray-900 mb-2">{achievement.title}</h4>
-                  <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {achievement.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {achievement.description}
+                  </p>
                   <p className="text-xs text-gray-500">{achievement.date}</p>
                 </div>
               ))}
@@ -282,22 +407,33 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
           </div>
         )}
 
-        {activeTab === 'certificates' && (
+        {activeTab === "certificates" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Certificates</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Certificates
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {certificates.map((certificate) => (
-                <div key={certificate.id} className="border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors">
+                <div
+                  key={certificate.id}
+                  className="border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors"
+                >
                   <img
                     src={certificate.thumbnail}
                     alt={certificate.title}
                     className="w-full h-32 object-cover"
                   />
                   <div className="p-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">{certificate.title}</h4>
-                    <p className="text-sm text-gray-600 mb-1">Instructor: {certificate.instructor}</p>
-                    <p className="text-sm text-gray-500 mb-3">Issued: {certificate.issueDate}</p>
-                    <button 
+                    <h4 className="font-semibold text-gray-900 mb-2">
+                      {certificate.title}
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Instructor: {certificate.instructor}
+                    </p>
+                    <p className="text-sm text-gray-500 mb-3">
+                      Issued: {certificate.issueDate}
+                    </p>
+                    <button
                       onClick={() => handleDownloadCertificate(certificate)}
                       className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors"
                     >

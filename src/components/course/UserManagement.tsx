@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Plus, Mail, Calendar, Search, Filter, MoreVertical, UserCheck, UserX } from 'lucide-react';
-import Modal from '../shared/Modal';
-import Button from '../shared/Button';
-import SearchInput from '../shared/SearchInput';
-import UserAvatar from '../shared/UserAvatar';
+import React, { useState } from "react";
+import { Plus, Mail, Calendar, Filter, UserCheck, UserX } from "lucide-react";
+import Modal from "../shared/Modal";
+import Button from "../shared/Button";
+import SearchInput from "../shared/SearchInput";
+import UserAvatar from "../shared/UserAvatar";
 
 interface User {
   id: string;
@@ -12,7 +12,7 @@ interface User {
   avatar?: string;
   enrollmentDate: string;
   progress: number;
-  status: 'active' | 'inactive' | 'completed';
+  status: "active" | "inactive" | "completed";
   lastActivity: string;
 }
 
@@ -21,56 +21,61 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
+  console.log(courseId);
+
   const [users, setUsers] = useState<User[]>([
     {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100',
-      enrollmentDate: '2024-01-15',
+      id: "1",
+      name: "John Doe",
+      email: "john.doe@example.com",
+      avatar:
+        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+      enrollmentDate: "2024-01-15",
       progress: 75,
-      status: 'active',
-      lastActivity: '2 hours ago',
+      status: "active",
+      lastActivity: "2 hours ago",
     },
     {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      enrollmentDate: '2024-01-20',
+      id: "2",
+      name: "Jane Smith",
+      email: "jane.smith@example.com",
+      enrollmentDate: "2024-01-20",
       progress: 100,
-      status: 'completed',
-      lastActivity: '1 day ago',
+      status: "completed",
+      lastActivity: "1 day ago",
     },
     {
-      id: '3',
-      name: 'Mike Johnson',
-      email: 'mike.johnson@example.com',
-      enrollmentDate: '2024-02-01',
+      id: "3",
+      name: "Mike Johnson",
+      email: "mike.johnson@example.com",
+      enrollmentDate: "2024-02-01",
       progress: 45,
-      status: 'active',
-      lastActivity: '5 hours ago',
+      status: "active",
+      lastActivity: "5 hours ago",
     },
     {
-      id: '4',
-      name: 'Sarah Wilson',
-      email: 'sarah.wilson@example.com',
-      enrollmentDate: '2024-02-05',
+      id: "4",
+      name: "Sarah Wilson",
+      email: "sarah.wilson@example.com",
+      enrollmentDate: "2024-02-05",
       progress: 20,
-      status: 'inactive',
-      lastActivity: '3 days ago',
+      status: "inactive",
+      lastActivity: "3 days ago",
     },
   ]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || user.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -78,42 +83,51 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
     if (!newUserEmail.trim()) return;
 
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       const newUser: User = {
         id: Date.now().toString(),
-        name: newUserEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        name: newUserEmail
+          .split("@")[0]
+          .replace(/[._]/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase()),
         email: newUserEmail,
-        enrollmentDate: new Date().toISOString().split('T')[0],
+        enrollmentDate: new Date().toISOString().split("T")[0],
         progress: 0,
-        status: 'active',
-        lastActivity: 'Just enrolled',
+        status: "active",
+        lastActivity: "Just enrolled",
       };
 
       setUsers([...users, newUser]);
-      setNewUserEmail('');
+      setNewUserEmail("");
       setIsAddUserModalOpen(false);
       setIsLoading(false);
     }, 1000);
   };
 
   const handleRemoveUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to remove this user from the course?')) {
-      setUsers(users.filter(user => user.id !== userId));
+    if (
+      window.confirm(
+        "Are you sure you want to remove this user from the course?"
+      )
+    ) {
+      setUsers(users.filter((user) => user.id !== userId));
     }
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { color: 'bg-green-100 text-green-800', label: 'Active' },
-      inactive: { color: 'bg-yellow-100 text-yellow-800', label: 'Inactive' },
-      completed: { color: 'bg-blue-100 text-blue-800', label: 'Completed' },
+      active: { color: "bg-green-100 text-green-800", label: "Active" },
+      inactive: { color: "bg-yellow-100 text-yellow-800", label: "Inactive" },
+      completed: { color: "bg-blue-100 text-blue-800", label: "Completed" },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig];
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
+      <span
+        className={`px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
+      >
         {config.label}
       </span>
     );
@@ -125,7 +139,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Course Users</h2>
-          <p className="text-gray-600 mt-1">{filteredUsers.length} of {users.length} users</p>
+          <p className="text-gray-600 mt-1">
+            {filteredUsers.length} of {users.length} users
+          </p>
         </div>
         <Button
           onClick={() => setIsAddUserModalOpen(true)}
@@ -144,7 +160,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
           placeholder="Search users by name or email..."
           className="flex-1"
         />
-        
+
         <div className="flex items-center space-x-2">
           <Filter className="w-4 h-4 text-gray-500" />
           <select
@@ -193,7 +209,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
                     <div className="flex items-center">
                       <UserAvatar name={user.name} avatar={user.avatar} />
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.name}
+                        </div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <Mail className="w-3 h-3 mr-1" />
                           {user.email}
@@ -209,7 +227,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
                           style={{ width: `${user.progress}%` }}
                         />
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{user.progress}%</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {user.progress}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -244,12 +264,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
             <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No users found
+            </h3>
             <p className="text-gray-500">
-              {searchQuery || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filters'
-                : 'Add users to get started'
-              }
+              {searchQuery || statusFilter !== "all"
+                ? "Try adjusting your search or filters"
+                : "Add users to get started"}
             </p>
           </div>
         )}
@@ -290,7 +311,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ courseId }) => {
               disabled={!newUserEmail.trim() || isLoading}
               variant="primary"
             >
-              {isLoading ? 'Adding...' : 'Add User'}
+              {isLoading ? "Adding..." : "Add User"}
             </Button>
           </div>
         </div>

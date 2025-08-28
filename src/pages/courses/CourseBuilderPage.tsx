@@ -1,20 +1,41 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit, Eye, Upload, Link, FileText, Award, GripVertical, ArrowLeft, Save, Video, Youtube, HelpCircle, Users, UserCheck } from 'lucide-react';
-import QuizBuilder from '../components/QuizBuilder';
-import QuizPreview from '../components/QuizPreview';
-import UserManagement from '../components/course/UserManagement';
-import GroupManagement from '../components/course/GroupManagement';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState } from "react";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  Upload,
+  Link,
+  FileText,
+  Award,
+  GripVertical,
+  ArrowLeft,
+  Save,
+  Video,
+  Youtube,
+  HelpCircle,
+  Users,
+  UserCheck,
+} from "lucide-react";
+import QuizBuilder from "../../components/quizes/QuizBuilder";
+import QuizPreview from "../../components/quizes/QuizPreview";
+import UserManagement from "../../components/course/UserManagement";
+import GroupManagement from "../../components/course/GroupManagement";
 
 interface Lesson {
   id: string;
   title: string;
-  type: 'video' | 'article' | 'quiz' | 'exam' | 'material';
+  type: "video" | "article" | "quiz" | "exam" | "material";
   content?: string;
   videoUrl?: string;
   youtubeUrl?: string;
   duration?: string;
   quiz?: any;
   order: number;
+  fileUrl?: any;
+  fileName?: any;
+  fileSize?: any;
 }
 
 interface Module {
@@ -39,30 +60,43 @@ interface Course {
 const CourseBuilderPage: React.FC = () => {
   const [course, setCourse] = useState<Course>({
     id: Date.now().toString(),
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     price: 0,
-    category: 'development',
-    level: 'beginner',
+    category: "development",
+    level: "beginner",
     modules: [],
   });
 
-  const [activeTab, setActiveTab] = useState('course-info');
+  const [activeTab, setActiveTab] = useState("course-info");
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [showQuizBuilder, setShowQuizBuilder] = useState(false);
   const [showQuizPreview, setShowQuizPreview] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<any>(null);
-  const [draggedItem, setDraggedItem] = useState<{ type: 'module' | 'lesson', id: string, moduleId?: string } | null>(null);
-  const [editingLesson, setEditingLesson] = useState<{ moduleId: string, lessonId: string } | null>(null);
-  const [editingArticle, setEditingArticle] = useState<{ moduleId: string, lessonId: string } | null>(null);
-  const [uploadingMaterial, setUploadingMaterial] = useState<{ moduleId: string, lessonId: string } | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{
+    type: "module" | "lesson";
+    id: string;
+    moduleId?: string;
+  } | null>(null);
+  const [editingLesson, setEditingLesson] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
+  const [editingArticle, setEditingArticle] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
+  const [uploadingMaterial, setUploadingMaterial] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
 
   const addModule = () => {
     const newModule: Module = {
       id: Date.now().toString(),
-      title: 'New Module',
-      description: '',
+      title: "New Module",
+      description: "",
       lessons: [],
       order: course.modules.length + 1,
     };
@@ -76,17 +110,17 @@ const CourseBuilderPage: React.FC = () => {
   const updateModule = (moduleId: string, updates: Partial<Module>) => {
     setCourse({
       ...course,
-      modules: course.modules.map(module =>
+      modules: course.modules.map((module) =>
         module.id === moduleId ? { ...module, ...updates } : module
       ),
     });
   };
 
   const deleteModule = (moduleId: string) => {
-    if (window.confirm('Are you sure you want to delete this module?')) {
+    if (window.confirm("Are you sure you want to delete this module?")) {
       setCourse({
         ...course,
-        modules: course.modules.filter(module => module.id !== moduleId),
+        modules: course.modules.filter((module) => module.id !== moduleId),
       });
       if (selectedModule === moduleId) {
         setSelectedModule(null);
@@ -94,7 +128,7 @@ const CourseBuilderPage: React.FC = () => {
     }
   };
 
-  const addLesson = (moduleId: string, type: Lesson['type']) => {
+  const addLesson = (moduleId: string, type: Lesson["type"]) => {
     const newLesson: Lesson = {
       id: Date.now().toString(),
       title: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
@@ -104,37 +138,44 @@ const CourseBuilderPage: React.FC = () => {
 
     setCourse({
       ...course,
-      modules: course.modules.map(module =>
+      modules: course.modules.map((module) =>
         module.id === moduleId
           ? {
               ...module,
-              lessons: [...module.lessons, { ...newLesson, order: module.lessons.length }],
+              lessons: [
+                ...module.lessons,
+                { ...newLesson, order: module.lessons.length },
+              ],
             }
           : module
       ),
     });
 
-    if (type === 'quiz') {
+    if (type === "quiz") {
       setSelectedLesson(newLesson.id);
       setSelectedModule(moduleId);
       setShowQuizBuilder(true);
-    } else if (type === 'video') {
+    } else if (type === "video") {
       setEditingLesson({ moduleId, lessonId: newLesson.id });
-    } else if (type === 'article') {
+    } else if (type === "article") {
       setEditingArticle({ moduleId, lessonId: newLesson.id });
-    } else if (type === 'material') {
+    } else if (type === "material") {
       setUploadingMaterial({ moduleId, lessonId: newLesson.id });
     }
   };
 
-  const updateLesson = (moduleId: string, lessonId: string, updates: Partial<Lesson>) => {
+  const updateLesson = (
+    moduleId: string,
+    lessonId: string,
+    updates: Partial<Lesson>
+  ) => {
     setCourse({
       ...course,
-      modules: course.modules.map(module =>
+      modules: course.modules.map((module) =>
         module.id === moduleId
           ? {
               ...module,
-              lessons: module.lessons.map(lesson =>
+              lessons: module.lessons.map((lesson) =>
                 lesson.id === lessonId ? { ...lesson, ...updates } : lesson
               ),
             }
@@ -144,14 +185,16 @@ const CourseBuilderPage: React.FC = () => {
   };
 
   const deleteLesson = (moduleId: string, lessonId: string) => {
-    if (window.confirm('Are you sure you want to delete this lesson?')) {
+    if (window.confirm("Are you sure you want to delete this lesson?")) {
       setCourse({
         ...course,
-        modules: course.modules.map(module =>
+        modules: course.modules.map((module) =>
           module.id === moduleId
             ? {
                 ...module,
-                lessons: module.lessons.filter(lesson => lesson.id !== lessonId),
+                lessons: module.lessons.filter(
+                  (lesson) => lesson.id !== lessonId
+                ),
               }
             : module
         ),
@@ -159,73 +202,100 @@ const CourseBuilderPage: React.FC = () => {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, type: 'module' | 'lesson', id: string, moduleId?: string) => {
+  const handleDragStart = (
+    e: React.DragEvent,
+    type: "module" | "lesson",
+    id: string,
+    moduleId?: string
+  ) => {
     setDraggedItem({ type, id, moduleId });
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (e: React.DragEvent, targetType: 'module' | 'lesson', targetId: string, targetModuleId?: string) => {
+  const handleDrop = (
+    e: React.DragEvent,
+    targetType: "module" | "lesson",
+    targetId: string,
+    targetModuleId?: string
+  ) => {
     e.preventDefault();
-    
+
     if (!draggedItem) return;
 
     // Handle module reordering
-    if (draggedItem.type === 'module' && targetType === 'module' && draggedItem.id !== targetId) {
+    if (
+      draggedItem.type === "module" &&
+      targetType === "module" &&
+      draggedItem.id !== targetId
+    ) {
       // Reorder modules
-      const draggedIndex = course.modules.findIndex(m => m.id === draggedItem.id);
-      const targetIndex = course.modules.findIndex(m => m.id === targetId);
-      
+      const draggedIndex = course.modules.findIndex(
+        (m) => m.id === draggedItem.id
+      );
+      const targetIndex = course.modules.findIndex((m) => m.id === targetId);
+
       const newModules = [...course.modules];
       const [draggedModule] = newModules.splice(draggedIndex, 1);
       newModules.splice(targetIndex, 0, draggedModule);
-      
+
       // Update order
       newModules.forEach((module, index) => {
         module.order = index;
       });
-      
+
       setCourse({ ...course, modules: newModules });
-    } 
+    }
     // Handle lesson reordering within the same module
-    else if (draggedItem.type === 'lesson' && targetType === 'lesson' && draggedItem.moduleId === targetModuleId && draggedItem.id !== targetId) {
+    else if (
+      draggedItem.type === "lesson" &&
+      targetType === "lesson" &&
+      draggedItem.moduleId === targetModuleId &&
+      draggedItem.id !== targetId
+    ) {
       // Reorder lessons within the same module
-      const moduleIndex = course.modules.findIndex(m => m.id === targetModuleId);
+      const moduleIndex = course.modules.findIndex(
+        (m) => m.id === targetModuleId
+      );
       if (moduleIndex === -1) return;
-      
+
       const module = course.modules[moduleIndex];
-      const draggedLessonIndex = module.lessons.findIndex(l => l.id === draggedItem.id);
-      const targetLessonIndex = module.lessons.findIndex(l => l.id === targetId);
-      
+      const draggedLessonIndex = module.lessons.findIndex(
+        (l) => l.id === draggedItem.id
+      );
+      const targetLessonIndex = module.lessons.findIndex(
+        (l) => l.id === targetId
+      );
+
       if (draggedLessonIndex === -1 || targetLessonIndex === -1) return;
-      
+
       const newLessons = [...module.lessons];
       const [draggedLesson] = newLessons.splice(draggedLessonIndex, 1);
       newLessons.splice(targetLessonIndex, 0, draggedLesson);
-      
+
       // Update order
       newLessons.forEach((lesson, index) => {
         lesson.order = index;
       });
-      
+
       const newModules = [...course.modules];
       newModules[moduleIndex] = { ...module, lessons: newLessons };
       setCourse({ ...course, modules: newModules });
     }
-    
+
     setDraggedItem(null);
   };
 
   const extractYouTubeVideoId = (url: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
@@ -252,8 +322,8 @@ const CourseBuilderPage: React.FC = () => {
   };
 
   const editQuiz = (moduleId: string, lessonId: string) => {
-    const module = course.modules.find(m => m.id === moduleId);
-    const lesson = module?.lessons.find(l => l.id === lessonId);
+    const module = course.modules.find((m) => m.id === moduleId);
+    const lesson = module?.lessons.find((l) => l.id === lessonId);
     if (lesson?.quiz) {
       setCurrentQuiz(lesson.quiz);
       setSelectedModule(moduleId);
@@ -263,23 +333,29 @@ const CourseBuilderPage: React.FC = () => {
   };
 
   const saveCourse = () => {
-    console.log('Saving course:', course);
-    alert('Course saved successfully!');
+    console.log("Saving course:", course);
+    alert("Course saved successfully!");
   };
 
   const publishCourse = () => {
-    console.log('Publishing course:', course);
-    alert('Course published successfully!');
+    console.log("Publishing course:", course);
+    alert("Course published successfully!");
   };
 
-  const getLessonIcon = (type: Lesson['type']) => {
+  const getLessonIcon = (type: Lesson["type"]) => {
     switch (type) {
-      case 'video': return <Video className="w-4 h-4" />;
-      case 'article': return <FileText className="w-4 h-4" />;
-      case 'quiz': return <HelpCircle className="w-4 h-4" />;
-      case 'exam': return <Award className="w-4 h-4" />;
-      case 'material': return <Upload className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
+      case "video":
+        return <Video className="w-4 h-4" />;
+      case "article":
+        return <FileText className="w-4 h-4" />;
+      case "quiz":
+        return <HelpCircle className="w-4 h-4" />;
+      case "exam":
+        return <Award className="w-4 h-4" />;
+      case "material":
+        return <Upload className="w-4 h-4" />;
+      default:
+        return <FileText className="w-4 h-4" />;
     }
   };
 
@@ -296,7 +372,9 @@ const CourseBuilderPage: React.FC = () => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-900">Course Builder</h1>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Course Builder
+              </h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -325,19 +403,19 @@ const CourseBuilderPage: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
               <nav className="space-y-2">
                 {[
-                  { id: 'course-info', label: 'Course Information' },
-                  { id: 'curriculum', label: 'Curriculum' },
-                  { id: 'users', label: 'Users', icon: Users },
-                  { id: 'groups', label: 'Groups', icon: UserCheck },
-                  { id: 'settings', label: 'Settings' },
+                  { id: "course-info", label: "Course Information" },
+                  { id: "curriculum", label: "Curriculum" },
+                  { id: "users", label: "Users", icon: Users },
+                  { id: "groups", label: "Groups", icon: UserCheck },
+                  { id: "settings", label: "Settings" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center ${
                       activeTab === tab.id
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? "bg-purple-100 text-purple-700"
+                        : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
                     {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
@@ -350,10 +428,12 @@ const CourseBuilderPage: React.FC = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            {activeTab === 'course-info' && (
+            {activeTab === "course-info" && (
               <div className="bg-white rounded-xl shadow-sm p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Course Information</h2>
-                
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Course Information
+                </h2>
+
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -362,7 +442,9 @@ const CourseBuilderPage: React.FC = () => {
                     <input
                       type="text"
                       value={course.title}
-                      onChange={(e) => setCourse({ ...course, title: e.target.value })}
+                      onChange={(e) =>
+                        setCourse({ ...course, title: e.target.value })
+                      }
                       placeholder="Enter course title"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
@@ -374,7 +456,9 @@ const CourseBuilderPage: React.FC = () => {
                     </label>
                     <textarea
                       value={course.description}
-                      onChange={(e) => setCourse({ ...course, description: e.target.value })}
+                      onChange={(e) =>
+                        setCourse({ ...course, description: e.target.value })
+                      }
                       placeholder="Describe what students will learn in this course"
                       rows={5}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -391,7 +475,12 @@ const CourseBuilderPage: React.FC = () => {
                         min="0"
                         step="0.01"
                         value={course.price}
-                        onChange={(e) => setCourse({ ...course, price: parseFloat(e.target.value) || 0 })}
+                        onChange={(e) =>
+                          setCourse({
+                            ...course,
+                            price: parseFloat(e.target.value) || 0,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
@@ -402,7 +491,9 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <select
                         value={course.category}
-                        onChange={(e) => setCourse({ ...course, category: e.target.value })}
+                        onChange={(e) =>
+                          setCourse({ ...course, category: e.target.value })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="development">Development</option>
@@ -420,7 +511,9 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <select
                         value={course.level}
-                        onChange={(e) => setCourse({ ...course, level: e.target.value })}
+                        onChange={(e) =>
+                          setCourse({ ...course, level: e.target.value })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="beginner">Beginner</option>
@@ -437,19 +530,25 @@ const CourseBuilderPage: React.FC = () => {
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600">Click to upload or drag and drop</p>
-                      <p className="text-sm text-gray-500 mt-1">PNG, JPG up to 2MB</p>
+                      <p className="text-gray-600">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        PNG, JPG up to 2MB
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'curriculum' && (
+            {activeTab === "curriculum" && (
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Curriculum</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Curriculum
+                    </h2>
                     <button
                       onClick={addModule}
                       className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
@@ -464,8 +563,12 @@ const CourseBuilderPage: React.FC = () => {
                       <div className="text-gray-400 mb-4">
                         <FileText className="w-16 h-16 mx-auto" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No modules yet</h3>
-                      <p className="text-gray-600 mb-4">Start building your course by adding your first module</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        No modules yet
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Start building your course by adding your first module
+                      </p>
                       <button
                         onClick={addModule}
                         className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
@@ -475,14 +578,16 @@ const CourseBuilderPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {course.modules.map((module, moduleIndex) => (
-                        <div 
-                          key={module.id} 
+                      {course.modules.map((module) => (
+                        <div
+                          key={module.id}
                           className="border border-gray-200 rounded-lg"
                           draggable
-                          onDragStart={(e) => handleDragStart(e, 'module', module.id)}
+                          onDragStart={(e) =>
+                            handleDragStart(e, "module", module.id)
+                          }
                           onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, 'module', module.id)}
+                          onDrop={(e) => handleDrop(e, "module", module.id)}
                         >
                           <div className="p-4 bg-gray-50 border-b border-gray-200">
                             <div className="flex items-center justify-between">
@@ -492,13 +597,21 @@ const CourseBuilderPage: React.FC = () => {
                                   <input
                                     type="text"
                                     value={module.title}
-                                    onChange={(e) => updateModule(module.id, { title: e.target.value })}
+                                    onChange={(e) =>
+                                      updateModule(module.id, {
+                                        title: e.target.value,
+                                      })
+                                    }
                                     className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                                   />
                                   <input
                                     type="text"
                                     value={module.description}
-                                    onChange={(e) => updateModule(module.id, { description: e.target.value })}
+                                    onChange={(e) =>
+                                      updateModule(module.id, {
+                                        description: e.target.value,
+                                      })
+                                    }
                                     placeholder="Module description"
                                     className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 w-full mt-1"
                                   />
@@ -511,35 +624,45 @@ const CourseBuilderPage: React.FC = () => {
                                   </button>
                                   <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 min-w-[150px]">
                                     <button
-                                      onClick={() => addLesson(module.id, 'video')}
+                                      onClick={() =>
+                                        addLesson(module.id, "video")
+                                      }
                                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                     >
                                       <Video className="w-4 h-4 mr-2" />
                                       Video
                                     </button>
                                     <button
-                                      onClick={() => addLesson(module.id, 'article')}
+                                      onClick={() =>
+                                        addLesson(module.id, "article")
+                                      }
                                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                     >
                                       <FileText className="w-4 h-4 mr-2" />
                                       Article
                                     </button>
                                     <button
-                                      onClick={() => addLesson(module.id, 'quiz')}
+                                      onClick={() =>
+                                        addLesson(module.id, "quiz")
+                                      }
                                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                     >
                                       <HelpCircle className="w-4 h-4 mr-2" />
                                       Quiz
                                     </button>
                                     <button
-                                      onClick={() => addLesson(module.id, 'exam')}
+                                      onClick={() =>
+                                        addLesson(module.id, "exam")
+                                      }
                                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                     >
                                       <Award className="w-4 h-4 mr-2" />
                                       Exam
                                     </button>
                                     <button
-                                      onClick={() => addLesson(module.id, 'material')}
+                                      onClick={() =>
+                                        addLesson(module.id, "material")
+                                      }
                                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                     >
                                       <Upload className="w-4 h-4 mr-2" />
@@ -560,14 +683,28 @@ const CourseBuilderPage: React.FC = () => {
                           {module.lessons.length > 0 && (
                             <div className="p-4">
                               <div className="space-y-2">
-                                {module.lessons.map((lesson, lessonIndex) => (
-                                  <div 
-                                    key={lesson.id} 
+                                {module.lessons.map((lesson) => (
+                                  <div
+                                    key={lesson.id}
                                     className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
                                     draggable
-                                    onDragStart={(e) => handleDragStart(e, 'lesson', lesson.id, module.id)}
+                                    onDragStart={(e) =>
+                                      handleDragStart(
+                                        e,
+                                        "lesson",
+                                        lesson.id,
+                                        module.id
+                                      )
+                                    }
                                     onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'lesson', lesson.id, module.id)}
+                                    onDrop={(e) =>
+                                      handleDrop(
+                                        e,
+                                        "lesson",
+                                        lesson.id,
+                                        module.id
+                                      )
+                                    }
                                   >
                                     <div className="flex items-center space-x-3">
                                       <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
@@ -576,10 +713,16 @@ const CourseBuilderPage: React.FC = () => {
                                         <input
                                           type="text"
                                           value={lesson.title}
-                                          onChange={(e) => updateLesson(module.id, lesson.id, { title: e.target.value })}
+                                          onChange={(e) =>
+                                            updateLesson(module.id, lesson.id, {
+                                              title: e.target.value,
+                                            })
+                                          }
                                           className="font-medium bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                                         />
-                                        <p className="text-sm text-gray-500 capitalize">{lesson.type}</p>
+                                        <p className="text-sm text-gray-500 capitalize">
+                                          {lesson.type}
+                                        </p>
                                         {lesson.youtubeUrl && (
                                           <div className="flex items-center text-xs text-red-600 mt-1">
                                             <Youtube className="w-3 h-3 mr-1" />
@@ -589,36 +732,53 @@ const CourseBuilderPage: React.FC = () => {
                                       </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                      {lesson.type === 'video' && (
+                                      {lesson.type === "video" && (
                                         <button
-                                          onClick={() => setEditingLesson({ moduleId: module.id, lessonId: lesson.id })}
+                                          onClick={() =>
+                                            setEditingLesson({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
                                           className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
                                           title="Edit Video"
                                         >
                                           <Link className="w-4 h-4" />
                                         </button>
                                       )}
-                                      {lesson.type === 'article' && (
+                                      {lesson.type === "article" && (
                                         <button
-                                          onClick={() => setEditingArticle({ moduleId: module.id, lessonId: lesson.id })}
+                                          onClick={() =>
+                                            setEditingArticle({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
                                           className="p-1 text-green-400 hover:text-green-600 transition-colors"
                                           title="Edit Article"
                                         >
                                           <Edit className="w-4 h-4" />
                                         </button>
                                       )}
-                                      {lesson.type === 'material' && (
+                                      {lesson.type === "material" && (
                                         <button
-                                          onClick={() => setUploadingMaterial({ moduleId: module.id, lessonId: lesson.id })}
+                                          onClick={() =>
+                                            setUploadingMaterial({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
                                           className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
                                           title="Upload Material"
                                         >
                                           <Upload className="w-4 h-4" />
                                         </button>
                                       )}
-                                      {lesson.type === 'quiz' && (
+                                      {lesson.type === "quiz" && (
                                         <button
-                                          onClick={() => editQuiz(module.id, lesson.id)}
+                                          onClick={() =>
+                                            editQuiz(module.id, lesson.id)
+                                          }
                                           className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
                                           title="Edit Quiz"
                                         >
@@ -626,7 +786,9 @@ const CourseBuilderPage: React.FC = () => {
                                         </button>
                                       )}
                                       <button
-                                        onClick={() => deleteLesson(module.id, lesson.id)}
+                                        onClick={() =>
+                                          deleteLesson(module.id, lesson.id)
+                                        }
                                         className="p-1 text-red-400 hover:text-red-600 transition-colors"
                                       >
                                         <Trash2 className="w-4 h-4" />
@@ -645,26 +807,30 @@ const CourseBuilderPage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'users' && (
-              <UserManagement courseId={course.id} />
-            )}
+            {activeTab === "users" && <UserManagement courseId={course.id} />}
 
-            {activeTab === 'groups' && (
-              <GroupManagement courseId={course.id} />
-            )}
+            {activeTab === "groups" && <GroupManagement courseId={course.id} />}
 
-            {activeTab === 'settings' && (
+            {activeTab === "settings" && (
               <div className="bg-white rounded-xl shadow-sm p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Course Settings</h2>
-                
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Course Settings
+                </h2>
+
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Publishing</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Publishing
+                    </h3>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div>
-                          <h4 className="font-medium text-gray-900">Course Status</h4>
-                          <p className="text-sm text-gray-600">Control who can see your course</p>
+                          <h4 className="font-medium text-gray-900">
+                            Course Status
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Control who can see your course
+                          </p>
                         </div>
                         <select className="border border-gray-300 rounded-lg px-3 py-2">
                           <option value="draft">Draft</option>
@@ -676,14 +842,24 @@ const CourseBuilderPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Enrollment</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Enrollment
+                    </h3>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div>
-                          <h4 className="font-medium text-gray-900">Auto-approve enrollments</h4>
-                          <p className="text-sm text-gray-600">Students can enroll immediately</p>
+                          <h4 className="font-medium text-gray-900">
+                            Auto-approve enrollments
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Students can enroll immediately
+                          </p>
                         </div>
-                        <input type="checkbox" className="h-4 w-4 text-purple-600" defaultChecked />
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-purple-600"
+                          defaultChecked
+                        />
                       </div>
                     </div>
                   </div>
@@ -736,15 +912,23 @@ const CourseBuilderPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Add Video Link</h3>
-              <p className="text-gray-600 mt-1">Add a YouTube video or upload your own video file</p>
+              <h3 className="text-xl font-bold text-gray-900">
+                Add Video Link
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Add a YouTube video or upload your own video file
+              </p>
             </div>
-            
+
             <div className="p-6">
               {(() => {
-                const module = course.modules.find(m => m.id === editingLesson.moduleId);
-                const lesson = module?.lessons.find(l => l.id === editingLesson.lessonId);
-                
+                const module = course.modules.find(
+                  (m) => m.id === editingLesson.moduleId
+                );
+                const lesson = module?.lessons.find(
+                  (l) => l.id === editingLesson.lessonId
+                );
+
                 return (
                   <div className="space-y-6">
                     {/* YouTube URL Input */}
@@ -758,13 +942,17 @@ const CourseBuilderPage: React.FC = () => {
                         </div>
                         <input
                           type="url"
-                          value={lesson?.youtubeUrl || ''}
+                          value={lesson?.youtubeUrl || ""}
                           onChange={(e) => {
                             if (editingLesson) {
-                              updateLesson(editingLesson.moduleId, editingLesson.lessonId, { 
-                                youtubeUrl: e.target.value,
-                                videoUrl: '' // Clear regular video URL when YouTube URL is set
-                              });
+                              updateLesson(
+                                editingLesson.moduleId,
+                                editingLesson.lessonId,
+                                {
+                                  youtubeUrl: e.target.value,
+                                  videoUrl: "", // Clear regular video URL when YouTube URL is set
+                                }
+                              );
                             }
                           }}
                           placeholder="https://www.youtube.com/watch?v=..."
@@ -772,26 +960,32 @@ const CourseBuilderPage: React.FC = () => {
                         />
                       </div>
                       <p className="mt-1 text-sm text-gray-500">
-                        Paste a YouTube video URL (supports youtube.com/watch, youtu.be, and youtube.com/embed formats)
+                        Paste a YouTube video URL (supports youtube.com/watch,
+                        youtu.be, and youtube.com/embed formats)
                       </p>
                     </div>
 
                     {/* YouTube Preview */}
-                    {lesson?.youtubeUrl && extractYouTubeVideoId(lesson.youtubeUrl) && (
-                      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <h4 className="font-medium text-gray-900 mb-3">Video Preview</h4>
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                          <img
-                            src={getYouTubeThumbnail(extractYouTubeVideoId(lesson.youtubeUrl)!)}
-                            alt="YouTube video thumbnail"
-                            className="w-full h-full object-cover"
-                          />
+                    {lesson?.youtubeUrl &&
+                      extractYouTubeVideoId(lesson.youtubeUrl) && (
+                        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                          <h4 className="font-medium text-gray-900 mb-3">
+                            Video Preview
+                          </h4>
+                          <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                            <img
+                              src={getYouTubeThumbnail(
+                                extractYouTubeVideoId(lesson.youtubeUrl)!
+                              )}
+                              alt="YouTube video thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <p className="text-sm text-gray-600 mt-2">
+                            Video ID: {extractYouTubeVideoId(lesson.youtubeUrl)}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-600 mt-2">
-                          Video ID: {extractYouTubeVideoId(lesson.youtubeUrl)}
-                        </p>
-                      </div>
-                    )}
+                      )}
 
                     {/* Divider */}
                     <div className="relative">
@@ -814,13 +1008,17 @@ const CourseBuilderPage: React.FC = () => {
                         </div>
                         <input
                           type="url"
-                          value={lesson?.videoUrl || ''}
+                          value={lesson?.videoUrl || ""}
                           onChange={(e) => {
                             if (editingLesson) {
-                              updateLesson(editingLesson.moduleId, editingLesson.lessonId, { 
-                                videoUrl: e.target.value,
-                                youtubeUrl: '' // Clear YouTube URL when regular video URL is set
-                              });
+                              updateLesson(
+                                editingLesson.moduleId,
+                                editingLesson.lessonId,
+                                {
+                                  videoUrl: e.target.value,
+                                  youtubeUrl: "", // Clear YouTube URL when regular video URL is set
+                                }
+                              );
                             }
                           }}
                           placeholder="https://example.com/video.mp4"
@@ -839,10 +1037,14 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={lesson?.duration || ''}
+                        value={lesson?.duration || ""}
                         onChange={(e) => {
                           if (editingLesson) {
-                            updateLesson(editingLesson.moduleId, editingLesson.lessonId, { duration: e.target.value });
+                            updateLesson(
+                              editingLesson.moduleId,
+                              editingLesson.lessonId,
+                              { duration: e.target.value }
+                            );
                           }
                         }}
                         placeholder="e.g., 15m 30s"
@@ -853,7 +1055,7 @@ const CourseBuilderPage: React.FC = () => {
                 );
               })()}
             </div>
-            
+
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
               <button
                 onClick={() => setEditingLesson(null)}
@@ -878,14 +1080,20 @@ const CourseBuilderPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900">Edit Article</h3>
-              <p className="text-gray-600 mt-1">Create rich text content for your lesson</p>
+              <p className="text-gray-600 mt-1">
+                Create rich text content for your lesson
+              </p>
             </div>
-            
+
             <div className="p-6">
               {(() => {
-                const module = course.modules.find(m => m.id === editingArticle.moduleId);
-                const lesson = module?.lessons.find(l => l.id === editingArticle.lessonId);
-                
+                const module = course.modules.find(
+                  (m) => m.id === editingArticle.moduleId
+                );
+                const lesson = module?.lessons.find(
+                  (l) => l.id === editingArticle.lessonId
+                );
+
                 return (
                   <div className="space-y-6">
                     {/* Article Title */}
@@ -895,10 +1103,14 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={lesson?.title || ''}
+                        value={lesson?.title || ""}
                         onChange={(e) => {
                           if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { title: e.target.value });
+                            updateLesson(
+                              editingArticle.moduleId,
+                              editingArticle.lessonId,
+                              { title: e.target.value }
+                            );
                           }
                         }}
                         placeholder="Enter article title"
@@ -912,10 +1124,14 @@ const CourseBuilderPage: React.FC = () => {
                         Article Content
                       </label>
                       <textarea
-                        value={lesson?.content || ''}
+                        value={lesson?.content || ""}
                         onChange={(e) => {
                           if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { content: e.target.value });
+                            updateLesson(
+                              editingArticle.moduleId,
+                              editingArticle.lessonId,
+                              { content: e.target.value }
+                            );
                           }
                         }}
                         placeholder="Write your article content here..."
@@ -934,10 +1150,14 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={lesson?.duration || ''}
+                        value={lesson?.duration || ""}
                         onChange={(e) => {
                           if (editingArticle) {
-                            updateLesson(editingArticle.moduleId, editingArticle.lessonId, { duration: e.target.value });
+                            updateLesson(
+                              editingArticle.moduleId,
+                              editingArticle.lessonId,
+                              { duration: e.target.value }
+                            );
                           }
                         }}
                         placeholder="e.g., 5 min read"
@@ -948,7 +1168,7 @@ const CourseBuilderPage: React.FC = () => {
                 );
               })()}
             </div>
-            
+
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
               <button
                 onClick={() => setEditingArticle(null)}
@@ -972,15 +1192,23 @@ const CourseBuilderPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Upload Material</h3>
-              <p className="text-gray-600 mt-1">Add downloadable resources for your students</p>
+              <h3 className="text-xl font-bold text-gray-900">
+                Upload Material
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Add downloadable resources for your students
+              </p>
             </div>
-            
+
             <div className="p-6">
               {(() => {
-                const module = course.modules.find(m => m.id === uploadingMaterial.moduleId);
-                const lesson = module?.lessons.find(l => l.id === uploadingMaterial.lessonId);
-                
+                const module = course.modules.find(
+                  (m) => m.id === uploadingMaterial.moduleId
+                );
+                const lesson = module?.lessons.find(
+                  (l) => l.id === uploadingMaterial.lessonId
+                );
+
                 return (
                   <div className="space-y-6">
                     {/* Material Title */}
@@ -990,10 +1218,14 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        value={lesson?.title || ''}
+                        value={lesson?.title || ""}
                         onChange={(e) => {
                           if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { title: e.target.value });
+                            updateLesson(
+                              uploadingMaterial.moduleId,
+                              uploadingMaterial.lessonId,
+                              { title: e.target.value }
+                            );
                           }
                         }}
                         placeholder="Enter material title"
@@ -1008,8 +1240,12 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer">
                         <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                        <p className="text-sm text-gray-500">PDF, DOC, ZIP, or any file type (Max 50MB)</p>
+                        <p className="text-gray-600 mb-2">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          PDF, DOC, ZIP, or any file type (Max 50MB)
+                        </p>
                         <input
                           type="file"
                           className="hidden"
@@ -1018,11 +1254,16 @@ const CourseBuilderPage: React.FC = () => {
                             if (file && uploadingMaterial) {
                               // Simulate file upload
                               const fileUrl = URL.createObjectURL(file);
-                              updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { 
-                                fileUrl: fileUrl,
-                                fileName: file.name,
-                                fileSize: Math.round(file.size / 1024) + ' KB'
-                              });
+                              updateLesson(
+                                uploadingMaterial.moduleId,
+                                uploadingMaterial.lessonId,
+                                {
+                                  fileUrl: fileUrl,
+                                  fileName: file.name,
+                                  fileSize:
+                                    Math.round(file.size / 1024) + " KB",
+                                }
+                              );
                             }
                           }}
                         />
@@ -1035,7 +1276,9 @@ const CourseBuilderPage: React.FC = () => {
                         <div className="w-full border-t border-gray-300" />
                       </div>
                       <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Or provide a download link</span>
+                        <span className="px-2 bg-white text-gray-500">
+                          Or provide a download link
+                        </span>
                       </div>
                     </div>
 
@@ -1045,10 +1288,14 @@ const CourseBuilderPage: React.FC = () => {
                       </label>
                       <input
                         type="url"
-                        value={lesson?.fileUrl || ''}
+                        value={lesson?.fileUrl || ""}
                         onChange={(e) => {
                           if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { fileUrl: e.target.value });
+                            updateLesson(
+                              uploadingMaterial.moduleId,
+                              uploadingMaterial.lessonId,
+                              { fileUrl: e.target.value }
+                            );
                           }
                         }}
                         placeholder="https://example.com/file.pdf"
@@ -1062,10 +1309,14 @@ const CourseBuilderPage: React.FC = () => {
                         Description
                       </label>
                       <textarea
-                        value={lesson?.content || ''}
+                        value={lesson?.content || ""}
                         onChange={(e) => {
                           if (uploadingMaterial) {
-                            updateLesson(uploadingMaterial.moduleId, uploadingMaterial.lessonId, { content: e.target.value });
+                            updateLesson(
+                              uploadingMaterial.moduleId,
+                              uploadingMaterial.lessonId,
+                              { content: e.target.value }
+                            );
                           }
                         }}
                         placeholder="Describe what this material contains..."
@@ -1077,7 +1328,7 @@ const CourseBuilderPage: React.FC = () => {
                 );
               })()}
             </div>
-            
+
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
               <button
                 onClick={() => setUploadingMaterial(null)}

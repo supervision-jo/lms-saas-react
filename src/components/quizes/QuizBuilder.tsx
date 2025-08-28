@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Check, X, Save, Eye, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Plus,
+  Trash2,
+  Check,
+  Save,
+  Eye,
+  GripVertical,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 interface AnswerOption {
   id: string;
@@ -31,44 +40,54 @@ interface QuizBuilderProps {
   initialQuiz?: Quiz;
 }
 
-const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQuiz }) => {
+const QuizBuilder: React.FC<QuizBuilderProps> = ({
+  onSave,
+  onPreview,
+  initialQuiz,
+}) => {
   const [quiz, setQuiz] = useState<Quiz>(
     initialQuiz || {
       id: Date.now().toString(),
-      title: '',
-      description: '',
+      title: "",
+      description: "",
       questions: [
         {
           id: Date.now().toString(),
-          question: '',
+          question: "",
           options: [
-            { id: '1', text: '', isCorrect: false },
-            { id: '2', text: '', isCorrect: false },
+            { id: "1", text: "", isCorrect: false },
+            { id: "2", text: "", isCorrect: false },
           ],
-          explanation: '',
+          explanation: "",
           points: 1,
           timeLimit: undefined,
-        }
+        },
       ],
       totalPoints: 1,
       totalTimeLimit: undefined,
     }
   );
 
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set([quiz.questions[0]?.id]));
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
+    new Set([quiz.questions[0]?.id])
+  );
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState<number | null>(null);
-  const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState<number | null>(null);
+  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState<
+    number | null
+  >(null);
+  const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState<
+    number | null
+  >(null);
 
   const addQuestion = () => {
     const newQuestion: Question = {
       id: Date.now().toString(),
-      question: '',
+      question: "",
       options: [
-        { id: Date.now().toString() + '_1', text: '', isCorrect: false },
-        { id: Date.now().toString() + '_2', text: '', isCorrect: false },
+        { id: Date.now().toString() + "_1", text: "", isCorrect: false },
+        { id: Date.now().toString() + "_2", text: "", isCorrect: false },
       ],
-      explanation: '',
+      explanation: "",
       points: 1,
       timeLimit: undefined,
     };
@@ -85,26 +104,26 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
 
   const removeQuestion = (questionId: string) => {
     if (quiz.questions.length <= 1) {
-      alert('A quiz must have at least 1 question');
+      alert("A quiz must have at least 1 question");
       return;
     }
 
-    const questionToRemove = quiz.questions.find(q => q.id === questionId);
+    const questionToRemove = quiz.questions.find((q) => q.id === questionId);
     const updatedQuiz = {
       ...quiz,
-      questions: quiz.questions.filter(q => q.id !== questionId),
+      questions: quiz.questions.filter((q) => q.id !== questionId),
       totalPoints: quiz.totalPoints - (questionToRemove?.points || 0),
     };
 
     setQuiz(updatedQuiz);
-    
+
     const newExpanded = new Set(expandedQuestions);
     newExpanded.delete(questionId);
     setExpandedQuestions(newExpanded);
   };
 
   const updateQuestion = (questionId: string, updates: Partial<Question>) => {
-    const updatedQuestions = quiz.questions.map(q => {
+    const updatedQuestions = quiz.questions.map((q) => {
       if (q.id === questionId) {
         const updatedQuestion = { ...q, ...updates };
         return updatedQuestion;
@@ -125,44 +144,47 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
   const addOption = (questionId: string) => {
     const newOption: AnswerOption = {
       id: Date.now().toString(),
-      text: '',
+      text: "",
       isCorrect: false,
     };
 
     updateQuestion(questionId, {
-      options: [...(quiz.questions.find(q => q.id === questionId)?.options || []), newOption],
+      options: [
+        ...(quiz.questions.find((q) => q.id === questionId)?.options || []),
+        newOption,
+      ],
     });
   };
 
   const removeOption = (questionId: string, optionId: string) => {
-    const question = quiz.questions.find(q => q.id === questionId);
+    const question = quiz.questions.find((q) => q.id === questionId);
     if (!question || question.options.length <= 2) {
-      alert('A question must have at least 2 options');
+      alert("A question must have at least 2 options");
       return;
     }
 
     updateQuestion(questionId, {
-      options: question.options.filter(option => option.id !== optionId),
+      options: question.options.filter((option) => option.id !== optionId),
     });
   };
 
   const updateOption = (questionId: string, optionId: string, text: string) => {
-    const question = quiz.questions.find(q => q.id === questionId);
+    const question = quiz.questions.find((q) => q.id === questionId);
     if (!question) return;
 
     updateQuestion(questionId, {
-      options: question.options.map(option =>
+      options: question.options.map((option) =>
         option.id === optionId ? { ...option, text } : option
       ),
     });
   };
 
   const toggleCorrectAnswer = (questionId: string, optionId: string) => {
-    const question = quiz.questions.find(q => q.id === questionId);
+    const question = quiz.questions.find((q) => q.id === questionId);
     if (!question) return;
 
     updateQuestion(questionId, {
-      options: question.options.map(option =>
+      options: question.options.map((option) =>
         option.id === optionId
           ? { ...option, isCorrect: !option.isCorrect }
           : option
@@ -181,12 +203,18 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
   };
 
   // Question drag and drop handlers
-  const handleQuestionDragStart = (e: React.DragEvent, questionIndex: number) => {
+  const handleQuestionDragStart = (
+    e: React.DragEvent,
+    questionIndex: number
+  ) => {
     setDraggedQuestionIndex(questionIndex);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleQuestionDragOver = (e: React.DragEvent, questionIndex: number) => {
+  const handleQuestionDragOver = (
+    e: React.DragEvent,
+    questionIndex: number
+  ) => {
     e.preventDefault();
     setDragOverQuestionIndex(questionIndex);
   };
@@ -194,7 +222,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
   const handleQuestionDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     setDragOverQuestionIndex(null);
-    
+
     if (draggedQuestionIndex === null || draggedQuestionIndex === dropIndex) {
       setDraggedQuestionIndex(null);
       return;
@@ -202,19 +230,20 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
 
     const newQuestions = [...quiz.questions];
     const draggedQuestion = newQuestions[draggedQuestionIndex];
-    
+
     // Remove the dragged question
     newQuestions.splice(draggedQuestionIndex, 1);
-    
+
     // Insert at new position
-    const insertIndex = draggedQuestionIndex < dropIndex ? dropIndex - 1 : dropIndex;
+    const insertIndex =
+      draggedQuestionIndex < dropIndex ? dropIndex - 1 : dropIndex;
     newQuestions.splice(insertIndex, 0, draggedQuestion);
-    
+
     setQuiz({
       ...quiz,
       questions: newQuestions,
     });
-    
+
     setDraggedQuestionIndex(null);
   };
 
@@ -227,24 +256,32 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
     const newErrors: { [key: string]: string } = {};
 
     if (!quiz.title.trim()) {
-      newErrors.title = 'Quiz title is required';
+      newErrors.title = "Quiz title is required";
     }
 
     quiz.questions.forEach((question, index) => {
       if (!question.question.trim()) {
-        newErrors[`question_${question.id}`] = `Question ${index + 1} text is required`;
+        newErrors[`question_${question.id}`] = `Question ${
+          index + 1
+        } text is required`;
       }
 
-      if (question.options.some(option => !option.text.trim())) {
-        newErrors[`options_${question.id}`] = `All options in question ${index + 1} must have text`;
+      if (question.options.some((option) => !option.text.trim())) {
+        newErrors[`options_${question.id}`] = `All options in question ${
+          index + 1
+        } must have text`;
       }
 
-      if (!question.options.some(option => option.isCorrect)) {
-        newErrors[`correct_${question.id}`] = `Question ${index + 1} must have at least one correct answer`;
+      if (!question.options.some((option) => option.isCorrect)) {
+        newErrors[`correct_${question.id}`] = `Question ${
+          index + 1
+        } must have at least one correct answer`;
       }
 
       if (question.points < 1) {
-        newErrors[`points_${question.id}`] = `Question ${index + 1} points must be at least 1`;
+        newErrors[`points_${question.id}`] = `Question ${
+          index + 1
+        } points must be at least 1`;
       }
     });
 
@@ -268,14 +305,18 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
     <div className="bg-white rounded-xl shadow-lg p-8 max-w-6xl mx-auto max-h-[90vh] overflow-y-auto">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz Builder</h2>
-        <p className="text-gray-600">Create engaging quizzes with multiple questions and answer options</p>
+        <p className="text-gray-600">
+          Create engaging quizzes with multiple questions and answer options
+        </p>
       </div>
 
       <div className="space-y-8">
         {/* Quiz Info */}
         <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quiz Information</h3>
-          
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Quiz Information
+          </h3>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -287,7 +328,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                 onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
                 placeholder="Enter quiz title"
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.title ? 'border-red-300' : 'border-gray-300'
+                  errors.title ? "border-red-300" : "border-gray-300"
                 }`}
               />
               {errors.title && (
@@ -303,8 +344,15 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                 type="number"
                 min="1"
                 max="180"
-                value={quiz.totalTimeLimit || ''}
-                onChange={(e) => setQuiz({ ...quiz, totalTimeLimit: e.target.value ? parseInt(e.target.value) * 60 : undefined })}
+                value={quiz.totalTimeLimit || ""}
+                onChange={(e) =>
+                  setQuiz({
+                    ...quiz,
+                    totalTimeLimit: e.target.value
+                      ? parseInt(e.target.value) * 60
+                      : undefined,
+                  })
+                }
                 placeholder="Optional"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
@@ -316,8 +364,10 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
               Description (Optional)
             </label>
             <textarea
-              value={quiz.description || ''}
-              onChange={(e) => setQuiz({ ...quiz, description: e.target.value })}
+              value={quiz.description || ""}
+              onChange={(e) =>
+                setQuiz({ ...quiz, description: e.target.value })
+              }
               placeholder="Brief description of the quiz"
               rows={2}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -345,20 +395,18 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
               const isExpanded = expandedQuestions.has(question.id);
               const isDragging = draggedQuestionIndex === questionIndex;
               const isDragOver = dragOverQuestionIndex === questionIndex;
-              
+
               return (
-                <div 
-                  key={question.id} 
+                <div
+                  key={question.id}
                   draggable
                   onDragStart={(e) => handleQuestionDragStart(e, questionIndex)}
                   onDragOver={(e) => handleQuestionDragOver(e, questionIndex)}
                   onDrop={(e) => handleQuestionDrop(e, questionIndex)}
                   onDragEnd={handleQuestionDragEnd}
                   className={`border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 ${
-                    isDragging ? 'opacity-50 transform rotate-2' : ''
-                  } ${
-                    isDragOver ? 'border-purple-400 bg-purple-50' : ''
-                  }`}
+                    isDragging ? "opacity-50 transform rotate-2" : ""
+                  } ${isDragOver ? "border-purple-400 bg-purple-50" : ""}`}
                 >
                   {/* Question Header */}
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
@@ -376,23 +424,32 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">
                             Question {questionIndex + 1}
-                            {question.question && `: ${question.question.substring(0, 50)}${question.question.length > 50 ? '...' : ''}`}
+                            {question.question &&
+                              `: ${question.question.substring(0, 50)}${
+                                question.question.length > 50 ? "..." : ""
+                              }`}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {question.options.length} options • {question.points} point{question.points !== 1 ? 's' : ''}
+                            {question.options.length} options •{" "}
+                            {question.points} point
+                            {question.points !== 1 ? "s" : ""}
                           </p>
                         </div>
                       </button>
-                      
+
                       <button
                         onClick={() => removeQuestion(question.id)}
                         disabled={quiz.questions.length <= 1}
                         className={`p-2 rounded-lg transition-colors ${
                           quiz.questions.length <= 1
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-red-500 hover:bg-red-50'
+                            ? "text-gray-300 cursor-not-allowed"
+                            : "text-red-500 hover:bg-red-50"
                         }`}
-                        title={quiz.questions.length <= 1 ? 'Minimum 1 question required' : 'Remove question'}
+                        title={
+                          quiz.questions.length <= 1
+                            ? "Minimum 1 question required"
+                            : "Remove question"
+                        }
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -409,15 +466,23 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                         </label>
                         <textarea
                           value={question.question}
-                          onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
+                          onChange={(e) =>
+                            updateQuestion(question.id, {
+                              question: e.target.value,
+                            })
+                          }
                           placeholder="Enter your question here..."
                           rows={3}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
-                            errors[`question_${question.id}`] ? 'border-red-300' : 'border-gray-300'
+                            errors[`question_${question.id}`]
+                              ? "border-red-300"
+                              : "border-gray-300"
                           }`}
                         />
                         {errors[`question_${question.id}`] && (
-                          <p className="mt-1 text-sm text-red-600">{errors[`question_${question.id}`]}</p>
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors[`question_${question.id}`]}
+                          </p>
                         )}
                       </div>
 
@@ -438,21 +503,32 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
 
                         <div className="space-y-3">
                           {question.options.map((option, optionIndex) => (
-                            <div key={option.id} className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg">
+                            <div
+                              key={option.id}
+                              className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg"
+                            >
                               <div className="flex items-center mt-1">
                                 <span className="text-sm font-medium text-gray-500 mr-3">
                                   {String.fromCharCode(65 + optionIndex)}.
                                 </span>
                                 <button
-                                  onClick={() => toggleCorrectAnswer(question.id, option.id)}
+                                  onClick={() =>
+                                    toggleCorrectAnswer(question.id, option.id)
+                                  }
                                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                                     option.isCorrect
-                                      ? 'bg-green-500 border-green-500 text-white'
-                                      : 'border-gray-300 hover:border-green-400'
+                                      ? "bg-green-500 border-green-500 text-white"
+                                      : "border-gray-300 hover:border-green-400"
                                   }`}
-                                  title={option.isCorrect ? 'Correct answer' : 'Mark as correct'}
+                                  title={
+                                    option.isCorrect
+                                      ? "Correct answer"
+                                      : "Mark as correct"
+                                  }
                                 >
-                                  {option.isCorrect && <Check className="w-3 h-3" />}
+                                  {option.isCorrect && (
+                                    <Check className="w-3 h-3" />
+                                  )}
                                 </button>
                               </div>
 
@@ -460,21 +536,35 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                                 <input
                                   type="text"
                                   value={option.text}
-                                  onChange={(e) => updateOption(question.id, option.id, e.target.value)}
-                                  placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`}
+                                  onChange={(e) =>
+                                    updateOption(
+                                      question.id,
+                                      option.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder={`Option ${String.fromCharCode(
+                                    65 + optionIndex
+                                  )}`}
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                               </div>
 
                               <button
-                                onClick={() => removeOption(question.id, option.id)}
+                                onClick={() =>
+                                  removeOption(question.id, option.id)
+                                }
                                 disabled={question.options.length <= 2}
                                 className={`p-1 rounded transition-colors ${
                                   question.options.length <= 2
-                                    ? 'text-gray-300 cursor-not-allowed'
-                                    : 'text-red-500 hover:bg-red-50'
+                                    ? "text-gray-300 cursor-not-allowed"
+                                    : "text-red-500 hover:bg-red-50"
                                 }`}
-                                title={question.options.length <= 2 ? 'Minimum 2 options required' : 'Remove option'}
+                                title={
+                                  question.options.length <= 2
+                                    ? "Minimum 2 options required"
+                                    : "Remove option"
+                                }
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -483,10 +573,14 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                         </div>
 
                         {errors[`options_${question.id}`] && (
-                          <p className="mt-2 text-sm text-red-600">{errors[`options_${question.id}`]}</p>
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors[`options_${question.id}`]}
+                          </p>
                         )}
                         {errors[`correct_${question.id}`] && (
-                          <p className="mt-2 text-sm text-red-600">{errors[`correct_${question.id}`]}</p>
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors[`correct_${question.id}`]}
+                          </p>
                         )}
                       </div>
 
@@ -501,13 +595,21 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                             min="1"
                             max="100"
                             value={question.points}
-                            onChange={(e) => updateQuestion(question.id, { points: parseInt(e.target.value) || 1 })}
+                            onChange={(e) =>
+                              updateQuestion(question.id, {
+                                points: parseInt(e.target.value) || 1,
+                              })
+                            }
                             className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                              errors[`points_${question.id}`] ? 'border-red-300' : 'border-gray-300'
+                              errors[`points_${question.id}`]
+                                ? "border-red-300"
+                                : "border-gray-300"
                             }`}
                           />
                           {errors[`points_${question.id}`] && (
-                            <p className="mt-1 text-sm text-red-600">{errors[`points_${question.id}`]}</p>
+                            <p className="mt-1 text-sm text-red-600">
+                              {errors[`points_${question.id}`]}
+                            </p>
                           )}
                         </div>
 
@@ -519,8 +621,14 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                             type="number"
                             min="10"
                             max="600"
-                            value={question.timeLimit || ''}
-                            onChange={(e) => updateQuestion(question.id, { timeLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                            value={question.timeLimit || ""}
+                            onChange={(e) =>
+                              updateQuestion(question.id, {
+                                timeLimit: e.target.value
+                                  ? parseInt(e.target.value)
+                                  : undefined,
+                              })
+                            }
                             placeholder="Optional"
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
@@ -533,8 +641,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
                           Explanation (Optional)
                         </label>
                         <textarea
-                          value={question.explanation || ''}
-                          onChange={(e) => updateQuestion(question.id, { explanation: e.target.value })}
+                          value={question.explanation || ""}
+                          onChange={(e) =>
+                            updateQuestion(question.id, {
+                              explanation: e.target.value,
+                            })
+                          }
                           placeholder="Provide an explanation for the correct answer..."
                           rows={2}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -554,11 +666,15 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-blue-700">Questions:</span>
-              <span className="font-semibold text-blue-900 ml-2">{quiz.questions.length}</span>
+              <span className="font-semibold text-blue-900 ml-2">
+                {quiz.questions.length}
+              </span>
             </div>
             <div>
               <span className="text-blue-700">Total Points:</span>
-              <span className="font-semibold text-blue-900 ml-2">{quiz.totalPoints}</span>
+              <span className="font-semibold text-blue-900 ml-2">
+                {quiz.totalPoints}
+              </span>
             </div>
             <div>
               <span className="text-blue-700">Total Options:</span>
@@ -569,7 +685,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
             <div>
               <span className="text-blue-700">Est. Time:</span>
               <span className="font-semibold text-blue-900 ml-2">
-                {quiz.totalTimeLimit ? `${Math.floor(quiz.totalTimeLimit / 60)}m` : 'No limit'}
+                {quiz.totalTimeLimit
+                  ? `${Math.floor(quiz.totalTimeLimit / 60)}m`
+                  : "No limit"}
               </span>
             </div>
           </div>
@@ -578,9 +696,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({ onSave, onPreview, initialQui
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-gray-200">
           <div className="text-sm text-gray-600">
-            {quiz.questions.length} question{quiz.questions.length !== 1 ? 's' : ''} • {quiz.totalPoints} total point{quiz.totalPoints !== 1 ? 's' : ''}
+            {quiz.questions.length} question
+            {quiz.questions.length !== 1 ? "s" : ""} • {quiz.totalPoints} total
+            point{quiz.totalPoints !== 1 ? "s" : ""}
           </div>
-          
+
           <div className="flex space-x-4">
             <button
               onClick={handlePreview}
