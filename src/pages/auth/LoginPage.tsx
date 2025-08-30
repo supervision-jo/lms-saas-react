@@ -1,35 +1,60 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { USER_KEY } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import handleErrorAlerts from "../../utils/showErrorMessages";
+
+interface FormValues {
+  email: string;
+  password: string;
+}
 
 const LoginPage: React.FC = () => {
   const { setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<FormValues>({
+    mode: "onChange",
+    reValidateMode: "onChange",
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    // Simulate login process
-    setTimeout(() => {
-      const user = {
-        name: "John Doe",
-        email: email,
-        avatar:
-          "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-      };
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-      navigate("/");
+  // const signUp = useCustomPost("/path-to-backend/", ["users", "sign-up"]);
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const formData = new FormData();
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+
+      // const res = await signUp.mutateAsync(formData);
+
+      toast.success("Logged in successfully!");
+
       setIsAuthenticated();
-      setIsLoading(false);
-    }, 1500);
+      reset();
+      navigate("/");
+    } catch (error: any) {
+      const payload = error?.response?.data;
+      handleErrorAlerts(
+        payload?.message || "There is an unexpected error occured."
+      );
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -42,6 +67,10 @@ const LoginPage: React.FC = () => {
         email: "john.doe@gmail.com",
         avatar:
           "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+        joinDate: "August 2025",
+        location: "",
+        phone: "",
+        bio: "",
       };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       navigate("/");
@@ -64,7 +93,7 @@ const LoginPage: React.FC = () => {
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -76,13 +105,24 @@ const LoginPage: React.FC = () => {
                 </div>
                 <input
                   type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+                      message: "Please enter a valid email.",
+                    },
+                  })}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
+                    errors.email ? "border-red-300" : "border-gray-300"
+                  }`}
                   placeholder="Enter your email"
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -96,9 +136,9 @@ const LoginPage: React.FC = () => {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password", {
+                    required: "Password is required",
+                  })}
                   className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                   placeholder="Enter your password"
                 />
@@ -114,6 +154,11 @@ const LoginPage: React.FC = () => {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -144,10 +189,10 @@ const LoginPage: React.FC = () => {
             {/* Login Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>

@@ -6,131 +6,77 @@ import {
   MapPin,
   Calendar,
   Camera,
-  Save,
   Edit,
+  Clock,
+  BookOpen,
+  Award,
+  LucideIcon,
+  // Award,
+  // BookOpen,
+  // Clock,
+} from "lucide-react";
+import EditUserProfile from "../../components/userProfile/EditUserProfile";
+import { readUserFromStorage } from "../../services/auth";
+import toast from "react-hot-toast";
+import { useCustomQuery } from "../../hooks/useQuery";
+
+const ICONS = {
   Award,
   BookOpen,
   Clock,
-} from "lucide-react";
+  Calendar,
+} as const;
+
+type IconName = keyof typeof ICONS;
+
+type LearningState = {
+  label: string;
+  value: string;
+  icon: IconName;
+  color: string;
+};
 
 const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
-  const [profileData, setProfileData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    location: "San Francisco, CA",
-    bio: "Passionate learner and software developer with 5+ years of experience in web development. Love exploring new technologies and sharing knowledge with others.",
-    joinDate: "January 2023",
-    avatar:
-      "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200",
-  });
+  // const [profileData, setProfileData] = useState({
+  //   name: "John Doe",
+  //   email: "john.doe@example.com",
+  //   phone: "+1 (555) 123-4567",
+  //   location: "San Francisco, CA",
+  //   bio: "Passionate learner and software developer with 5+ years of experience in web development. Love exploring new technologies and sharing knowledge with others.",
+  //   joinDate: "January 2023",
+  //   avatar:
+  //     "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200",
+  // });
 
-  const achievements = [
-    {
-      id: "1",
-      title: "First Course Completed",
-      icon: "🎓",
-      date: "2024-01-15",
-      description: "Completed your first course",
-    },
-    {
-      id: "2",
-      title: "Week Streak",
-      icon: "🔥",
-      date: "2024-01-20",
-      description: "Learned for 7 consecutive days",
-    },
-    {
-      id: "3",
-      title: "Fast Learner",
-      icon: "⚡",
-      date: "2024-01-25",
-      description: "Completed 3 courses in one month",
-    },
-    {
-      id: "4",
-      title: "Quiz Master",
-      icon: "🧠",
-      date: "2024-02-01",
-      description: "Scored 100% on 5 quizzes",
-    },
-    {
-      id: "5",
-      title: "Community Helper",
-      icon: "🤝",
-      date: "2024-02-05",
-      description: "Helped 10 fellow students",
-    },
-    {
-      id: "6",
-      title: "Dedicated Student",
-      icon: "📚",
-      date: "2024-02-10",
-      description: "Spent 100+ hours learning",
-    },
-  ];
+  const profileData = readUserFromStorage();
 
-  const certificates = [
-    {
-      id: "1",
-      title: "Complete React Developer Course",
-      issueDate: "2024-01-30",
-      instructor: "John Doe",
-      thumbnail:
-        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300",
-    },
-    {
-      id: "2",
-      title: "Python for Data Science",
-      issueDate: "2024-02-15",
-      instructor: "Jane Smith",
-      thumbnail:
-        "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300",
-    },
-    {
-      id: "3",
-      title: "UI/UX Design Fundamentals",
-      issueDate: "2024-02-28",
-      instructor: "Alex Brown",
-      thumbnail:
-        "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300",
-    },
-  ];
+  const achievementsData = useCustomQuery("/data/achievements.json", [
+    "achievements",
+    // profileData.id,
+  ]);
+  const certificatesData = useCustomQuery("/data/certificates.json", [
+    "certificates",
+    // profileData.id,
+  ]);
+  const learningStatsData = useCustomQuery("/data/learningStats.json", [
+    "learningStats",
+    // profileData.id,
+  ]);
 
-  const learningStats = [
-    {
-      label: "Courses Completed",
-      value: "12",
-      icon: BookOpen,
-      color: "text-blue-600",
-    },
-    {
-      label: "Hours Learned",
-      value: "156",
-      icon: Clock,
-      color: "text-green-600",
-    },
-    {
-      label: "Certificates Earned",
-      value: "8",
-      icon: Award,
-      color: "text-purple-600",
-    },
-    {
-      label: "Current Streak",
-      value: "23 days",
-      icon: Calendar,
-      color: "text-orange-600",
-    },
-  ];
+  const achievements: Acheivement[] = achievementsData?.data?.data ?? [];
 
-  const handleSave = () => {
-    setIsEditing(false);
-    console.log("Profile saved:", profileData);
-  };
+  const certificates: Certificate[] = certificatesData?.data?.data ?? [];
+
+  const learningStats =
+    (learningStatsData?.data?.data as LearningState[] | undefined)?.map(
+      (s: LearningState) => ({
+        ...s,
+        Icon: ICONS[s.icon] as LucideIcon,
+      })
+    ) ?? [];
 
   const handleDownloadCertificate = (certificate: any) => {
     console.log("Downloading certificate for:", certificate.title);
@@ -141,7 +87,7 @@ const ProfilePage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    alert("Certificate download started!");
+    toast.success("Certificate download started!");
   };
 
   return (
@@ -178,36 +124,38 @@ const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600 mb-4">
                 <div className="flex items-center justify-center md:justify-start">
                   <Mail className="w-4 h-4 mr-2" />
-                  <span>{profileData.email}</span>
+                  <span>{profileData.email || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <Phone className="w-4 h-4 mr-2" />
-                  <span>{profileData.phone}</span>
+                  <span>{profileData.phone || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <MapPin className="w-4 h-4 mr-2" />
-                  <span>{profileData.location}</span>
+                  <span>{profileData.location || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <Calendar className="w-4 h-4 mr-2" />
-                  <span>Joined {profileData.joinDate}</span>
+                  <span>Joined {profileData.joinDate || "--"}</span>
                 </div>
               </div>
 
-              <p className="text-gray-700 leading-relaxed">{profileData.bio}</p>
+              <p className="text-gray-700 leading-relaxed">
+                {profileData.bio || "--"}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Learning Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {learningStats.map((stat, index) => (
+          {learningStats?.map((stat, index) => (
             <div
               key={index}
               className="bg-white rounded-xl shadow-sm p-6 text-center"
             >
               <div className="flex items-center justify-center mb-3">
-                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                <stat.Icon className={`w-8 h-8 ${stat.color}`} />
               </div>
               <p className="text-2xl font-bold text-gray-900 mb-1">
                 {stat.value}
@@ -250,99 +198,7 @@ const ProfilePage: React.FC = () => {
             </h3>
 
             {isEditing ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.name}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, name: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          email: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          phone: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.location}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          location: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={profileData.bio}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, bio: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </button>
-                </div>
-              </div>
+              <EditUserProfile setIsEditing={setIsEditing} />
             ) : (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -350,32 +206,34 @@ const ProfilePage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name
                     </label>
-                    <p className="text-gray-900">{profileData.name}</p>
+                    <p className="text-gray-900">{profileData.name || "--"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
                     </label>
-                    <p className="text-gray-900">{profileData.email}</p>
+                    <p className="text-gray-900">{profileData.email || "--"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone
                     </label>
-                    <p className="text-gray-900">{profileData.phone}</p>
+                    <p className="text-gray-900">{profileData.phone || "--"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Location
                     </label>
-                    <p className="text-gray-900">{profileData.location}</p>
+                    <p className="text-gray-900">
+                      {profileData.location || "--"}
+                    </p>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Bio
                   </label>
-                  <p className="text-gray-900">{profileData.bio}</p>
+                  <p className="text-gray-900">{profileData.bio || "--"}</p>
                 </div>
               </div>
             )}

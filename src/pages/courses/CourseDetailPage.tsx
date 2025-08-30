@@ -11,6 +11,8 @@ import {
   Play,
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { useParams } from "react-router";
 
 interface CourseDetailPageProps {
   onNavigateToPlayer?: () => void;
@@ -19,279 +21,18 @@ interface CourseDetailPageProps {
 const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
   onNavigateToPlayer,
 }) => {
+  const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [isEnrolled, setIsEnrolled] = useState(false);
 
-  const courseData = {
-    id: "1",
-    title: "Complete React Developer Course with Redux, Hooks, and GraphQL",
-    subtitle:
-      "Learn React by Google. Become an React, Machine Learning, and Deep Learning expert!",
-    instructor: {
-      name: "John Doe",
-      avatar:
-        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-      bio: "Senior Software Engineer at Google with 10+ years of experience",
-      rating: 4.8,
-      students: 150000,
-      courses: 25,
-    },
-    rating: 4.7,
-    reviewCount: 12560,
-    studentCount: 89432,
-    price: 84.99,
-    originalPrice: 199.99,
-    duration: "52 hours",
-    lastUpdated: "2/2026",
-    language: "English",
-    level: "Intermediate",
-    isBestseller: true,
-    thumbnail:
-      "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=800",
-    videoUrl:
-      "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-    whatYouLearn: [
-      "Build React applications using modern React features",
-      "Master Redux for state management",
-      "Implement GraphQL with Apollo Client",
-      "Create responsive and interactive user interfaces",
-      "Deploy React applications to production",
-      "Understanding of React Hooks and Context API",
-      "Testing React applications with Jest and React Testing Library",
-      "Performance optimization techniques",
-    ],
-    requirements: [
-      "Basic knowledge of HTML, CSS, and JavaScript",
-      "Familiarity with ES6+ features",
-      "A computer with internet connection",
-      "No prior React experience required",
-    ],
-    description: `This comprehensive React course will take you from beginner to advanced level. You'll learn all the modern React features including Hooks, Context API, and state management with Redux.
+  const coursesData = useCustomQuery("/data/allCourses.json", ["courses"]);
+  const modulesData = useCustomQuery("/data/modules.json", ["modules"]);
 
-The course is project-based, so you'll build real-world applications while learning. By the end of this course, you'll have the skills and knowledge to build professional React applications and land your dream job as a React developer.`,
-  };
+  const courses: Course[] = coursesData?.data?.data ?? [];
 
-  const modules = [
-    {
-      id: "1",
-      title: "Getting Started with React",
-      totalDuration: "3h 45m",
-      lessonCount: 15,
-      lessons: [
-        {
-          id: "1",
-          title: "What is React?",
-          duration: "15m",
-          type: "video" as const,
-          isCompleted: true,
-          isFree: true,
-        },
-        {
-          id: "2",
-          title: "Setting up the Development Environment",
-          duration: "20m",
-          type: "video" as const,
-          isCompleted: true,
-          isFree: true,
-        },
-        {
-          id: "3",
-          title: "Creating Your First React App",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "4",
-          title: "Understanding JSX",
-          duration: "18m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "5",
-          title: "React Basics Guide",
-          duration: "10m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "6",
-          title: "Setup Files",
-          duration: "5m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/react-setup.zip",
-        },
-        {
-          id: "7",
-          title: "Knowledge Check Quiz",
-          duration: "15m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "8",
-          title: "Module 1 Final Exam",
-          duration: "30m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "React Components and Props",
-      totalDuration: "4h 20m",
-      lessonCount: 18,
-      lessons: [
-        {
-          id: "9",
-          title: "Functional Components",
-          duration: "22m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "10",
-          title: "Class Components",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "11",
-          title: "Props and Prop Types",
-          duration: "30m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "12",
-          title: "Component Composition",
-          duration: "28m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "13",
-          title: "Components Best Practices",
-          duration: "12m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "14",
-          title: "Component Examples",
-          duration: "8m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/components-examples.pdf",
-        },
-        {
-          id: "15",
-          title: "Props Quiz",
-          duration: "20m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "16",
-          title: "Module 2 Final Exam",
-          duration: "45m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-    {
-      id: "3",
-      title: "State Management and Hooks",
-      totalDuration: "6h 15m",
-      lessonCount: 20,
-      lessons: [
-        {
-          id: "17",
-          title: "useState Hook",
-          duration: "35m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "18",
-          title: "useEffect Hook",
-          duration: "40m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "19",
-          title: "Custom Hooks",
-          duration: "32m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "20",
-          title: "Context API",
-          duration: "45m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "21",
-          title: "Hooks Reference Guide",
-          duration: "15m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "22",
-          title: "Hook Examples & Templates",
-          duration: "10m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/hooks-templates.zip",
-        },
-        {
-          id: "23",
-          title: "Hooks Practice Quiz",
-          duration: "25m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "24",
-          title: "Module 3 Final Exam",
-          duration: "60m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-  ];
+  const targetCourse = courses.find((c) => c.id === courseId) as Course;
+
+  const modules: Module[] = modulesData?.data?.data ?? [];
 
   const handleEnroll = () => {
     setIsEnrolled(true);
@@ -321,28 +62,28 @@ The course is project-based, so you'll build real-world applications while learn
               </nav>
 
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {courseData.title}
+                {targetCourse?.title}
               </h1>
               <p className="text-xl text-gray-300 mb-6">
-                {courseData.subtitle}
+                {targetCourse?.subtitle}
               </p>
 
               <div className="flex flex-wrap items-center gap-4 mb-6">
-                {courseData.isBestseller && (
+                {targetCourse?.isBestseller && (
                   <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded">
                     Bestseller
                   </span>
                 )}
                 <div className="flex items-center">
                   <span className="text-yellow-400 font-bold mr-2">
-                    {courseData.rating}
+                    {targetCourse?.rating}
                   </span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < Math.floor(courseData.rating)
+                          i < Math.floor(targetCourse?.rating)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-400"
                         }`}
@@ -350,26 +91,26 @@ The course is project-based, so you'll build real-world applications while learn
                     ))}
                   </div>
                   <span className="text-gray-300 ml-2">
-                    ({courseData.reviewCount.toLocaleString()} ratings)
+                    ({targetCourse?.reviewCount.toLocaleString()} ratings)
                   </span>
                 </div>
                 <span className="text-gray-300">
-                  {courseData.studentCount.toLocaleString()} students
+                  {targetCourse?.studentCount.toLocaleString()} students
                 </span>
               </div>
 
               <div className="flex items-center text-gray-300 mb-6">
-                <span>Created by {courseData.instructor.name}</span>
+                <span>Created by {targetCourse?.instructor.name}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300">
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>Last updated {courseData.lastUpdated}</span>
+                  <span>Last updated {targetCourse?.lastUpdated}</span>
                 </div>
                 <div className="flex items-center">
                   <Globe className="w-4 h-4 mr-2" />
-                  <span>{courseData.language}</span>
+                  <span>{targetCourse?.language}</span>
                 </div>
               </div>
             </div>
@@ -378,8 +119,8 @@ The course is project-based, so you'll build real-world applications while learn
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-4">
                 <div className="relative">
                   <img
-                    src={courseData.thumbnail}
-                    alt={courseData.title}
+                    src={targetCourse?.thumbnail}
+                    alt={targetCourse?.title}
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -393,11 +134,11 @@ The course is project-based, so you'll build real-world applications while learn
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <span className="text-3xl font-bold text-gray-900">
-                        ${courseData.price}
+                        ${targetCourse?.price}
                       </span>
-                      {courseData.originalPrice && (
+                      {targetCourse?.originalPrice && (
                         <span className="text-gray-500 line-through ml-3">
-                          ${courseData.originalPrice}
+                          ${targetCourse?.originalPrice}
                         </span>
                       )}
                     </div>
@@ -435,7 +176,7 @@ The course is project-based, so you'll build real-world applications while learn
                     </h4>
                     <div className="flex items-center text-gray-700">
                       <Clock className="w-4 h-4 mr-3" />
-                      <span>{courseData.duration} on-demand video</span>
+                      <span>{targetCourse?.duration} on-demand video</span>
                     </div>
                     <div className="flex items-center text-gray-700">
                       <Smartphone className="w-4 h-4 mr-3" />
@@ -491,7 +232,7 @@ The course is project-based, so you'll build real-world applications while learn
                     What you'll learn
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    {courseData.whatYouLearn.map((item, index) => (
+                    {targetCourse?.whatYouLearn.map((item, index) => (
                       <div key={index} className="flex items-start">
                         <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">{item}</span>
@@ -503,7 +244,7 @@ The course is project-based, so you'll build real-world applications while learn
                     Requirements
                   </h3>
                   <ul className="space-y-2 mb-8">
-                    {courseData.requirements.map((req, index) => (
+                    {targetCourse?.requirements.map((req, index) => (
                       <li key={index} className="flex items-start">
                         <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
                         <span className="text-gray-700">{req}</span>
@@ -515,7 +256,7 @@ The course is project-based, so you'll build real-world applications while learn
                     Description
                   </h3>
                   <div className="prose max-w-none text-gray-700">
-                    {courseData.description
+                    {targetCourse?.description
                       .split("\n\n")
                       .map((paragraph, index) => (
                         <p key={index} className="mb-4">
@@ -546,32 +287,34 @@ The course is project-based, so you'll build real-world applications while learn
                   </h3>
                   <div className="flex items-start mb-6">
                     <img
-                      src={courseData.instructor.avatar}
-                      alt={courseData.instructor.name}
+                      src={targetCourse?.instructor.avatar}
+                      alt={targetCourse?.instructor.name}
                       className="w-16 h-16 rounded-full mr-4"
                     />
                     <div>
                       <h4 className="text-xl font-bold text-gray-900">
-                        {courseData.instructor.name}
+                        {targetCourse?.instructor.name}
                       </h4>
                       <p className="text-gray-600 mb-2">
-                        {courseData.instructor.bio}
+                        {targetCourse?.instructor.bio}
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center">
                           <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                          <span>{courseData.instructor.rating} Rating</span>
+                          <span>{targetCourse?.instructor.rating} Rating</span>
                         </div>
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>
-                            {courseData.instructor.students.toLocaleString()}{" "}
+                            {targetCourse?.instructor.students.toLocaleString()}{" "}
                             Students
                           </span>
                         </div>
                         <div className="flex items-center">
                           <Award className="w-4 h-4 mr-1" />
-                          <span>{courseData.instructor.courses} Courses</span>
+                          <span>
+                            {targetCourse?.instructor.courses} Courses
+                          </span>
                         </div>
                       </div>
                     </div>

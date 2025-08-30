@@ -1,114 +1,156 @@
 import React from "react";
-import { Star, Clock, Users, Award } from "lucide-react";
+import { Star, Clock, Users, Play } from "lucide-react";
+import { useNavigate } from "react-router";
 
 interface CourseCardProps {
-  id: string;
-  title: string;
-  instructor: string;
-  thumbnail: string;
-  price: number;
-  originalPrice?: number;
-  rating: number;
-  reviewCount: number;
-  duration: string;
-  studentCount: number;
-  level: string;
-  isBestseller?: boolean;
-  description: string;
-  onEnroll: (courseId: string) => void;
+  course: Course;
+  isListView?: boolean;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({
-  id,
-  title,
-  instructor,
-  thumbnail,
-  price,
-  originalPrice,
-  rating,
-  reviewCount,
-  duration,
-  studentCount,
-  level,
-  isBestseller,
-  description,
-  onEnroll,
-}) => {
+const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
+  const navigate = useNavigate();
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-      <div className="relative">
-        <img src={thumbnail} alt={title} className="w-full h-48 object-cover" />
-        {isBestseller && (
-          <div className="absolute top-3 left-3">
-            <span className="bg-yellow-400 text-yellow-900 px-2 py-1 text-xs font-bold rounded">
+    <div
+      className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
+        isListView ? "flex items-start" : ""
+      }`}
+      onClick={() => navigate(`/catalog/${course.id}`)}
+    >
+      <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
+        <img
+          src={course.thumbnail}
+          alt={course.title}
+          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
+            isListView ? "w-full h-48" : "w-full h-48"
+          }`}
+        />
+        {course.isBestseller && (
+          <div className="absolute top-4 left-4">
+            <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
               Bestseller
             </span>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-          <div className="absolute bottom-4 left-4 right-4">
-            <button
-              onClick={() => onEnroll(id)}
-              className="w-full bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-            >
-              Enroll Now
-            </button>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate("/course");
+            }}
+            className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition-colors flex items-center"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Preview
+          </button>
         </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer transition-colors">
-          {title}
-        </h3>
+      <div className={`p-6 ${isListView ? "flex-1" : ""}`}>
+        <div className={`${isListView ? "flex justify-between" : ""}`}>
+          <div className={`${isListView ? "flex-1 pr-6" : ""}`}>
+            <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer transition-colors">
+              {course.title}
+            </h3>
 
-        <p className="text-gray-600 text-sm mb-2">{instructor}</p>
-
-        <p className="text-gray-700 text-sm mb-3 line-clamp-2">{description}</p>
-
-        <div className="flex items-center mb-3">
-          <div className="flex items-center">
-            <span className="text-yellow-500 font-bold mr-1">{rating}</span>
-            <div className="flex">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-4 h-4 ${
-                    i < Math.floor(rating)
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
-                />
-              ))}
+            <div className="flex items-center mb-3">
+              <img
+                src={course.instructor.avatar}
+                alt={course.instructor.name}
+                className="w-6 h-6 rounded-full mr-2"
+              />
+              <p className="text-gray-600 text-sm">{course.instructor.name}</p>
             </div>
-            <span className="text-gray-500 text-sm ml-2">
-              ({reviewCount.toLocaleString()})
-            </span>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between mb-3 text-sm text-gray-600">
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-1" />
-            <span>{duration}</span>
-          </div>
-          <div className="flex items-center">
-            <Users className="w-4 h-4 mr-1" />
-            <span>{studentCount.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center">
-            <Award className="w-4 h-4 mr-1" />
-            <span>{level}</span>
-          </div>
-        </div>
+            {isListView && (
+              <p className="text-gray-700 text-sm mb-4 line-clamp-2">
+                {course.description}
+              </p>
+            )}
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <span className="text-2xl font-bold text-gray-900">${price}</span>
-            {originalPrice && (
-              <span className="text-gray-500 line-through ml-2">
-                ${originalPrice}
+            <div className="flex items-center mb-4">
+              <div className="flex items-center">
+                <span className="text-yellow-500 font-bold mr-1">
+                  {course.rating}
+                </span>
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${
+                        i < Math.floor(course.rating)
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-gray-500 text-sm ml-2">
+                  ({course.reviewCount.toLocaleString()})
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-1" />
+                <span>{course.duration}</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="w-4 h-4 mr-1" />
+                <span>{course.studentCount.toLocaleString()}</span>
+              </div>
+              <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                {course.level}
               </span>
+            </div>
+
+            {isListView && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  What you'll learn:
+                </h4>
+                <ul className="space-y-1">
+                  {course.whatYouLearn
+                    .slice(0, 3)
+                    .map((item: string, index: number) => (
+                      <li
+                        key={index}
+                        className="flex items-start text-sm text-gray-700"
+                      >
+                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mr-2 mt-2 flex-shrink-0"></div>
+                        {item}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`${
+              isListView ? "text-right" : "flex items-center justify-between"
+            }`}
+          >
+            <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
+              <span className="text-2xl font-bold text-gray-900">
+                ${course.price}
+              </span>
+              {course.originalPrice && (
+                <span className="text-gray-500 line-through ml-2">
+                  ${course.originalPrice}
+                </span>
+              )}
+            </div>
+            {isListView && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate("/course");
+                }}
+                className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+              >
+                Enroll Now
+              </button>
             )}
           </div>
         </div>

@@ -12,7 +12,7 @@ import CoursePlayerPage from "../pages/courses/CoursePlayerPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import InstructorPage from "../pages/instructor/InstructorPage";
 import CourseBuilderPage from "../pages/courses/CourseBuilderPage";
-import ProfilePage from "../pages/auth/ProfilePage";
+import ProfilePage from "../pages/userProfile/ProfilePage";
 import Layout from "../layout/dashboard/Layout";
 import HomePage from "../pages/home/HomePage";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
@@ -42,7 +42,7 @@ export default function AppRoutes() {
 
           {/* Main */}
           <Route path="/catalog" element={<CourseCatalogPage />} />
-          <Route path="/course" element={<CourseDetailPage />} />
+          <Route path="/catalog/:courseId" element={<CourseDetailPage />} />
           <Route path="/player" element={<CoursePlayerPage />} />
           <Route path="/course-builder" element={<CourseBuilderPage />} />
           {/* Main */}

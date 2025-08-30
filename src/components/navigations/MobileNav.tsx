@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { Home } from "lucide-react";
 import { readUserFromStorage } from "../../services/auth";
@@ -17,7 +17,6 @@ export default function MobileNav({
   onLogout,
 }: Props) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
 
   const currentUser = readUserFromStorage();
   return (
@@ -26,23 +25,22 @@ export default function MobileNav({
         {mainNavigationItems
           .concat([{ id: "profile", label: "Profile Settings", icon: Home }])
           .map((i) => {
+            const path = i.id ? `/${i.id}` : "/";
             return (
-              <button
-                key={i.id}
-                onClick={() => {
-                  navigate(i.id);
-                  setIsMenuOpen(false);
-                }}
-                className={`block w-full text-left px-3 py-2 transition-colors
-                ${
-                  pathname.includes(i.id)
-                    ? "text-purple-600 font-semibold"
-                    : "text-gray-700 hover:text-purple-600"
+              <NavLink
+                key={i.id || "home"}
+                to={path}
+                end={path === "/"}
+                className={({ isActive }) =>
+                  `block w-full text-left px-3 py-2 transition-colors ${
+                    isActive
+                      ? "text-purple-600 font-semibold"
+                      : "text-gray-700 hover:text-purple-600"
+                  }`
                 }
-                `}
               >
                 {i.label}
-              </button>
+              </NavLink>
             );
           })}
 

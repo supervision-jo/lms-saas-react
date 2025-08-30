@@ -1,158 +1,103 @@
 import React, { useState } from "react";
-import { Plus, Users, DollarSign, Star, Edit, Trash2, Eye } from "lucide-react";
+import {
+  Plus,
+  Users,
+  DollarSign,
+  Star,
+  Edit,
+  Trash2,
+  Eye,
+  LucideIcon,
+} from "lucide-react";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { useNavigate } from "react-router";
+import toast from "react-hot-toast";
 
-interface InstructorPageProps {
-  onNavigate?: (page: string) => void;
-}
+const ICONS = {
+  Users,
+  DollarSign,
+  Star,
+  Eye,
+} as const;
 
-const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
+type IconName = keyof typeof ICONS;
+
+type InstructorStats = {
+  label: string;
+  value: string;
+  icon: IconName;
+  color: string;
+  bg: string;
+  change: string;
+};
+
+type RecentReview = {
+  id: string;
+  student: string;
+  course: string;
+  rating: number;
+  comment: string;
+  date: string;
+};
+
+type Analytics = {
+  monthlyRevenue: number[];
+  studentGrowth: number[];
+  coursePerformance: {
+    name: string;
+    students: number;
+    revenue: number;
+    rating: number;
+  }[];
+  topCountries: {
+    country: string;
+    students: number;
+    percentage: number;
+  }[];
+};
+
+type InstructorCourses = {
+  id: string;
+  title: string;
+  thumbnail: string;
+  students: number;
+  rating: number;
+  reviews: number;
+  revenue: string;
+  status: string;
+  lastUpdated: string;
+  completion: number;
+};
+
+const InstructorPage: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("courses");
 
-  const instructorStats = [
-    {
-      label: "Total Students",
-      value: "12,450",
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-100",
-      change: "+12%",
-    },
-    {
-      label: "Total Revenue",
-      value: "$45,230",
-      icon: DollarSign,
-      color: "text-green-600",
-      bg: "bg-green-100",
-      change: "+8%",
-    },
-    {
-      label: "Average Rating",
-      value: "4.8",
-      icon: Star,
-      color: "text-yellow-600",
-      bg: "bg-yellow-100",
-      change: "+0.2",
-    },
-    {
-      label: "Course Views",
-      value: "89,234",
-      icon: Eye,
-      color: "text-purple-600",
-      bg: "bg-purple-100",
-      change: "+15%",
-    },
-  ];
+  const instructorStatsData = useCustomQuery("/data/instructorStats.json", [
+    "instructorStats",
+  ]);
+  const instructorCoursesData = useCustomQuery("/data/instructorCourses.json", [
+    "instructorCourses",
+  ]);
+  const recentReviewsData = useCustomQuery("/data/recentReviews.json", [
+    "recentReviews",
+  ]);
+  const analyticsData = useCustomQuery("/data/analytics.json", ["analytics"]);
 
-  const myCourses = [
-    {
-      id: "1",
-      title: "Complete React Developer Course",
-      thumbnail:
-        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=400",
-      students: 5420,
-      rating: 4.7,
-      reviews: 1250,
-      revenue: "$18,450",
-      status: "published",
-      lastUpdated: "2024-01-15",
-      completion: 78,
-    },
-    {
-      id: "2",
-      title: "Advanced JavaScript Concepts",
-      thumbnail:
-        "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400",
-      students: 3200,
-      rating: 4.6,
-      reviews: 890,
-      revenue: "$12,800",
-      status: "published",
-      lastUpdated: "2024-01-10",
-      completion: 82,
-    },
-    {
-      id: "3",
-      title: "Node.js Backend Development",
-      thumbnail:
-        "https://images.pexels.com/photos/3184639/pexels-photo-3184639.jpeg?auto=compress&cs=tinysrgb&w=400",
-      students: 2100,
-      rating: 4.5,
-      reviews: 456,
-      revenue: "$8,400",
-      status: "draft",
-      lastUpdated: "2024-01-20",
-      completion: 65,
-    },
-  ];
+  const instructorStats =
+    (instructorStatsData?.data?.data as InstructorStats[] | undefined)?.map(
+      (s: InstructorStats) => ({
+        ...s,
+        Icon: ICONS[s.icon] as LucideIcon,
+      })
+    ) ?? [];
 
-  const recentReviews = [
-    {
-      id: "1",
-      student: "Sarah Johnson",
-      course: "Complete React Developer Course",
-      rating: 5,
-      comment: "Excellent course! Very detailed and easy to follow.",
-      date: "2024-01-25",
-    },
-    {
-      id: "2",
-      student: "Mike Chen",
-      course: "Advanced JavaScript Concepts",
-      rating: 4,
-      comment: "Great content, but could use more practical examples.",
-      date: "2024-01-24",
-    },
-    {
-      id: "3",
-      student: "Emily Davis",
-      course: "Complete React Developer Course",
-      rating: 5,
-      comment: "Best React course I've taken. Highly recommended!",
-      date: "2024-01-23",
-    },
-  ];
+  const myCourses: InstructorCourses[] =
+    instructorCoursesData?.data?.data ?? [];
 
-  const analyticsData = {
-    monthlyRevenue: [3200, 3800, 4200, 4800, 5200, 5800, 6200],
-    studentGrowth: [1200, 1450, 1680, 1920, 2150, 2380, 2650],
-    coursePerformance: [
-      { name: "React Course", students: 5420, revenue: 18450, rating: 4.7 },
-      {
-        name: "JavaScript Course",
-        students: 3200,
-        revenue: 12800,
-        rating: 4.6,
-      },
-      { name: "Node.js Course", students: 2100, revenue: 8400, rating: 4.5 },
-    ],
-    topCountries: [
-      { country: "United States", students: 3200, percentage: 35 },
-      { country: "India", students: 2100, percentage: 23 },
-      { country: "United Kingdom", students: 1800, percentage: 20 },
-      { country: "Canada", students: 1200, percentage: 13 },
-      { country: "Australia", students: 850, percentage: 9 },
-    ],
-  };
+  const recentReviews: RecentReview[] = recentReviewsData?.data?.data ?? [];
 
-  const handleCreateCourse = () => {
-    if (onNavigate) {
-      onNavigate("course-builder");
-    }
-  };
-
-  const handleViewCourse = (courseId: string) => {
-    console.log("Viewing course:", courseId);
-    if (onNavigate) {
-      onNavigate("course");
-    }
-  };
-
-  const handleEditCourse = (courseId: string) => {
-    console.log("Editing course:", courseId);
-    if (onNavigate) {
-      onNavigate("course-builder");
-    }
-  };
+  const analytics: Analytics = analyticsData?.data?.data ?? {};
 
   const handleDeleteCourse = (courseId: string) => {
     const confirmDelete = window.confirm(
@@ -160,7 +105,7 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
     );
     if (confirmDelete) {
       console.log("Deleting course:", courseId);
-      alert("Course has been deleted successfully.");
+      toast.success("Course has been deleted successfully.");
     }
   };
 
@@ -178,7 +123,9 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
             </p>
           </div>
           <button
-            onClick={handleCreateCourse}
+            onClick={() => {
+              navigate("/course-builder");
+            }}
             className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -196,7 +143,7 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-3 rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                    <stat.Icon className={`w-6 h-6 ${stat.color}`} />
                   </div>
                   <div className="ml-4">
                     <p className="text-2xl font-bold text-gray-900">
@@ -302,14 +249,16 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
                             </div>
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => handleViewCourse(course.id)}
+                                onClick={() =>
+                                  navigate(`/catalog/${course.id}`)
+                                }
                                 className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                                 title="View Course"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleEditCourse(course.id)}
+                                onClick={() => navigate("/course-builder")}
                                 className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
                                 title="Edit Course"
                               >
@@ -339,7 +288,7 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
                     Course Performance
                   </h3>
                   <div className="space-y-4">
-                    {analyticsData.coursePerformance.map((course, index) => (
+                    {analytics.coursePerformance.map((course, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
@@ -374,14 +323,13 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
                   </h3>
                   <div className="h-64 bg-gray-100 rounded-lg flex items-end justify-center p-4">
                     <div className="flex items-end space-x-2 h-full">
-                      {analyticsData.studentGrowth.map((value, index) => (
+                      {analytics.studentGrowth.map((value, index) => (
                         <div key={index} className="flex flex-col items-center">
                           <div
                             className="bg-blue-600 rounded-t w-8 transition-all duration-300 hover:bg-blue-700"
                             style={{
                               height: `${
-                                (value /
-                                  Math.max(...analyticsData.studentGrowth)) *
+                                (value / Math.max(...analytics.studentGrowth)) *
                                 100
                               }%`,
                             }}
@@ -404,7 +352,7 @@ const InstructorPage: React.FC<InstructorPageProps> = ({ onNavigate }) => {
                     Top Countries
                   </h3>
                   <div className="space-y-4">
-                    {analyticsData.topCountries.map((country, index) => (
+                    {analytics.topCountries.map((country, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between"

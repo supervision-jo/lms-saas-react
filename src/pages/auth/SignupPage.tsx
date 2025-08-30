@@ -1,82 +1,172 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from "lucide-react";
 import { USER_KEY } from "../../utils/constants";
 import { useNavigate } from "react-router";
+import { useForm, useWatch } from "react-hook-form";
+import handleErrorAlerts from "../../utils/showErrorMessages";
+// import { useCustomPost } from "../../hooks/useMutation";
+import toast from "react-hot-toast";
+
+interface FormValues {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  c_password: string;
+  terms: boolean;
+}
 
 const SignupPage: React.FC = () => {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    getValues,
+    trigger,
+    setError,
+    control,
+    reset,
+  } = useForm<FormValues>({
+    mode: "onChange",
+    reValidateMode: "onChange",
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      password: "",
+      c_password: "",
+      terms: false,
+    },
   });
+
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [errors, setErrors] = useState<any>({});
 
-  const navigate = useNavigate();
+  const agreeToTerms = useWatch({
+    control,
+    name: "terms",
+    defaultValue: false,
+  });
+  const password = useWatch({ control, name: "password" });
 
-  const validateForm = () => {
-    const newErrors: any = {};
+  // const signUp = useCustomPost("/path-to-backend/", ["users", "sign-up"]);
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "First name is required";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    if (!agreeToTerms) {
-      newErrors.terms = "You must agree to the terms and conditions";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
+  const onSubmit = async (data: FormValues) => {
+    if (data.password !== data.c_password) {
+      setError("c_password", {
+        type: "validate",
+        message: "Passwords do not match",
+      });
       return;
     }
+    if (!data.terms) {
+      setError("terms", {
+        type: "validate",
+        message: "Please read the Terms and Privacy Policy and agree.",
+      });
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("first_name", data.first_name);
+      formData.append("last_name", data.last_name);
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+      formData.append("c_password", data.c_password);
 
-    setIsLoading(true);
+      // const res = await signUp.mutateAsync(formData);
 
-    // Simulate signup process
-    setTimeout(() => {
+      toast.success("Signed up successfully!");
       const user = {
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
+        name: `${formData.get("first_name")} ${formData.get("last_name")}`,
+        email: formData.get("email"),
         avatar:
           "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+        joinDate: "August 2025",
+        location: "",
+        phone: "",
+        bio: "",
       };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
-      navigate("/");
-      setIsLoading(false);
-    }, 2000);
+
+      reset();
+      navigate("/login");
+    } catch (error: any) {
+      const payload = error?.response?.data;
+      handleErrorAlerts(
+        payload?.message || "There is an unexpected error occured."
+      );
+    }
   };
+
+  // const [formData, setFormData] = useState({
+  //   firstName: "",
+  //   lastName: "",
+  //   email: "",
+  //   password: "",
+  //   confirmPassword: "",
+  // });
+
+  // const validateForm = () => {
+  //   const newErrors: any = {};
+
+  //   if (!formData.firstName.trim()) {
+  //     newErrors.firstName = "First name is required";
+  //   }
+
+  //   if (!formData.lastName.trim()) {
+  //     newErrors.lastName = "Last name is required";
+  //   }
+
+  //   if (!formData.email.trim()) {
+  //     newErrors.email = "Email is required";
+  //   } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+  //     newErrors.email = "Email is invalid";
+  //   }
+
+  //   if (!formData.password) {
+  //     newErrors.password = "Password is required";
+  //   } else if (formData.password.length < 8) {
+  //     newErrors.password = "Password must be at least 8 characters";
+  //   }
+
+  //   if (formData.password !== formData.confirmPassword) {
+  //     newErrors.confirmPassword = "Passwords do not match";
+  //   }
+
+  //   if (!agreeToTerms) {
+  //     newErrors.terms = "You must agree to the terms and conditions";
+  //   }
+
+  //   setErrors(newErrors);
+  //   return Object.keys(newErrors).length === 0;
+  // };
+
+  // const handleSignup = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+
+  //   if (!validateForm()) {
+  //     return;
+  //   }
+
+  //   setIsLoading(true);
+
+  //   // Simulate signup process
+  //   setTimeout(() => {
+  //     const user = {
+  //       name: `${formData.firstName} ${formData.lastName}`,
+  //       email: formData.email,
+  //       avatar:
+  //         "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+  //     };
+  //     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  //     // navigate("/");
+  //     setIsLoading(false);
+  //   }, 2000);
+  // };
 
   const handleGoogleSignup = () => {
     setIsLoading(true);
@@ -88,6 +178,10 @@ const SignupPage: React.FC = () => {
         email: "john.doe@gmail.com",
         avatar:
           "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+        joinDate: "August 2025",
+        location: "",
+        phone: "",
+        bio: "",
       };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       navigate("/");
@@ -95,12 +189,20 @@ const SignupPage: React.FC = () => {
     }, 2000);
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: "" });
-    }
-  };
+  // const handleInputChange = (field: string, value: string) => {
+  //   setFormData({ ...formData, [field]: value });
+  //   if (errors[field]) {
+  //     setErrors({ ...errors, [field]: "" });
+  //   }
+  // };
+
+  useEffect(() => {
+    register("terms");
+  }, [register]);
+
+  useEffect(() => {
+    if (getValues("c_password")) trigger("c_password");
+  }, [password, trigger, getValues]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
@@ -117,7 +219,7 @@ const SignupPage: React.FC = () => {
 
         {/* Signup Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSignup} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -130,20 +232,20 @@ const SignupPage: React.FC = () => {
                   </div>
                   <input
                     type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) =>
-                      handleInputChange("firstName", e.target.value)
-                    }
+                    {...register("first_name", {
+                      required: "First name required",
+                    })}
                     className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
-                      errors.firstName ? "border-red-300" : "border-gray-300"
+                      errors.first_name ? "border-red-300" : "border-gray-300"
                     }`}
                     placeholder="First name"
                   />
                 </div>
-                {errors.firstName && (
+                {errors.first_name && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.firstName}
+                    {String(
+                      errors.first_name.message ?? "First name is required"
+                    )}
                   </p>
                 )}
               </div>
@@ -154,18 +256,18 @@ const SignupPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    handleInputChange("lastName", e.target.value)
-                  }
+                  {...register("last_name", {
+                    required: "Last name required",
+                  })}
                   className={`block w-full px-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
-                    errors.lastName ? "border-red-300" : "border-gray-300"
+                    errors.last_name ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="Last name"
                 />
-                {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                {errors.last_name && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.last_name.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -181,9 +283,13 @@ const SignupPage: React.FC = () => {
                 </div>
                 <input
                   type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+                      message: "Please enter a valid email.",
+                    },
+                  })}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
@@ -191,7 +297,9 @@ const SignupPage: React.FC = () => {
                 />
               </div>
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -206,11 +314,9 @@ const SignupPage: React.FC = () => {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value)
-                  }
+                  {...register("password", {
+                    required: "Password is required",
+                  })}
                   className={`block w-full pl-10 pr-12 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.password ? "border-red-300" : "border-gray-300"
                   }`}
@@ -229,7 +335,9 @@ const SignupPage: React.FC = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -244,15 +352,13 @@ const SignupPage: React.FC = () => {
                 </div>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    handleInputChange("confirmPassword", e.target.value)
-                  }
+                  {...register("c_password", {
+                    required: "Confirmation password is required",
+                    validate: (val) =>
+                      val === getValues("password") || "Passwords do not match",
+                  })}
                   className={`block w-full pl-10 pr-12 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
-                    errors.confirmPassword
-                      ? "border-red-300"
-                      : "border-gray-300"
+                    errors.c_password ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="Confirm your password"
                 />
@@ -268,9 +374,9 @@ const SignupPage: React.FC = () => {
                   )}
                 </button>
               </div>
-              {errors.confirmPassword && (
+              {errors.c_password && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.confirmPassword}
+                  {errors.c_password.message}
                 </p>
               )}
             </div>
@@ -282,13 +388,11 @@ const SignupPage: React.FC = () => {
                   <input
                     id="agree-terms"
                     type="checkbox"
-                    checked={agreeToTerms}
-                    onChange={(e) => {
-                      setAgreeToTerms(e.target.checked);
-                      if (errors.terms) {
-                        setErrors({ ...errors, terms: "" });
-                      }
-                    }}
+                    {...register("terms", {
+                      validate: (v) =>
+                        v === true ||
+                        "Please read the Terms and Privacy Policy and agree.",
+                    })}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                   />
                 </div>
@@ -312,17 +416,19 @@ const SignupPage: React.FC = () => {
                 </div>
               </div>
               {errors.terms && (
-                <p className="mt-1 text-sm text-red-600">{errors.terms}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.terms.message}
+                </p>
               )}
             </div>
 
             {/* Signup Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting || !agreeToTerms}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>

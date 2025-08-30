@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Search, Bell, ShoppingCart, Menu, X } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { readUserFromStorage } from "../../services/auth";
@@ -21,7 +21,6 @@ const Header: React.FC<HeaderProps> = ({
   authNavigationItems,
 }) => {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,8 +31,6 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const currentUser = readUserFromStorage();
-
-  console.log(currentUser);
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -49,20 +46,22 @@ const Header: React.FC<HeaderProps> = ({
             <nav className="hidden md:block ml-10">
               <div className="flex items-center space-x-8">
                 {mainNavigationItems.map((i) => {
+                  const path = i.id ? `/${i.id}` : "/";
                   return (
-                    <button
-                      key={i.id}
-                      onClick={() => navigate(i.id)}
-                      className={`transition-colors
-                        ${
-                          pathname.includes(i.id)
+                    <NavLink
+                      key={i.id || "home"}
+                      to={path}
+                      end={path === "/"}
+                      className={({ isActive }) =>
+                        `transition-colors ${
+                          isActive
                             ? "text-purple-600 font-semibold"
                             : "text-gray-700 hover:text-purple-600"
-                        }
-                        `}
+                        }`
+                      }
                     >
                       {i.label}
-                    </button>
+                    </NavLink>
                   );
                 })}
               </div>
@@ -125,10 +124,9 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     {userNavigationItems.map((i) => {
                       return (
-                        <>
+                        <div key={i.id}>
                           {i.id === "logout" && <hr className="my-2" />}
                           <button
-                            key={i.id}
                             onClick={() => {
                               if (i.id === "logout") {
                                 if (onLogout) onLogout();
@@ -145,7 +143,7 @@ const Header: React.FC<HeaderProps> = ({
                           >
                             {i.label}
                           </button>
-                        </>
+                        </div>
                       );
                     })}
                   </div>

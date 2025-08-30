@@ -11,24 +11,6 @@ import {
   Download,
 } from "lucide-react";
 
-interface Lesson {
-  id: string;
-  title: string;
-  duration: string;
-  type: "video" | "article" | "quiz" | "exam" | "material";
-  isCompleted: boolean;
-  isFree: boolean;
-  fileUrl?: string;
-}
-
-interface Module {
-  id: string;
-  title: string;
-  totalDuration: string;
-  lessonCount: number;
-  lessons: Lesson[];
-}
-
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;

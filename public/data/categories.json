@@ -1,0 +1,11 @@
+{
+  "data": [
+    { "id": "all", "name": "All Categories", "count": 15420 },
+    { "id": "development", "name": "Development", "count": 4250 },
+    { "id": "business", "name": "Business", "count": 3180 },
+    { "id": "design", "name": "Design", "count": 2890 },
+    { "id": "marketing", "name": "Marketing", "count": 2340 },
+    { "id": "data-science", "name": "Data Science", "count": 1980 },
+    { "id": "photography", "name": "Photography", "count": 780 }
+  ]
+}
