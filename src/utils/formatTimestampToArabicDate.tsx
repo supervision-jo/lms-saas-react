@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const formatTimestampToEnglishDate = (timestamp: any) => {
   const date = new Date(timestamp);
 

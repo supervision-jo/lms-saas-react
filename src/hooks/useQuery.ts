@@ -1,4 +1,4 @@
-import { get } from "@/api";
+import { get } from "../api";
 import { QueryKey, useQuery } from "@tanstack/react-query";
 import { AxiosRequestConfig } from "axios";
 
