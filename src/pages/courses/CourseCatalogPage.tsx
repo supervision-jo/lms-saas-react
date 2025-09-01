@@ -10,10 +10,13 @@ const CourseCatalogPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
-  const [isFree, setIsFree] = useState<boolean>(false);
+  const [priceFilter
+    // ,setPriceFilter
+  ] = useState("all");
+  const [isPaid, setIsPaid] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState("most-popular");
 
-  const queryParams = new URLSearchParams();
+  // const queryParams = new URLSearchParams();
   // queryParams.set("search", searchQuery);
   // queryParams.set("sub_category", selectedCategory);
   // queryParams.set("level", selectedLevel);
@@ -24,13 +27,10 @@ const CourseCatalogPage: React.FC = () => {
   // queryParams.set("price_high_to_low", sortBy);
 
   // GET COURSES
-  const { data: courses } = useCustomQuery(
-    `/api/course/courses/${queryParams.toString()}`,
-    ["courses", searchQuery, selectedCategory, selectedLevel, isFree, sortBy]
-  );
+  const { data: courses } = useCustomQuery(`/api/course/courses/`, ["courses"]);
 
-  const coursesData: Course[] = courses?.data?.data ?? [];
-
+  const coursesData: Course[] = courses?.data;
+  console.log("Courses data:", coursesData);
   // const filteredCourses = coursesData.filter((course) => {
   //   const matchesSearch =
   //     course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,7 +57,7 @@ const CourseCatalogPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">All Courses</h1>
               <p className="text-gray-600 mt-1">
-                {coursesData.length} courses available
+                {coursesData?.length} courses available
               </p>
             </div>
 
@@ -80,16 +80,17 @@ const CourseCatalogPage: React.FC = () => {
           <CoursesFilter
             selectedCategory={selectedCategory}
             selectedLevel={selectedLevel}
-            isFree={isFree}
+            isPaid={isPaid}
+            priceFilter={priceFilter}
             setSearchQuery={setSearchQuery}
             setSelectedCategory={setSelectedCategory}
             setSelectedLevel={setSelectedLevel}
-            setIsFree={setIsFree}
+            setIsPaid={setIsPaid}
           />
 
           {/* Course Grid */}
           <div className="flex-1">
-            {coursesData.length === 0 ? (
+            {coursesData?.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -107,7 +108,7 @@ const CourseCatalogPage: React.FC = () => {
                     : "grid-cols-1"
                 }`}
               >
-                {coursesData.map((course) => (
+                {coursesData?.map((course) => (
                   <CourseCard
                     key={course.id}
                     course={course}
@@ -118,7 +119,7 @@ const CourseCatalogPage: React.FC = () => {
             )}
 
             {/* Pagination */}
-            {coursesData.length > 0 && (
+            {coursesData?.length > 0 && (
               <div className="mt-12 flex items-center justify-center">
                 <nav className="flex items-center space-x-2">
                   <button

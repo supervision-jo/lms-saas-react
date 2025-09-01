@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, Clock, Users, Play } from "lucide-react";
+import { Star, Clock, Play } from "lucide-react";
 import { useNavigate } from "react-router";
 
 interface CourseCardProps {
@@ -14,17 +14,17 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
       className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
         isListView ? "flex items-start" : ""
       }`}
-      onClick={() => navigate(`/catalog/${course.id}`)}
+      onClick={() => navigate(`/catalog/${course?.id}`)}
     >
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
-          src={course.thumbnail}
-          alt={course.title}
+          src={course?.picture}
+          alt={course?.title}
           className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
             isListView ? "w-full h-48" : "w-full h-48"
           }`}
         />
-        {course.isBestseller && (
+        {course?.is_best_seller && (
           <div className="absolute top-4 left-4">
             <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
               Bestseller
@@ -49,35 +49,35 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
         <div className={`${isListView ? "flex justify-between" : ""}`}>
           <div className={`${isListView ? "flex-1 pr-6" : ""}`}>
             <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer transition-colors">
-              {course.title}
+              {course?.title}
             </h3>
 
             <div className="flex items-center mb-3">
               <img
-                src={course.instructor.avatar}
-                alt={course.instructor.name}
+                src={course?.instructor?.profile_image}
+                alt={course?.instructor?.id}
                 className="w-6 h-6 rounded-full mr-2"
               />
-              <p className="text-gray-600 text-sm">{course.instructor.name}</p>
+              <p className="text-gray-600 text-sm">{course?.instructor?.first_name} {course?.instructor?.last_name}</p>
             </div>
 
             {isListView && (
               <p className="text-gray-700 text-sm mb-4 line-clamp-2">
-                {course.description}
+                {course?.description}
               </p>
             )}
 
             <div className="flex items-center mb-4">
               <div className="flex items-center">
                 <span className="text-yellow-500 font-bold mr-1">
-                  {course.rating}
+                  {course?.rating}
                 </span>
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(course.rating)
+                        i < Math.floor(course?.rating)
                           ? "text-yellow-400 fill-current"
                           : "text-gray-300"
                       }`}
@@ -85,7 +85,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                   ))}
                 </div>
                 <span className="text-gray-500 text-sm ml-2">
-                  ({course.reviewCount.toLocaleString()})
+                  ({course?.total_reviews})
                 </span>
               </div>
             </div>
@@ -93,18 +93,18 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                <span>{course.duration}</span>
+                <span>{course.duration ?? "-"}</span>
               </div>
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1" />
                 <span>{course.studentCount.toLocaleString()}</span>
-              </div>
+              </div> */}
               <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                {course.level}
+                {course?.level}
               </span>
             </div>
 
-            {isListView && (
+            {/* {isListView && (
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-2">
                   What you'll learn:
@@ -123,7 +123,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                     ))}
                 </ul>
               </div>
-            )}
+            )} */}
           </div>
 
           <div
@@ -133,11 +133,11 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
           >
             <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
               <span className="text-2xl font-bold text-gray-900">
-                ${course.price}
+                ${course?.price}
               </span>
-              {course.originalPrice && (
+              {course?.old_price && (
                 <span className="text-gray-500 line-through ml-2">
-                  ${course.originalPrice}
+                  ${course?.old_price}
                 </span>
               )}
             </div>

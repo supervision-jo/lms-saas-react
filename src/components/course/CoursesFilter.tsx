@@ -1,34 +1,40 @@
 import { Filter } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
+// import { categories } from "../../types/categories";
 
 interface Props {
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
   setSelectedLevel: React.Dispatch<React.SetStateAction<string>>;
-  setIsFree: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsPaid: React.Dispatch<React.SetStateAction<boolean>>;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   selectedCategory: string;
   selectedLevel: string;
-  isFree: boolean;
+  isPaid: boolean;
+  priceFilter: string
 }
 
-type Category = {
+interface category {
   id: string;
   name: string;
-  count: number;
-};
+  description: string;
+  icon: string;
+  color: string;
+  total_courses: number;
+}
 
 export default function CoursesFilter({
   setSearchQuery,
   setSelectedCategory,
   setSelectedLevel,
-  // setIsFree,
+  setIsPaid,
   selectedCategory,
   selectedLevel,
-  // isFree,
+  // isPaid,
+  priceFilter
 }: Props) {
-  const catsData = useCustomQuery("/api/course/courses/", ["categories"]);
+  const {data: categories} = useCustomQuery("/api/course/categories/", ["categories"]);
 
-  const categories: Category[] = catsData?.data?.data ?? [];
+  const categoriesData: category[] = categories?.data?.data;
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-32">
@@ -41,24 +47,24 @@ export default function CoursesFilter({
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Category</h4>
           <div className="space-y-2">
-            {categories?.map((category) => (
+            {categoriesData?.map((category) => (
               <label
-                key={category.id}
+                key={category?.id}
                 className="flex items-center cursor-pointer"
               >
                 <input
                   type="radio"
                   name="category"
-                  value={category.id}
+                  value={category?.id}
                   checked={selectedCategory === category.id}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                 />
                 <span className="ml-3 text-sm text-gray-700 flex-1">
-                  {category.name}
+                  {category?.name}
                 </span>
                 <span className="text-xs text-gray-500">
-                  ({category.count})
+                  ({category?.total_courses})
                 </span>
               </label>
             ))}
@@ -108,14 +114,14 @@ export default function CoursesFilter({
                 key={price.id}
                 className="flex items-center cursor-pointer"
               >
-                {/* <input
+                <input
                   type="radio"
                   name="price"
                   value={price.id}
-                  checked={selectedPrice === price.id}
-                  onChange={(e) => setSelectedPrice(e.target.value)}
+                  checked={priceFilter  === price.id}
+                  onChange={(e) => setIsPaid(e.target.checked)}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                /> */}
+                />
                 <span className="ml-3 text-sm text-gray-700">
                   {price.label}
                 </span>
