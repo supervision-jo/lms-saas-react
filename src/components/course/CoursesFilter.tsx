@@ -4,11 +4,11 @@ import { useCustomQuery } from "../../hooks/useQuery";
 interface Props {
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
   setSelectedLevel: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedPrice: React.Dispatch<React.SetStateAction<string>>;
+  setIsFree: React.Dispatch<React.SetStateAction<boolean>>;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   selectedCategory: string;
   selectedLevel: string;
-  selectedPrice: string;
+  isFree: boolean;
 }
 
 type Category = {
@@ -21,12 +21,12 @@ export default function CoursesFilter({
   setSearchQuery,
   setSelectedCategory,
   setSelectedLevel,
-  setSelectedPrice,
+  // setIsFree,
   selectedCategory,
   selectedLevel,
-  selectedPrice,
+  // isFree,
 }: Props) {
-  const catsData = useCustomQuery("/data/categories.json", ["categories"]);
+  const catsData = useCustomQuery("/api/course/courses/", ["categories"]);
 
   const categories: Category[] = catsData?.data?.data ?? [];
   return (
@@ -41,7 +41,7 @@ export default function CoursesFilter({
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Category</h4>
           <div className="space-y-2">
-            {categories.map((category) => (
+            {categories?.map((category) => (
               <label
                 key={category.id}
                 className="flex items-center cursor-pointer"
@@ -108,14 +108,14 @@ export default function CoursesFilter({
                 key={price.id}
                 className="flex items-center cursor-pointer"
               >
-                <input
+                {/* <input
                   type="radio"
                   name="price"
                   value={price.id}
                   checked={selectedPrice === price.id}
                   onChange={(e) => setSelectedPrice(e.target.value)}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                />
+                /> */}
                 <span className="ml-3 text-sm text-gray-700">
                   {price.label}
                 </span>
@@ -128,7 +128,7 @@ export default function CoursesFilter({
           onClick={() => {
             setSelectedCategory("all");
             setSelectedLevel("all");
-            setSelectedPrice("all");
+            // setSelectedPrice("all");
             setSearchQuery("");
           }}
           className="w-full text-purple-600 hover:text-purple-700 text-sm font-medium"

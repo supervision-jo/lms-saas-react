@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+// import React, { useState } from "react";
 import {
   Play,
   Star,
@@ -10,74 +10,103 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
 
+interface category {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  total_courses: number;
+}
+interface Instructor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  profile_image: string;
+}
+
+interface course {
+  id: string;
+  title: string;
+  picture: string;
+  subtitle: string;
+  description: string;
+  sub_category: string;
+  instructor: Instructor;
+  old_price: number;
+  price: number;
+  is_paid: boolean;
+  level: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  rating: number;
+  average_rating: number;
+  total_reviews: number;
+  duration: string;
+  is_best_seller: boolean;
+}
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [featuredCourses] = useState([
-    {
-      id: "1",
-      title: "Complete React Developer Course",
-      instructor: "John Doe",
-      thumbnail:
-        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=800",
-      price: 84.99,
-      originalPrice: 199.99,
-      rating: 4.7,
-      reviewCount: 12560,
-      duration: "52 hours",
-      studentCount: 89432,
-      level: "Intermediate",
-      isBestseller: true,
-    },
-    {
-      id: "2",
-      title: "Python for Data Science",
-      instructor: "Jane Smith",
-      thumbnail:
-        "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=800",
-      price: 74.99,
-      originalPrice: 149.99,
-      rating: 4.6,
-      reviewCount: 9874,
-      duration: "25 hours",
-      studentCount: 67543,
-      level: "Beginner",
-      isBestseller: true,
-    },
-    {
-      id: "3",
-      title: "Full Stack Web Development",
-      instructor: "Mike Johnson",
-      thumbnail:
-        "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=800",
-      price: 94.99,
-      rating: 4.8,
-      reviewCount: 15432,
-      duration: "63 hours",
-      studentCount: 123456,
-      level: "All Levels",
-    },
+  // const [featuredCourses] = useState([
+  //   {
+  //     id: "1",
+  //     title: "Complete React Developer Course",
+  //     instructor: "John Doe",
+  //     thumbnail:
+  //       "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=800",
+  //     price: 84.99,
+  //     originalPrice: 199.99,
+  //     rating: 4.7,
+  //     reviewCount: 12560,
+  //     duration: "52 hours",
+  //     studentCount: 89432,
+  //     level: "Intermediate",
+  //     isBestseller: true,
+  //   },
+  //   {
+  //     id: "2",
+  //     title: "Python for Data Science",
+  //     instructor: "Jane Smith",
+  //     thumbnail:
+  //       "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=800",
+  //     price: 74.99,
+  //     originalPrice: 149.99,
+  //     rating: 4.6,
+  //     reviewCount: 9874,
+  //     duration: "25 hours",
+  //     studentCount: 67543,
+  //     level: "Beginner",
+  //     isBestseller: true,
+  //   },
+  //   {
+  //     id: "3",
+  //     title: "Full Stack Web Development",
+  //     instructor: "Mike Johnson",
+  //     thumbnail:
+  //       "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=800",
+  //     price: 94.99,
+  //     rating: 4.8,
+  //     reviewCount: 15432,
+  //     duration: "63 hours",
+  //     studentCount: 123456,
+  //     level: "All Levels",
+  //   },
+  // ]);
+
+  // GET CATEGORIES
+  const { data: categories } = useCustomQuery("/api/course/categories/", [
+    "categories",
   ]);
 
-  const categories = [
-    {
-      name: "Web Development",
-      icon: "💻",
-      courses: 2847,
-      color: "bg-blue-500",
-    },
-    { name: "Data Science", icon: "📊", courses: 1923, color: "bg-green-500" },
-    {
-      name: "Mobile Development",
-      icon: "📱",
-      courses: 1456,
-      color: "bg-purple-500",
-    },
-    { name: "Design", icon: "🎨", courses: 1789, color: "bg-pink-500" },
-    { name: "Business", icon: "💼", courses: 1234, color: "bg-orange-500" },
-    { name: "Marketing", icon: "📈", courses: 987, color: "bg-red-500" },
-  ];
-
+  const categoriesData: category[] = categories?.data?.data;
+  // GET CATEGORIES
+  const { data: courses } = useCustomQuery("/api/course/courses/", [
+    "featured-courses",
+  ]);
+  const coursesData: course[] = courses?.data;
   const testimonials = [
     {
       name: "Sarah Johnson",
@@ -212,23 +241,34 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {categories.map((category) => (
+            {categoriesData?.map((category: category) => (
               <div
-                key={category.name}
+                key={category?.id}
                 onClick={() => navigate("/catalog")}
                 className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden"
               >
                 <div
-                  className={`absolute top-0 right-0 w-24 h-24 ${category.color} rounded-full opacity-10 transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
+                  className={`absolute top-0 right-0 w-24 bg-[${
+                    category?.color[0] === "#"
+                      ? category?.color
+                      : "#" + category?.color
+                  }] h-24 rounded-full transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
                 ></div>
 
                 <div className="relative z-10">
-                  <div className="text-4xl mb-4">{category.icon}</div>
+                  <img
+                    src={
+                      category?.icon ??
+                      "https://ralfvanveen.com/en/glossary/placeholder/"
+                    }
+                    alt={category?.id}
+                    className="w-16 h-16 mb-4"
+                  />
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {category.name}
+                    {category?.name}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    {category.courses.toLocaleString()} courses
+                    {category?.total_courses} courses
                   </p>
                   <div className="flex items-center text-purple-600 font-semibold group-hover:text-purple-700">
                     <span>Explore courses</span>
@@ -255,7 +295,7 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredCourses.map((course) => (
+            {coursesData?.map((course) => (
               <div
                 key={course.id}
                 className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
@@ -263,11 +303,14 @@ const HomePage: React.FC = () => {
               >
                 <div className="relative">
                   <img
-                    src={course.thumbnail}
+                    src={
+                      course.picture ??
+                      "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                    }
                     alt={course.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full w-h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  {course.isBestseller && (
+                  {course.is_best_seller && (
                     <div className="absolute top-4 left-4">
                       <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
                         Bestseller
@@ -294,7 +337,7 @@ const HomePage: React.FC = () => {
                     {course.title}
                   </h3>
                   <p className="text-gray-600 text-sm mb-3">
-                    {course.instructor}
+                    {course.instructor.first_name} {course.instructor.last_name}
                   </p>
 
                   <div className="flex items-center mb-4">
@@ -315,7 +358,7 @@ const HomePage: React.FC = () => {
                         ))}
                       </div>
                       <span className="text-gray-500 text-sm ml-2">
-                        ({course.reviewCount.toLocaleString()})
+                        ({course.total_reviews} reviews)
                       </span>
                     </div>
                   </div>
@@ -325,10 +368,10 @@ const HomePage: React.FC = () => {
                       <Clock className="w-4 h-4 mr-1" />
                       <span>{course.duration}</span>
                     </div>
-                    <div className="flex items-center">
+                    {/* <div className="flex items-center">
                       <Users className="w-4 h-4 mr-1" />
                       <span>{course.studentCount.toLocaleString()}</span>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -336,9 +379,9 @@ const HomePage: React.FC = () => {
                       <span className="text-2xl font-bold text-gray-900">
                         ${course.price}
                       </span>
-                      {course.originalPrice && (
+                      {course.old_price && (
                         <span className="text-gray-500 line-through ml-2">
-                          ${course.originalPrice}
+                          ${course.old_price}
                         </span>
                       )}
                     </div>

@@ -10,29 +10,43 @@ const CourseCatalogPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
-  const [selectedPrice, setSelectedPrice] = useState("all");
+  const [isFree, setIsFree] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState("most-popular");
 
-  const coursesData = useCustomQuery("/data/allCourses.json", ["courses"]);
+  const queryParams = new URLSearchParams();
+  // queryParams.set("search", searchQuery);
+  // queryParams.set("sub_category", selectedCategory);
+  // queryParams.set("level", selectedLevel);
+  // queryParams.set("is_free", isFree.toString());
+  // queryParams.set("high_rating", sortBy);
+  // queryParams.set("most_popular", sortBy);
+  // queryParams.set("price_low_to_high", sortBy);
+  // queryParams.set("price_high_to_low", sortBy);
 
-  const courses: Course[] = coursesData?.data?.data ?? [];
+  // GET COURSES
+  const { data: courses } = useCustomQuery(
+    `/api/course/courses/${queryParams.toString()}`,
+    ["courses", searchQuery, selectedCategory, selectedLevel, isFree, sortBy]
+  );
 
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.instructor.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || course.category === selectedCategory;
-    const matchesLevel =
-      selectedLevel === "all" ||
-      course.level.toLowerCase().replace(" ", "-") === selectedLevel;
-    const matchesPrice =
-      selectedPrice === "all" ||
-      (selectedPrice === "free" && course.price === 0) ||
-      (selectedPrice === "paid" && course.price > 0);
+  const coursesData: Course[] = courses?.data?.data ?? [];
 
-    return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
-  });
+  // const filteredCourses = coursesData.filter((course) => {
+  //   const matchesSearch =
+  //     course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     course.instructor.name.toLowerCase().includes(searchQuery.toLowerCase());
+  //   const matchesCategory =
+  //     selectedCategory === "all" || course.category === selectedCategory;
+  //   const matchesLevel =
+  //     selectedLevel === "all" ||
+  //     course.level.toLowerCase().replace(" ", "-") === selectedLevel;
+  //   const matchesPrice = "";
+  //   // selectedPrice === "all" ||
+  //   // (selectedPrice === "free" && course.price === 0) ||
+  //   // (selectedPrice === "paid" && course.price > 0);
+
+  //   return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
+  // });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,7 +57,7 @@ const CourseCatalogPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">All Courses</h1>
               <p className="text-gray-600 mt-1">
-                {filteredCourses.length.toLocaleString()} courses available
+                {coursesData.length} courses available
               </p>
             </div>
 
@@ -66,16 +80,16 @@ const CourseCatalogPage: React.FC = () => {
           <CoursesFilter
             selectedCategory={selectedCategory}
             selectedLevel={selectedLevel}
-            selectedPrice={selectedPrice}
+            isFree={isFree}
             setSearchQuery={setSearchQuery}
             setSelectedCategory={setSelectedCategory}
             setSelectedLevel={setSelectedLevel}
-            setSelectedPrice={setSelectedPrice}
+            setIsFree={setIsFree}
           />
 
           {/* Course Grid */}
           <div className="flex-1">
-            {filteredCourses.length === 0 ? (
+            {coursesData.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -93,7 +107,7 @@ const CourseCatalogPage: React.FC = () => {
                     : "grid-cols-1"
                 }`}
               >
-                {filteredCourses.map((course) => (
+                {coursesData.map((course) => (
                   <CourseCard
                     key={course.id}
                     course={course}
@@ -104,7 +118,7 @@ const CourseCatalogPage: React.FC = () => {
             )}
 
             {/* Pagination */}
-            {filteredCourses.length > 0 && (
+            {coursesData.length > 0 && (
               <div className="mt-12 flex items-center justify-center">
                 <nav className="flex items-center space-x-2">
                   <button
