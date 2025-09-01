@@ -18,13 +18,13 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
     >
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
-          src={course.thumbnail}
+          src={"course.picture"}
           alt={course.title}
           className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
             isListView ? "w-full h-48" : "w-full h-48"
           }`}
         />
-        {course.isBestseller && (
+        {course.is_best_seller && (
           <div className="absolute top-4 left-4">
             <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
               Bestseller
@@ -54,11 +54,13 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
 
             <div className="flex items-center mb-3">
               <img
-                src={course.instructor.avatar}
-                alt={course.instructor.name}
+                src={course.instructor.profile_image}
+                alt={course.instructor.first_name}
                 className="w-6 h-6 rounded-full mr-2"
               />
-              <p className="text-gray-600 text-sm">{course.instructor.name}</p>
+              <p className="text-gray-600 text-sm">
+                {course.instructor.first_name}
+              </p>
             </div>
 
             {isListView && (
@@ -85,7 +87,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                   ))}
                 </div>
                 <span className="text-gray-500 text-sm ml-2">
-                  ({course.reviewCount.toLocaleString()})
+                  ({course.total_reviews.toLocaleString()})
                 </span>
               </div>
             </div>
@@ -93,11 +95,11 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                <span>{course.duration}</span>
+                {/* <span>{course.duration}</span> */}
               </div>
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1" />
-                <span>{course.studentCount.toLocaleString()}</span>
+                {/* <span>{course.studentCount.toLocaleString()}</span> */}
               </div>
               <span className="bg-gray-100 px-2 py-1 rounded text-xs">
                 {course.level}
@@ -109,7 +111,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                 <h4 className="font-semibold text-gray-900 mb-2">
                   What you'll learn:
                 </h4>
-                <ul className="space-y-1">
+                {/* <ul className="space-y-1">
                   {course.whatYouLearn
                     .slice(0, 3)
                     .map((item: string, index: number) => (
@@ -121,7 +123,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                         {item}
                       </li>
                     ))}
-                </ul>
+                </ul> */}
               </div>
             )}
           </div>
@@ -135,9 +137,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
               <span className="text-2xl font-bold text-gray-900">
                 ${course.price}
               </span>
-              {course.originalPrice && (
+              {course.price && (
                 <span className="text-gray-500 line-through ml-2">
-                  ${course.originalPrice}
+                  ${course.price}
                 </span>
               )}
             </div>

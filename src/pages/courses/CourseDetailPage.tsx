@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 interface CourseDetailPageProps {
   onNavigateToPlayer?: () => void;
@@ -21,6 +21,7 @@ interface CourseDetailPageProps {
 const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
   onNavigateToPlayer,
 }) => {
+  const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [isEnrolled, setIsEnrolled] = useState(false);
@@ -158,7 +159,9 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                         <span className="font-medium">Enrolled</span>
                       </div>
                       <button
-                        onClick={onNavigateToPlayer}
+                        onClick={() => {
+                          navigate(`/player`);
+                        }}
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                       >
                         Start Learning

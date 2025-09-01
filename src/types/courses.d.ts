@@ -15,26 +15,26 @@ interface EnrolledCourse {
 interface Course {
   id: string;
   title: string;
+  picture: null;
   subtitle: string;
-  instructor: Instructor;
-  instructorImage: string;
-  rating: number;
-  reviewCount: number;
-  studentCount: number;
-  price: number;
-  originalPrice: number;
-  duration: string;
-  lastUpdated: string;
-  language: string;
-  level: string;
-  isBestseller: boolean;
-  thumbnail: string;
-  videoUrl: string;
-  whatYouLearn: string[];
-  requirements: string[];
-
-  category: string;
   description: string;
+  sub_category: string;
+  instructor: {
+    first_name: string;
+    last_name: string;
+    profile_image: string;
+    id: string;
+  };
+  price: string;
+  is_paid: boolean;
+  level: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  rating: number;
+  average_rating: null;
+  total_reviews: number;
+  is_best_seller: boolean;
 }
 
 interface Instructor {

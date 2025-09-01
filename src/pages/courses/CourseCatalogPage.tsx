@@ -13,23 +13,25 @@ const CourseCatalogPage: React.FC = () => {
   const [selectedPrice, setSelectedPrice] = useState("all");
   const [sortBy, setSortBy] = useState("most-popular");
 
-  const coursesData = useCustomQuery("/data/allCourses.json", ["courses"]);
+  const coursesData = useCustomQuery("course/courses/", ["courses"]);
 
   const courses: Course[] = coursesData?.data?.data ?? [];
 
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.instructor.name.toLowerCase().includes(searchQuery.toLowerCase());
+      course.instructor.first_name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
     const matchesCategory =
-      selectedCategory === "all" || course.category === selectedCategory;
+      selectedCategory === "all" || course.sub_category === selectedCategory;
     const matchesLevel =
       selectedLevel === "all" ||
       course.level.toLowerCase().replace(" ", "-") === selectedLevel;
     const matchesPrice =
       selectedPrice === "all" ||
-      (selectedPrice === "free" && course.price === 0) ||
-      (selectedPrice === "paid" && course.price > 0);
+      (selectedPrice === "free" && +course.price === 0) ||
+      (selectedPrice === "paid" && +course.price > 0);
 
     return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
   });

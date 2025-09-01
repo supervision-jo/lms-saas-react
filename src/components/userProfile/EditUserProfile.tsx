@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Save } from "lucide-react";
 import { USER_KEY } from "../../utils/constants";
 import { useForm } from "react-hook-form";
