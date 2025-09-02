@@ -5,12 +5,13 @@ import { useCustomQuery } from "../../hooks/useQuery";
 interface Props {
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
   setSelectedLevel: React.Dispatch<React.SetStateAction<string>>;
-  setIsPaid: React.Dispatch<React.SetStateAction<boolean>>;
+  // setIsPaid: React.Dispatch<React.SetStateAction<boolean>>;
+  setSelectedPrice: React.Dispatch<React.SetStateAction<string>>;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   selectedCategory: string;
   selectedLevel: string;
-  isPaid: boolean;
-  priceFilter: string
+  // isPaid: boolean;
+  selectedPrice: string;
 }
 
 interface category {
@@ -25,16 +26,20 @@ interface category {
 export default function CoursesFilter({
   setSearchQuery,
   setSelectedCategory,
+  setSelectedPrice,
   setSelectedLevel,
-  setIsPaid,
+  // setIsPaid,
   selectedCategory,
   selectedLevel,
   // isPaid,
-  priceFilter
+  selectedPrice,
 }: Props) {
-  const {data: categories} = useCustomQuery("/api/course/categories/", ["categories"]);
+  const { data: categories } = useCustomQuery("/api/course/categories/", [
+    "categories",
+  ]);
 
   const categoriesData: category[] = categories?.data?.data;
+  console.log("categories", categoriesData);
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-32">
@@ -47,6 +52,22 @@ export default function CoursesFilter({
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Category</h4>
           <div className="space-y-2">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="category"
+                value={""}
+                checked={selectedCategory === ""}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+              />
+              <span className="ml-3 text-sm text-gray-700 flex-1">
+                All Categories
+              </span>
+              <span className="text-xs text-gray-500">
+                {/* ({category?.total_courses}) */}
+              </span>
+            </label>
             {categoriesData?.map((category) => (
               <label
                 key={category?.id}
@@ -76,7 +97,7 @@ export default function CoursesFilter({
           <h4 className="font-medium text-gray-900 mb-3">Level</h4>
           <div className="space-y-2">
             {[
-              { id: "all", label: "All Levels" },
+              { id: "", label: "All Levels" },
               { id: "beginner", label: "Beginner" },
               { id: "intermediate", label: "Intermediate" },
               { id: "advanced", label: "Advanced" },
@@ -106,7 +127,7 @@ export default function CoursesFilter({
           <h4 className="font-medium text-gray-900 mb-3">Price</h4>
           <div className="space-y-2">
             {[
-              { id: "all", label: "All Prices" },
+              { id: "", label: "All Prices" },
               { id: "free", label: "Free" },
               { id: "paid", label: "Paid" },
             ].map((price) => (
@@ -118,8 +139,10 @@ export default function CoursesFilter({
                   type="radio"
                   name="price"
                   value={price.id}
-                  checked={priceFilter  === price.id}
-                  onChange={(e) => setIsPaid(e.target.checked)}
+                  checked={selectedPrice === price.id}
+                  onChange={(e) => {
+                    setSelectedPrice(e.target.value);
+                  }}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                 />
                 <span className="ml-3 text-sm text-gray-700">
@@ -132,9 +155,9 @@ export default function CoursesFilter({
 
         <button
           onClick={() => {
-            setSelectedCategory("all");
-            setSelectedLevel("all");
-            // setSelectedPrice("all");
+            setSelectedCategory("");
+            setSelectedLevel("");
+            setSelectedPrice("");
             setSearchQuery("");
           }}
           className="w-full text-purple-600 hover:text-purple-700 text-sm font-medium"

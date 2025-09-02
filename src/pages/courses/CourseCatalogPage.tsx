@@ -8,26 +8,29 @@ import CoursesFilter from "../../components/course/CoursesFilter";
 const CourseCatalogPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedLevel, setSelectedLevel] = useState("all");
-  const [priceFilter
-    // ,setPriceFilter
-  ] = useState("all");
-  const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedPrice, setSelectedPrice] = useState("");
   const [sortBy, setSortBy] = useState("most-popular");
 
-  // const queryParams = new URLSearchParams();
-  // queryParams.set("search", searchQuery);
-  // queryParams.set("sub_category", selectedCategory);
+  const isPaid =
+    selectedPrice === "" ? "" : selectedPrice === "paid" ? true : false;
+  const queryParams = new URLSearchParams();
+  queryParams.set("search", searchQuery);
+  queryParams.set("category", selectedCategory);
+  // queryParams.set("price", priceFilter);
   // queryParams.set("level", selectedLevel);
-  // queryParams.set("is_free", isFree.toString());
+  queryParams.set("is_paid", isPaid.toString());
   // queryParams.set("high_rating", sortBy);
   // queryParams.set("most_popular", sortBy);
   // queryParams.set("price_low_to_high", sortBy);
   // queryParams.set("price_high_to_low", sortBy);
 
   // GET COURSES
-  const { data: courses } = useCustomQuery(`/api/course/courses/`, ["courses"]);
+  const { data: courses } = useCustomQuery(
+    `/api/course/courses/?${queryParams.toString()}`,
+    ["courses", searchQuery, selectedCategory, selectedPrice]
+  );
 
   const coursesData: Course[] = courses?.data;
   console.log("Courses data:", coursesData);
@@ -80,12 +83,13 @@ const CourseCatalogPage: React.FC = () => {
           <CoursesFilter
             selectedCategory={selectedCategory}
             selectedLevel={selectedLevel}
-            isPaid={isPaid}
-            priceFilter={priceFilter}
+            // isPaid={isPaid}
+            selectedPrice={selectedPrice}
             setSearchQuery={setSearchQuery}
             setSelectedCategory={setSelectedCategory}
+            setSelectedPrice={setSelectedPrice}
             setSelectedLevel={setSelectedLevel}
-            setIsPaid={setIsPaid}
+            // setIsPaid={setIsPaid}
           />
 
           {/* Course Grid */}
