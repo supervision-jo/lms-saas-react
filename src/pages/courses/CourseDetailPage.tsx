@@ -18,12 +18,12 @@ import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
+import { formatDuration } from "../../utils/formatDuration";
 
 const CourseDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
-  const [isEnrolled, setIsEnrolled] = useState(false);
 
   const courseData = useCustomQuery(
     `${API_ENDPOINTS.courses}${courseId}`,
@@ -52,6 +52,13 @@ const CourseDetailPage: React.FC = () => {
     !!course?.id && !!course?.instructor_?.id
   );
 
+  const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
+    "enrolledCourses",
+  ]);
+
+  const enrolledCourses: EnrolledCourse[] =
+    enrolledCoursesData?.data?.data ?? [];
+
   const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
     "enrolledCourses",
   ]);
@@ -64,6 +71,10 @@ const CourseDetailPage: React.FC = () => {
 
   const instructor: Partial<Instructor> = instructorData?.data;
 
+  const courseEnrollStatus: boolean = enrolledCourses.some(
+    (c) => c.course.id === courseId
+  );
+  const [isEnrolled, setIsEnrolled] = useState(courseEnrollStatus);
   const handleEnroll = async () => {
     try {
       const res = await createEnroll.mutateAsync({ course: course?.id });
@@ -94,7 +105,9 @@ const CourseDetailPage: React.FC = () => {
               <nav className="text-sm mb-4">
                 {/* <span className="text-purple-400">Development</span>
                 <span className="mx-2">›</span> */}
-                <span className="text-purple-400">{currentCategory?.name}</span>
+                <span className="text-purple-400">
+                  {currentCategory?.name ?? "Development"}
+                </span>
                 <span className="mx-2">›</span>
                 <span>{course?.title}</span>
               </nav>
@@ -219,7 +232,9 @@ const CourseDetailPage: React.FC = () => {
                     </h4>
                     <div className="flex items-center text-gray-700">
                       <Clock className="w-4 h-4 mr-3" />
-                      <span>{course?.duration ?? "0h 0m"} on-demand video</span>
+                      <span>
+                        {formatDuration(course?.total_hours)} on-demand video
+                      </span>
                     </div>
                     <div className="flex items-center text-gray-700">
                       <Smartphone className="w-4 h-4 mr-3" />
@@ -337,14 +352,20 @@ const CourseDetailPage: React.FC = () => {
                     Instructor
                   </h3>
                   <div className="flex items-start mb-6">
-                    <img
-                      src={
-                        instructor?.instructor_image ??
-                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
-                      }
-                      alt={instructor?.instructor_full_name}
-                      className="w-16 h-16 rounded-full mr-4"
-                    />
+                    {instructor?.instructor_image ? (
+                      <img
+                        src={instructor?.instructor_image}
+                        alt={instructor?.instructor_full_name}
+                        className="w-6 h-6 rounded-full mr-2"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-medium">
+                          {instructor?.instructor_full_name?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+
                     <div>
                       <h4 className="text-xl font-bold text-gray-900">
                         {instructor?.instructor_full_name}

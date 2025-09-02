@@ -1,8 +1,7 @@
 import { Save } from "lucide-react";
-import { USER_KEY, API_ENDPOINTS } from "../../utils/constants";
+import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import { useForm } from "react-hook-form";
 import handleErrorAlerts from "../../utils/showErrorMessages";
-// import { useCustomUpdate } from "../../hooks/useMutation";
 import { useCustomPatch } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import { readUserFromStorage } from "../../services/auth";
@@ -22,11 +21,8 @@ interface Props {
 }
 
 export default function EditUserProfile({ setIsEditing }: Props) {
-  const currentUser = readUserFromStorage();
-  const { mutateAsync: editUser } = useCustomPatch(
-    API_ENDPOINTS.updateProfile,
-    ["patch-user"]
-  );
+  const currentUser: User = readUserFromStorage();
+
   const {
     register,
     handleSubmit,
@@ -44,6 +40,10 @@ export default function EditUserProfile({ setIsEditing }: Props) {
     },
   });
 
+  const editUser = useCustomPatch(API_ENDPOINTS.updateProfile, [
+    "update-profile",
+  ]);
+
   const onSubmit = async (data: FormValues) => {
     try {
       const formData = new FormData();
@@ -54,20 +54,33 @@ export default function EditUserProfile({ setIsEditing }: Props) {
       formData.append("location", data.location);
       formData.append("bio", data.bio);
 
-      const response = await editUser(formData);
-      toast.success("Changes saved successfully!");
-      const user = {
-        ...currentUser,
-        first_name: formData.get("first_name"),
-        last_name: formData.get("last_name"),
-        email: formData.get("email"),
-        phone: formData.get("phone"),
-        location: formData.get("location"),
-        bio: formData.get("bio"),
-      };
+      const res = await editUser.mutateAsync(formData);
 
-      localStorage.setItem(USER_KEY, JSON.stringify(response?.data));
-      setIsEditing(false);
+      if (res?.status) {
+        toast.success("Changes saved successfully!");
+        const user = {
+          ...currentUser,
+          first_name: res?.data?.first_name,
+          last_name: res?.data?.last_name,
+          email: res?.data?.email,
+          profile_image: res?.data?.profile_image,
+          location: res?.data?.location,
+          phone: res?.data?.phone,
+          bio: res?.data?.bio,
+        };
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        setIsEditing(false);
+      } else {
+        toast.error(
+          res.first_name[0] ||
+            res.last_name[0] ||
+            res.email[0] ||
+            res.location[0] ||
+            res.bio[0] ||
+            res.phone[0] ||
+            "There is an error"
+        );
+      }
     } catch (error: any) {
       const payload = error?.response?.data;
       handleErrorAlerts(
@@ -103,20 +116,35 @@ export default function EditUserProfile({ setIsEditing }: Props) {
         {/* Last Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fisrt Name
+          </label>
+          <input
+            type="text"
+            {...register("first_name", { required: "First name is required" })}
+            className={inputClass(!!errors.first_name)}
+          />
+          {errors.first_name && (
+            <p className="mt-1 text-sm text-red-600">
+              {String(errors.first_name.message ?? "First name is required")}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Last Name
           </label>
           <input
             type="text"
-            {...register("last_name", { required: "Last Name is required" })}
+            {...register("last_name", { required: "Last name is required" })}
             className={inputClass(!!errors.last_name)}
           />
           {errors.last_name && (
             <p className="mt-1 text-sm text-red-600">
-              {String(errors.last_name.message ?? "Last Name is required")}
+              {String(errors.last_name.message ?? "Last name is required")}
             </p>
           )}
         </div>
-        {/* Email */}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email

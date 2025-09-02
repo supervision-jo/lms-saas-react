@@ -1,25 +1,20 @@
 import React from "react";
 import { Star, Clock, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useCustomQuery } from "../../hooks/useQuery";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { formatDuration } from "../../utils/formatDuration";
 
 interface CourseCardProps {
-  courseId: string;
+  course: Course;
+  coursePic: string | null;
   isListView?: boolean;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
+const CourseCard: React.FC<CourseCardProps> = ({
+  course,
+  coursePic,
+  isListView,
+}) => {
   const navigate = useNavigate();
-
-  const courseData = useCustomQuery(
-    `${API_ENDPOINTS.courses}${courseId}/`,
-    ["course", courseId],
-    undefined,
-    !!courseId
-  );
-
-  const course: Course = courseData?.data?.data;
 
   return (
     <div
@@ -31,7 +26,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
           src={
-            course?.picture ??
+            coursePic ??
             "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
           }
           alt={course?.title}
@@ -68,14 +63,19 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
             </h3>
 
             <div className="flex items-center mb-3">
-              <img
-                src={
-                  course?.instructor?.profile_image ??
-                  "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
-                }
-                alt={course?.instructor?.first_name}
-                className="w-6 h-6 rounded-full mr-2"
-              />
+              {course?.instructor?.profile_image ? (
+                <img
+                  src={course?.instructor?.profile_image}
+                  alt={course?.instructor?.first_name}
+                  className="w-6 h-6 rounded-full mr-2"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {course?.instructor?.first_name?.charAt(0)}
+                  </span>
+                </div>
+              )}
               <p className="text-gray-600 text-sm">
                 {course?.instructor?.first_name ?? "--"}{" "}
                 {course?.instructor?.last_name}
@@ -114,7 +114,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                <span>{course?.duration ?? "0h 0m"}</span>
+                <span>{formatDuration(course?.total_hours)}</span>
               </div>
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1" />
@@ -125,7 +125,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
               </span>
             </div>
 
-            {isListView && (
+            {isListView && course?.objectives?.length > 0 && (
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-2">
                   What you'll learn:
@@ -150,16 +150,25 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
               isListView ? "text-right" : "flex items-center justify-between"
             }`}
           >
-            <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
-              <span className="text-2xl font-bold text-gray-900">
-                ${course?.price}
-              </span>
-              {course?.old_price && (
-                <span className="text-gray-500 line-through ml-2">
-                  ${course?.old_price}
+            {course?.is_paid ? (
+              <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
+                <span className="text-2xl font-bold text-gray-900">
+                  ${course?.price}
                 </span>
-              )}
-            </div>
+                {course?.old_price && (
+                  <span className="text-gray-500 line-through ml-2">
+                    ${course?.old_price}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span
+                className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
+              >
+                Free
+              </span>
+            )}
+
             {isListView && (
               <button
                 onClick={(e) => {

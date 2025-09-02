@@ -46,8 +46,7 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <GlobalLoading />
+    <div id="app-scroll" className="min-h-screen bg-gray-50">
       {!pathname.includes("player") &&
         !pathname.includes("login") &&
         !pathname.includes("sign-up") && (

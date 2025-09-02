@@ -62,7 +62,7 @@ interface Course {
   average_rating: number;
   total_reviews: number;
   total_enrollments: number;
-  duration: string;
+  total_hours: string | null;
   is_best_seller: boolean;
   objectives: TextLists[];
   requirements: TextLists[];

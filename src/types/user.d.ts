@@ -25,4 +25,5 @@ interface User {
   bio: string | null;
   phone: string | null;
   location: string | null;
+  data_joined: string;
 }
