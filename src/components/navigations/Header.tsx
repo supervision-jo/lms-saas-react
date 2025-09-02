@@ -110,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({
                   ) : (
                     <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {currentUser.name.charAt(0)}
+                        {currentUser?.name?.charAt(0)}
                       </span>
                     </div>
                   )}

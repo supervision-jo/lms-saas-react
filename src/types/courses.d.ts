@@ -55,7 +55,7 @@ interface Lesson {
   type: "video" | "article" | "quiz" | "exam" | "material";
   isCompleted: boolean;
   isFree: boolean;
-  fileUrl: string | null;
+  fileUrl?: string | null;
 }
 
 interface Module {
