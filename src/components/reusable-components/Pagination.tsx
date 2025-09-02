@@ -86,6 +86,7 @@ export default function Pagination({
       <nav className="flex items-center space-x-2" aria-label="Pagination">
         {/* Prev */}
         <button
+          type="button"
           className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
           onClick={() => onPageChange(current - 1)}
           disabled={current <= 1}
@@ -104,6 +105,7 @@ export default function Pagination({
             </span>
           ) : (
             <button
+              type="button"
               key={p}
               onClick={() => onPageChange(p as number)}
               aria-current={p === current ? "page" : undefined}
@@ -120,8 +122,11 @@ export default function Pagination({
 
         {/* Next */}
         <button
+          type="button"
           className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-          onClick={() => onPageChange(current + 1)}
+          onClick={() => {
+            onPageChange(current + 1);
+          }}
           disabled={current >= totalPages}
         >
           Next

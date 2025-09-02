@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Search, Bell, ShoppingCart, Menu, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
@@ -25,6 +25,10 @@ const Header: React.FC<HeaderProps> = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchQuery);
@@ -32,18 +36,41 @@ const Header: React.FC<HeaderProps> = ({
 
   const currentUser: User = readUserFromStorage();
 
+  useEffect(() => {
+    if (mobileSearchOpen) {
+      const id = setTimeout(() => mobileInputRef.current?.focus(), 10);
+      return () => clearTimeout(id);
+    }
+  }, [mobileSearchOpen]);
+
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileSearchOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileSearchOpen]);
+
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="relative flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="text-2xl font-bold text-purple-600">LearnHub</div>
+              <button
+                onClick={() => {
+                  navigate("/");
+                }}
+                className="cursor-pointer text-2xl font-bold text-purple-600"
+              >
+                LearnHub
+              </button>
             </div>
 
             {/* Navigation */}
-            <nav className="hidden md:block ml-10">
+            <nav className="hidden lg:block ml-10">
               <div className="flex items-center space-x-8">
                 {mainNavigationItems.map((i) => {
                   const path = i.id ? `/${i.id}` : "/";
@@ -68,8 +95,8 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
-          {/* Search */}
-          <div className="flex-1 max-w-lg mx-8">
+          {/* Desktop Search */}
+          <div className="flex-1 max-w-lg mx-8 sm:block hidden">
             <form onSubmit={handleSearchSubmit} className="relative">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -87,11 +114,20 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right side */}
-          <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-400 hover:text-gray-500">
+          <div className="flex items-center gap-0">
+            <button
+              type="button"
+              className="sm:hidden p-2 text-gray-500 hover:text-gray-700"
+              aria-label="Open search"
+              onClick={() => setMobileSearchOpen(true)}
+            >
+              <Search className="h-5 w-5 text-gray-400" />
+            </button>
+
+            <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
               <Bell className="h-6 w-6" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-500">
+            <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
               <ShoppingCart className="h-6 w-6" />
             </button>
 
@@ -114,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({
                       </span>
                     </div>
                   )}
-                  <span className="hidden md:block text-sm text-gray-700">
+                  <span className="hidden lg:block text-sm text-gray-700">
                     {currentUser.first_name} {currentUser.last_name}
                   </span>
                 </div>
@@ -130,10 +166,10 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => {
                               if (i.id === "logout") {
                                 if (onLogout) onLogout();
-                                setIsUserMenuOpen(false);
                               } else {
                                 navigate(i.id);
                               }
+                              setIsUserMenuOpen(false);
                             }}
                             className={`block w-full text-left px-4 py-2 text-sm ${
                               i.id === "logout"
@@ -172,7 +208,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 text-gray-400 hover:text-gray-500"
+              className="lg:hidden p-2 text-gray-400 hover:text-gray-500"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -180,6 +216,67 @@ const Header: React.FC<HeaderProps> = ({
                 <Menu className="h-6 w-6" />
               )}
             </button>
+          </div>
+
+          <div
+            ref={overlayRef}
+            className={`
+              sm:hidden absolute right-0 top-0 h-16 bg-white border-b
+              transition-all duration-300 ease-out overflow-hidden z-50
+              ${
+                mobileSearchOpen
+                  ? "w-full"
+                  : "w-0 pointer-events-none opacity-0"
+              }
+            `}
+          >
+            <form
+              onSubmit={(e) => {
+                handleSearchSubmit(e);
+                setMobileSearchOpen(false);
+              }}
+              className="h-full"
+            >
+              <div className="h-full flex items-center gap-2">
+                {/* close button */}
+                <button
+                  type="button"
+                  aria-label="Close search"
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => setMobileSearchOpen(false)}
+                >
+                  <X className="h-6 w-6" />
+                </button>
+
+                {/* search field */}
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    ref={mobileInputRef}
+                    type="text"
+                    placeholder="Search for anything"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={(e) => {
+                      const next = e.relatedTarget as HTMLElement | null;
+                      if (next && overlayRef.current?.contains(next)) return;
+                      setMobileSearchOpen(false);
+                    }}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Submit button on mobile */}
+                <button
+                  type="submit"
+                  className="px-3 py-2 rounded-full bg-purple-600 text-white text-sm font-medium"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 

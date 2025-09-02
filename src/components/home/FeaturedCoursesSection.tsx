@@ -2,6 +2,7 @@ import { Clock, Star, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useCustomQuery } from "../../hooks/useQuery";
+import { formatDuration } from "../../utils/formatDuration";
 
 export default function FeaturedCoursesSection() {
   const navigate = useNavigate();
@@ -97,7 +98,7 @@ export default function FeaturedCoursesSection() {
                 <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
-                    <span>{course?.duration ?? "0h 0m"}</span>
+                    <span>{formatDuration(course?.total_hours)}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Mail,
   Phone,
@@ -17,6 +17,10 @@ import {
 import EditUserProfile from "../../components/userProfile/EditUserProfile";
 import { readUserFromStorage } from "../../services/auth";
 import toast from "react-hot-toast";
+import { formatDateTimeSimple } from "../../utils/formatDateTime";
+import { useCustomPatch } from "../../hooks/useMutation";
+import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
+import handleErrorAlerts from "../../utils/showErrorMessages";
 // import { useCustomQuery } from "../../hooks/useQuery";
 
 const ICONS = {
@@ -138,7 +142,12 @@ const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
-  const profileData = readUserFromStorage();
+  const profileData: User = readUserFromStorage();
+
+  const [profileImage, setProfileImage] = useState<string | null>(
+    profileData?.profile_image
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const achievements: Acheivement[] = achievementsData ?? [];
 
@@ -164,6 +173,46 @@ const ProfilePage: React.FC = () => {
     toast.success("Certificate download started!");
   };
 
+  const { mutateAsync, isPending } = useCustomPatch(
+    API_ENDPOINTS.updateProfile,
+    ["update-profile"]
+  );
+
+  const handleChangeImage = async (file: File) => {
+    try {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("profile_image", file);
+
+      const res = await mutateAsync(formData);
+
+      if (res?.status) {
+        const newUrl = res?.data?.profile_image;
+        setProfileImage(newUrl);
+        const user = { ...profileData, profile_image: newUrl };
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        toast.success("Profile image updated successfully!");
+      } else {
+        toast.error(res?.profile_image?.[0] || "There is an error");
+      }
+    } catch (error: any) {
+      const payload = error?.response?.data;
+      handleErrorAlerts(
+        payload?.message || "There is an unexpected error occured."
+      );
+    }
+  };
+
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await handleChangeImage(file);
+    e.currentTarget.value = "";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -171,20 +220,47 @@ const ProfilePage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
           <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
             <div className="relative">
-              <img
-                src={profileData.avatar}
-                alt={profileData.name}
-                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-              />
-              <button className="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors">
-                <Camera className="w-4 h-4" />
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={profileData.first_name}
+                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {profileData?.first_name?.charAt(0)}
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                className="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors disabled:opacity-60"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isPending}
+                aria-label="Change profile photo"
+                title="Change profile photo"
+              >
+                {isPending ? (
+                  <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="user"
+                className="hidden"
+                onChange={onPickFile}
+              />
             </div>
 
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">
-                  {profileData.name}
+                  {profileData.first_name} {profileData.last_name}
                 </h1>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
@@ -210,7 +286,10 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <Calendar className="w-4 h-4 mr-2" />
-                  <span>Joined {profileData.joinDate || "--"}</span>
+                  {/* <span>Joined {profileData.created_at || "--"}</span> */}
+                  <span>
+                    Joined {formatDateTimeSimple(profileData?.data_joined)}
+                  </span>
                 </div>
               </div>
 
@@ -280,7 +359,10 @@ const ProfilePage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name
                     </label>
-                    <p className="text-gray-900">{profileData.name || "--"}</p>
+                    <p className="text-gray-900">
+                      {profileData.first_name || "--"}{" "}
+                      {profileData.last_name || "--"}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">

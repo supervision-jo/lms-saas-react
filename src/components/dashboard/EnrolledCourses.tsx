@@ -34,7 +34,10 @@ export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
       <div className="flex items-start">
         <div className="relative">
           <img
-            src={item?.course?.picture ?? undefined}
+            src={
+              item?.course?.picture ??
+              "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+            }
             alt={item?.course?.title}
             className="w-24 h-24 rounded-xl object-cover"
           />
@@ -49,11 +52,19 @@ export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
                 {item?.course?.title}
               </h4>
               <div className="flex items-center mb-3">
-                <img
-                  src={instructor?.instructor_image}
-                  alt={instructor?.instructor_full_name}
-                  className="w-6 h-6 rounded-full mr-2"
-                />
+                {instructor?.instructor_image ? (
+                  <img
+                    src={instructor?.instructor_image}
+                    alt={instructor?.instructor_full_name}
+                    className="w-6 h-6 rounded-full mr-2"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">
+                      {instructor?.instructor_full_name?.charAt(0)}
+                    </span>
+                  </div>
+                )}
                 <p className="text-gray-600">
                   {instructor?.instructor_full_name}
                 </p>
