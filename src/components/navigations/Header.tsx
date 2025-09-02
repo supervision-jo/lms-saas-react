@@ -31,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const currentUser: User = readUserFromStorage();
-
+  console.log("Current user:", currentUser);
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,13 +107,13 @@ const Header: React.FC<HeaderProps> = ({
                         currentUser.profile_image ??
                         "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                       }
-                      alt={currentUser.first_name}
+                      alt={currentUser?.first_name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {currentUser.first_name.charAt(0)}
+                        {currentUser?.first_name?.charAt(0)}
                       </span>
                     </div>
                   )}
