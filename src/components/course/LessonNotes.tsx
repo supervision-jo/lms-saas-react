@@ -7,7 +7,7 @@ const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
     `/enrollments/lesson-notes/?lesson=`,
     ["lesson-notes"]
   );
-//   console.log("API_ENDPOINTS.lessonNotes", API_ENDPOINTS.lessonNotes);
+  console.log("API_ENDPOINTS.lessonNotes", API_ENDPOINTS.lessonNotes);
   const notesData = data;
   console.log("notesData", notesData);
   console.log("currentLessonId",currentLessonId)

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { RawAxiosRequestConfig } from "axios";
 import axiosInstance from "./config";
 

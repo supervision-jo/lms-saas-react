@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NavigateFunction } from "react-router";
-import { ACCESS_TOKEN, USER_KEY } from "../utils/constants";
+import { ACCESS_TOKEN_KEY, USER_KEY } from "../utils/constants";
 
 export function getStoredTokens(): string | null {
   try {
-    const tokens = localStorage.getItem(ACCESS_TOKEN);
+    const tokens = localStorage.getItem(ACCESS_TOKEN_KEY);
     return tokens ? JSON.parse(tokens) : null;
   } catch {
     return null;
@@ -16,7 +15,7 @@ export async function storeTokens(
   navigate?: NavigateFunction,
   setIsAuthenticated?: () => void
 ): Promise<void> {
-  await localStorage.setItem(ACCESS_TOKEN, JSON.stringify(tokens));
+  await localStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(tokens));
 
   if (setIsAuthenticated) setIsAuthenticated();
 
@@ -27,7 +26,7 @@ export async function removeTokens(
   navigate?: NavigateFunction,
   setIsAuthenticated?: () => void
 ): Promise<void> {
-  await localStorage.removeItem(ACCESS_TOKEN);
+  await localStorage.removeItem(ACCESS_TOKEN_KEY);
 
   if (setIsAuthenticated) setIsAuthenticated();
 
@@ -35,8 +34,7 @@ export async function removeTokens(
 }
 
 export function isAuthenticated(): boolean {
-  // return !!getStoredTokens();
-  return !!readUserFromStorage();
+  return !!getStoredTokens();
 }
 
 export function readUserFromStorage(): any | null {

@@ -14,9 +14,14 @@ import {
 } from "lucide-react";
 import VideoPlayer from "../../components/reusable-components/VideoPlayer";
 import CourseContent from "../../components/course/CourseContent";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { useParams } from "react-router";
+import LessonNotes from "../../components/course/LessonNotes";
 
 const CoursePlayerPage: React.FC = () => {
-  const [currentLessonId, setCurrentLessonId] = useState("1");
+  const { courseId } = useParams();
+  const [currentLessonId, setCurrentLessonId] = useState("");
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
   const [notes, setNotes] = useState("");
@@ -82,7 +87,9 @@ const CoursePlayerPage: React.FC = () => {
   const [examScore, setExamScore] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
+  const [savedNotes
+    // , setSavedNotes
+  ] = useState<{ [key: string]: string }>({});
   const [showExam, setShowExam] = useState(false);
 
   const courseData = {
@@ -171,156 +178,17 @@ const CoursePlayerPage: React.FC = () => {
     ],
   };
 
-  const modules = [
-    {
-      id: "1",
-      title: "Getting Started with React",
-      totalDuration: "3h 45m",
-      lessonCount: 15,
-      lessons: [
-        {
-          id: "1",
-          title: "What is React?",
-          duration: "15m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "2",
-          title: "Setting up the Development Environment",
-          duration: "20m",
-          type: "video" as const,
-          isCompleted: true,
-          isFree: true,
-        },
-        {
-          id: "3",
-          title: "Creating Your First React App",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "4",
-          title: "React Fundamentals Guide",
-          duration: "12m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "5",
-          title: "Understanding JSX",
-          duration: "18m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "6",
-          title: "Quick Knowledge Check",
-          duration: "10m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "7",
-          title: "React Setup Files & Resources",
-          duration: "5m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/react-setup.zip",
-        },
-        {
-          id: "8",
-          title: "Module 1 Assessment",
-          duration: "25m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "React Components and Props",
-      totalDuration: "4h 20m",
-      lessonCount: 18,
-      lessons: [
-        {
-          id: "9",
-          title: "Functional Components",
-          duration: "22m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "10",
-          title: "Class Components",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "11",
-          title: "Props and Prop Types",
-          duration: "30m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "12",
-          title: "Component Composition",
-          duration: "28m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "13",
-          title: "Components Best Practices",
-          duration: "12m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "14",
-          title: "Component Examples",
-          duration: "8m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/components-examples.pdf",
-        },
-        {
-          id: "15",
-          title: "Props Quiz",
-          duration: "20m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "16",
-          title: "Module 2 Final Exam",
-          duration: "45m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-  ];
+  const { data: modulesData } = useCustomQuery(
+    `${API_ENDPOINTS.modules}?course=${courseId}`,
+    ["modules", courseId],
+    undefined,
+    !!courseId
+  );
 
+  const modules: Module[] = modulesData?.data?.data ?? [];
+  console.log("modules",modules)
   const handleLessonSelect = (lessonId: string) => {
+    console.log("Selected lesson:", lessonId);
     setCurrentLessonId(lessonId);
     // Load saved notes for the new lesson
     setNotes(savedNotes[lessonId] || "");
@@ -332,7 +200,7 @@ const CoursePlayerPage: React.FC = () => {
     const allLessons = modules.flatMap((m) => m.lessons);
     const selectedLesson = allLessons.find((l) => l.id === lessonId);
 
-    if (selectedLesson?.type === "exam") {
+    if (selectedLesson?.content_type === "exam") {
       setShowExam(true);
       setShowNotes(false);
       setShowQA(false);
@@ -351,17 +219,17 @@ const CoursePlayerPage: React.FC = () => {
     console.log("Lesson completed");
   };
 
-  const handleSaveNotes = () => {
-    // Save notes for current lesson
-    setSavedNotes((prev) => ({
-      ...prev,
-      [currentLessonId]: notes,
-    }));
+  // const handleSaveNotes = () => {
+  //   // Save notes for current lesson
+  //   setSavedNotes((prev) => ({
+  //     ...prev,
+  //     [currentLessonId]: notes,
+  //   }));
 
-    // Show success message (you could add a toast notification here)
-    alert("Notes saved successfully!");
-    console.log("Notes saved for lesson:", currentLessonId, notes);
-  };
+  //   // Show success message (you could add a toast notification here)
+  //   alert("Notes saved successfully!");
+  //   console.log("Notes saved for lesson:", currentLessonId, notes);
+  // };
 
   const handleAskQuestion = () => {
     if (newQuestion.trim()) {
@@ -547,7 +415,7 @@ const CoursePlayerPage: React.FC = () => {
                   (l) => l.id === currentLessonId
                 );
 
-                if (currentLessonData?.type === "article") {
+                if (currentLessonData?.content_type === "article") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto">
@@ -560,7 +428,7 @@ const CoursePlayerPage: React.FC = () => {
                               {currentLessonData.title}
                             </h1>
                             <p className="text-gray-600 mt-1">
-                              Reading time: {currentLessonData.duration}
+                              Reading time: {currentLessonData.duration_hours}
                             </p>
                           </div>
                         </div>
@@ -642,7 +510,7 @@ const CoursePlayerPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                } else if (currentLessonData?.type === "quiz") {
+                } else if (currentLessonData?.content_type === "quiz") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto">
@@ -659,7 +527,8 @@ const CoursePlayerPage: React.FC = () => {
                               {currentLessonData.title}
                             </h1>
                             <p className="text-gray-600 mt-1">
-                              Quick assessment • {currentLessonData.duration}
+                              Quick assessment •{" "}
+                              {currentLessonData.duration_hours}
                             </p>
                           </div>
                         </div>
@@ -791,7 +660,7 @@ const CoursePlayerPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                } else if (currentLessonData?.type === "material") {
+                } else if (currentLessonData?.content_type === "material") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto text-center">
@@ -929,34 +798,11 @@ const CoursePlayerPage: React.FC = () => {
 
           {/* Notes Section */}
           {showNotes && !showExam && (
-            <div className="bg-gray-800 p-6 border-b border-gray-700">
-              <div className="max-w-5xl mx-auto">
-                <div className="bg-gray-900 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">
-                      Lesson Notes
-                    </h3>
-                    <button
-                      onClick={handleSaveNotes}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                    >
-                      Save Notes
-                    </button>
-                  </div>
-                  <textarea
-                    placeholder="Take notes while watching..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full h-40 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
-                  />
-                  {savedNotes[currentLessonId] && (
-                    <p className="text-green-400 text-sm mt-2">
-                      ✓ Notes saved for this lesson
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <LessonNotes
+              currentLessonId={currentLesson.id}
+              notes={notes}
+              setNotes={setNotes}
+            />
           )}
 
           {/* Exam Section */}
@@ -1202,7 +1048,10 @@ const CoursePlayerPage: React.FC = () => {
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center space-x-3">
                               <img
-                                src={qa.studentImage}
+                                src={
+                                  qa.studentImage ??
+                                  "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                                }
                                 alt={qa.student}
                                 className="w-8 h-8 rounded-full object-cover border-2 border-purple-500"
                               />
@@ -1257,7 +1106,10 @@ const CoursePlayerPage: React.FC = () => {
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center space-x-2">
                                     <img
-                                      src={reply.authorImage}
+                                      src={
+                                        reply.authorImage ??
+                                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                                      }
                                       alt={reply.author}
                                       className="w-6 h-6 rounded-full object-cover border border-gray-500"
                                     />

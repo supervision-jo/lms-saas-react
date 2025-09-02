@@ -20,7 +20,7 @@ export default function MobileNav({
 
   const currentUser = readUserFromStorage();
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
         {mainNavigationItems
           .concat([{ id: "profile", label: "Profile Settings", icon: Home }])
@@ -62,6 +62,12 @@ export default function MobileNav({
             })}
           </>
         )}
+        <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
+          Notifications
+        </button>
+        <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
+          Shopping Cart
+        </button>
         {currentUser && onLogout && (
           <button
             onClick={() => {

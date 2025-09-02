@@ -1,14 +1,8 @@
 import axios from "axios";
 import { getStoredTokens } from "../services/auth";
-import { ACCESS_TOKEN, BASE_URL } from "../utils/constants";
+import { ACCESS_TOKEN_KEY, BASE_URL } from "../utils/constants";
 
-const axiosInstance = axios.create({
-  // headers: {
-  //   "Content-Type": "application/json",
-  //   Accept: "application/json",
-  // },
-  // baseURL: BASE_URL,
-});
+const axiosInstance = axios.create();
 
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -32,12 +26,12 @@ axiosInstance.interceptors.response.use(
   },
   function (error) {
     if (error?.response?.data?.code === "token_not_valid") {
-      localStorage.removeItem(ACCESS_TOKEN);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
       window.location.href = "/login";
     }
 
     if (error?.response?.data?.code === "user_not_found") {
-      localStorage.removeItem(ACCESS_TOKEN);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
       window.location.href = "/login";
     }
 

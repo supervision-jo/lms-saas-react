@@ -1,0 +1,67 @@
+import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+
+export default function CategoriesSection() {
+  const navigate = useNavigate();
+  const { data: categoriesData } = useCustomQuery(
+    API_ENDPOINTS.categories,
+    ["categories"]
+  );
+  const categories: Category[] = categoriesData?.data?.data;
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Explore Top Categories
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Discover courses in the most in-demand skills and advance your
+            career
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {categories?.map((category: Category) => (
+            <div
+              key={category?.id}
+              onClick={() => navigate("/catalog")}
+              className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden"
+            >
+              <div
+                className={`absolute top-0 right-0 w-24 bg-[${
+                  category?.color[0] === "#"
+                    ? category?.color
+                    : "#" + category?.color
+                }] h-24 rounded-full transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
+              ></div>
+
+              <div className="relative z-10">
+                <img
+                  src={
+                    category?.icon ??
+                    "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                  }
+                  alt={category?.id}
+                  className="w-16 h-16 mb-4"
+                />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {category?.name}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {category?.total_courses} courses
+                </p>
+                <div className="flex items-center text-purple-600 font-semibold group-hover:text-purple-700">
+                  <span>Explore courses</span>
+                  <ArrowRight className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
