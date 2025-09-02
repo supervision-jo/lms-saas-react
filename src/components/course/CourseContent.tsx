@@ -37,10 +37,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
     }
     setExpandedModules(newExpanded);
   };
-
+console.log("module.lessons",modules)
   const handleLessonClick = (lesson: Lesson) => {
     const canAccess = isEnrolled || lesson.free_preview;
-
+    
     if (!canAccess) return;
 
     if (lesson.content_type === "material" && lesson.video_url) {

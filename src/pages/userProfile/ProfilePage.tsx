@@ -139,7 +139,6 @@ const learningStatsData = [
 ];
 
 const ProfilePage: React.FC = () => {
-  const profileRef = useRef<HTMLInputElement | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -161,39 +160,6 @@ const ProfilePage: React.FC = () => {
         Icon: ICONS[s.icon] as LucideIcon,
       })
     ) ?? [];
-  // PATCH USER
-  const { mutateAsync: editUser } = useCustomPatch(
-    API_ENDPOINTS.updateProfile,
-    ["patch-user"]
-  );
-  const handleButtonClick = () => {
-    profileRef.current?.click();
-  };
-  const handleImageChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const profile_image = event.target.files?.[0];
-    try {
-      const formData = new FormData();
-      if (profile_image) {
-        formData.append("profile_image", profile_image);
-        console.log("Selected image:", profile_image);
-        const response = await editUser(formData);
-        toast.success("Changes saved successfully!");
-        // const user = {
-        //   ...profileData,
-        //   profile_image: formData.get("profile_image"),
-        // };
-
-        localStorage.setItem(USER_KEY, JSON.stringify(response?.data));
-      }
-    } catch (error: any) {
-      const payload = error?.response?.data;
-      handleErrorAlerts(
-        payload?.message || "There is an unexpected error occured."
-      );
-    }
-  };
   const handleDownloadCertificate = (certificate: any) => {
     console.log("Downloading certificate for:", certificate.title);
     // Create a mock download
