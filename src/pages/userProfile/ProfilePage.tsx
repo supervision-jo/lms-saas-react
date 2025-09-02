@@ -14,10 +14,6 @@ import {
   // BookOpen,
   // Clock,
 } from "lucide-react";
-import { useRef } from "react";
-import handleErrorAlerts from "../../utils/showErrorMessages";
-import { USER_KEY, API_ENDPOINTS } from "../../utils/constants";
-import { useCustomPatch } from "../../hooks/useMutation";
 import EditUserProfile from "../../components/userProfile/EditUserProfile";
 import { readUserFromStorage } from "../../services/auth";
 import toast from "react-hot-toast";
