@@ -90,6 +90,7 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  
   const handleLessonSelect = (lessonId: string) => {
     console.log("Selected lesson:", lessonId);
     navigate(`/catalog/${course?.id}/player`);
