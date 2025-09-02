@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { formatDateTimeSimple } from "../../utils/formatDateTime";
 const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
   const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
   const { data } = useCustomQuery(
-    `/enrollments/lesson-notes/?lesson=`,
+    `/enrollments/lesson-notes/?lesson=${currentLessonId}`,
     ["lesson-notes"]
   );
-  console.log("API_ENDPOINTS.lessonNotes", API_ENDPOINTS.lessonNotes);
-  const notesData = data;
-  console.log("notesData", notesData);
-  console.log("currentLessonId",currentLessonId)
+  const notesData = data?.data;
   const handleSaveNotes = () => {
     // Save notes for current lesson
     setSavedNotes((prev) => ({
@@ -50,7 +48,25 @@ const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
           </div>
         </div>
       </div>
-      {/* {notesData.map()} */}
+      {notesData?.map((note: any) => (
+        <div
+          key={note.id}
+          className="w-full rounded-2xl bg-white shadow-md border border-gray-200 p-6 my-6 flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-lg transition-shadow"
+        >
+          {/* Left: title + content */}
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {note?.title || "-"}
+            </h2>
+            <p className="text-gray-700">{note?.content || "-"}</p>
+          </div>
+
+          {/* Right: created date */}
+          <p className="mt-4 sm:mt-0 text-sm text-gray-500 whitespace-nowrap">
+            {formatDateTimeSimple(note?.created_at) || "-"}
+          </p>
+        </div>
+      ))}
     </>
   );
 };

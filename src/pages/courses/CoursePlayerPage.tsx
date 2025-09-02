@@ -799,7 +799,7 @@ const CoursePlayerPage: React.FC = () => {
           {/* Notes Section */}
           {showNotes && !showExam && (
             <LessonNotes
-              currentLessonId={currentLesson.id}
+              currentLessonId={currentLessonId}
               notes={notes}
               setNotes={setNotes}
             />
