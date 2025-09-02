@@ -15,7 +15,7 @@ interface FormValues {
   email: string;
   password: string;
   c_password: string;
-  role: Role; // <-- single source of truth for the role
+  role: Role;
   terms: boolean;
 }
 
@@ -38,7 +38,7 @@ const SignupPage: React.FC = () => {
       password: "",
       c_password: "",
       terms: false,
-      role: "instructor", // <-- default is Instructor
+      role: "instructor",
     },
   });
 
@@ -83,18 +83,9 @@ const SignupPage: React.FC = () => {
 
       const res = await signUp.mutateAsync(formData);
 
-      if (res?.data?.status) {
+      if (res?.status) {
         toast.success("Signed up successfully!");
-        const user = {
-          name: `${formData.get("first_name")} ${formData.get("last_name")}`,
-          email: formData.get("email"),
-          avatar:
-            "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-          joinDate: "August 2025",
-          location: "",
-          phone: "",
-          bio: "",
-        };
+        const user = res.data.user;
         localStorage.setItem(USER_KEY, JSON.stringify(user));
 
         reset();
@@ -105,7 +96,12 @@ const SignupPage: React.FC = () => {
     } catch (error: any) {
       const payload = error?.response?.data;
       handleErrorAlerts(
-        payload?.message || "There is an unexpected error occured."
+        payload?.email[0] ||
+          payload?.password[0] ||
+          payload?.first_name[0] ||
+          payload?.last_name[0] ||
+          payload?.role[0] ||
+          "There is an unexpected error occured"
       );
     }
   };

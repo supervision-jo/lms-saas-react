@@ -20,5 +20,9 @@ interface User {
   last_name: string;
   email: string;
   is_student: boolean;
-  profile_image: any;
+  is_instructor: boolean;
+  profile_image: string | null;
+  bio: string | null;
+  phone: string | null;
+  location: string | null;
 }

@@ -4,13 +4,94 @@ import {
   BookOpen,
   Clock,
   LucideIcon,
-  Play,
-  Star,
   TrendingUp,
   Trophy,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+import EnrolledCourses from "../../components/dashboard/EnrolledCourses";
+import { readUserFromStorage } from "../../services/auth";
+
+const achievements = [
+  {
+    id: "1",
+    title: "First Course Completed",
+    icon: "🎓",
+    date: "2024-01-15",
+    description: "Completed your first course",
+  },
+  {
+    id: "2",
+    title: "Week Streak",
+    icon: "🔥",
+    date: "2024-01-20",
+    description: "Learned for 7 consecutive days",
+  },
+  {
+    id: "3",
+    title: "Fast Learner",
+    icon: "⚡",
+    date: "2024-01-25",
+    description: "Completed 3 courses in one month",
+  },
+  {
+    id: "4",
+    title: "Quiz Master",
+    icon: "🧠",
+    date: "2024-02-01",
+    description: "Scored 100% on 5 quizzes",
+  },
+  {
+    id: "5",
+    title: "Community Helper",
+    icon: "🤝",
+    date: "2024-02-05",
+    description: "Helped 10 fellow students",
+  },
+  {
+    id: "6",
+    title: "Dedicated Student",
+    icon: "📚",
+    date: "2024-02-10",
+    description: "Spent 100+ hours learning",
+  },
+];
+
+const dashboardStatsData = [
+  {
+    label: "Courses Enrolled",
+    value: "12",
+    icon: "BookOpen",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+  },
+  {
+    label: "Hours Learned",
+    value: "156",
+    icon: "Clock",
+    color: "text-green-600",
+    bg: "bg-green-50",
+    border: "border-green-200",
+  },
+  {
+    label: "Certificates",
+    value: "8",
+    icon: "Award",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+  },
+  {
+    label: "Streak Days",
+    value: "23",
+    icon: "TrendingUp",
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+  },
+];
 
 const ICONS = {
   Award,
@@ -34,25 +115,15 @@ const DashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("courses");
   const navigate = useNavigate();
 
-  const enrolledCoursesData = useCustomQuery("/data/enrolledCourses.json", [
+  const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
     "enrolledCourses",
-  ]);
-
-  const achievementsData = useCustomQuery("/data/achievements.json", [
-    "achievements",
-  ]);
-
-  const dashboardStatsData = useCustomQuery("/data/dashboardStats.json", [
-    "dashboardStats",
   ]);
 
   const enrolledCourses: EnrolledCourse[] =
     enrolledCoursesData?.data?.data ?? [];
 
-  const achievements: Acheivement[] = achievementsData?.data?.data ?? [];
-
   const stats =
-    (dashboardStatsData?.data?.data as DashboardState[] | undefined)?.map(
+    (dashboardStatsData as DashboardState[] | undefined)?.map(
       (s: DashboardState) => ({
         ...s,
         Icon: ICONS[s.icon] as LucideIcon,
@@ -71,6 +142,8 @@ const DashboardPage: React.FC = () => {
 
   // const maxHours = Math.max(...weeklyActivity.map((d) => d.hours));
 
+  const currentUser: User = readUserFromStorage();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -80,7 +153,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold mb-2">
-                  Welcome back, John! 👋
+                  Welcome back, {currentUser?.first_name}! 👋
                 </h1>
                 <p className="text-purple-100 text-lg">
                   Continue your learning journey and achieve your goals.
@@ -166,73 +239,8 @@ const DashboardPage: React.FC = () => {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-6">
-                  {enrolledCourses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="group bg-gradient-to-r from-gray-50 to-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg"
-                    >
-                      <div className="flex items-start">
-                        <div className="relative">
-                          <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="w-24 h-24 rounded-xl object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-xl transition-all duration-300 flex items-center justify-center">
-                            <Play className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          </div>
-                        </div>
-                        <div className="ml-6 flex-1">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="text-xl font-bold text-gray-900 mb-2">
-                                {course.title}
-                              </h4>
-                              <p className="text-gray-600 mb-3">
-                                {course.instructor}
-                              </p>
-                              <div className="flex items-center text-sm text-gray-500 mb-4">
-                                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium mr-4">
-                                  {course.category}
-                                </span>
-                                <Clock className="w-4 h-4 mr-1" />
-                                <span className="mr-4">{course.timeSpent}</span>
-                                <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                                <span className="mr-4">{course.rating}</span>
-                                <span className="text-gray-400">
-                                  Last accessed {course.lastAccessed}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex-1 mr-6">
-                                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                                    <span className="font-medium">
-                                      {course.progress}% complete
-                                    </span>
-                                    <span>
-                                      {course.completedLessons}/
-                                      {course.totalLessons} lessons
-                                    </span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-3">
-                                    <div
-                                      className="bg-gradient-to-r from-purple-600 to-indigo-600 h-3 rounded-full transition-all duration-500"
-                                      style={{ width: `${course.progress}%` }}
-                                    />
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => navigate("/player")}
-                                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                >
-                                  Continue
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  {enrolledCourses.map((item) => (
+                    <EnrolledCourses item={item} key={item.id} />
                   ))}
                 </div>
               </div>

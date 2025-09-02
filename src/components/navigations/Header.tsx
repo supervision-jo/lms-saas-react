@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({
     onSearch(searchQuery);
   };
 
-  const currentUser = readUserFromStorage();
+  const currentUser: User = readUserFromStorage();
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -101,21 +101,21 @@ const Header: React.FC<HeaderProps> = ({
                   className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors"
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 >
-                  {currentUser.avatar ? (
+                  {currentUser.profile_image ? (
                     <img
-                      src={currentUser.avatar}
-                      alt={currentUser.name}
+                      src={currentUser.profile_image}
+                      alt={currentUser.first_name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {currentUser.name.charAt(0)}
+                        {currentUser.first_name.charAt(0)}
                       </span>
                     </div>
                   )}
                   <span className="hidden md:block text-sm text-gray-700">
-                    {currentUser.name}
+                    {currentUser.first_name} {currentUser.last_name}
                   </span>
                 </div>
 

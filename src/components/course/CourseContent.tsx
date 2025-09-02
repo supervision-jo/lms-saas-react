@@ -4,7 +4,7 @@ import {
   ChevronRight,
   Play,
   Lock,
-  CheckCircle,
+  // CheckCircle,
   Clock,
   FileText,
   Award,
@@ -39,14 +39,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    const canAccess = isEnrolled || lesson.isFree;
+    const canAccess = isEnrolled || lesson.free_preview;
 
     if (!canAccess) return;
 
-    if (lesson.type === "material" && lesson.fileUrl) {
+    if (lesson.content_type === "material" && lesson.video_url) {
       // Handle material download
       const link = document.createElement("a");
-      link.href = lesson.fileUrl;
+      link.href = lesson.video_url;
       link.download = lesson.title;
       document.body.appendChild(link);
       link.click();
@@ -58,14 +58,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
   };
 
   const getLessonIcon = (lesson: Lesson) => {
-    if (lesson.isCompleted) {
-      return <CheckCircle className="w-4 h-4 text-green-500 fill-current" />;
-    }
-    if (!isEnrolled && !lesson.isFree) {
+    // if (lesson.isCompleted) {
+    //   return <CheckCircle className="w-4 h-4 text-green-500 fill-current" />;
+    // }
+    if (!isEnrolled && !lesson.free_preview) {
       return <Lock className="w-4 h-4 text-gray-500" />;
     }
 
-    switch (lesson.type) {
+    switch (lesson.content_type) {
       case "video":
         return <Play className="w-4 h-4 text-purple-600 fill-current" />;
       case "article":
@@ -129,7 +129,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                 <div className="px-5 pb-4 bg-gray-50">
                   {module.lessons.map((lesson) => {
                     const isCurrentLesson = lesson.id === currentLessonId;
-                    const canAccess = isEnrolled || lesson.isFree;
+                    const canAccess = isEnrolled || lesson.free_preview;
 
                     return (
                       <button
@@ -153,7 +153,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           >
                             {lesson.title}
                           </span>
-                          {lesson.isFree && !isEnrolled && (
+                          {lesson.free_preview && !isEnrolled && (
                             <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
                               Free
                             </span>
@@ -167,7 +167,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           }`}
                         >
                           <Clock className="w-3 h-3 mr-1" />
-                          {lesson.duration}
+                          {lesson.duration_hours}h
                         </div>
                       </button>
                     );

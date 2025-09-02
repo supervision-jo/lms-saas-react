@@ -1,34 +1,40 @@
 import { Filter } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+
+type PriceFilter = "all" | "free" | "paid";
 
 interface Props {
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedLevel: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedPrice: React.Dispatch<React.SetStateAction<string>>;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedCategory: (v: string) => void;
+  setSelectedLevel: (v: string) => void;
+  setPriceFilter: (v: PriceFilter) => void;
+  setSearchQuery: (v: string) => void;
   selectedCategory: string;
   selectedLevel: string;
-  selectedPrice: string;
+  priceFilter: PriceFilter;
 }
 
-type Category = {
+interface Category {
   id: string;
   name: string;
-  count: number;
-};
+  description: string;
+  icon: string;
+  color: string;
+  total_courses: number;
+}
 
 export default function CoursesFilter({
   setSearchQuery,
   setSelectedCategory,
   setSelectedLevel,
-  setSelectedPrice,
+  setPriceFilter,
   selectedCategory,
   selectedLevel,
-  selectedPrice,
+  priceFilter,
 }: Props) {
-  const catsData = useCustomQuery("/data/categories.json", ["categories"]);
+  const { data } = useCustomQuery(API_ENDPOINTS.categories, ["categories"]);
+  const categories: Category[] = data?.data?.data;
 
-  const categories: Category[] = catsData?.data?.data ?? [];
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-32">
@@ -41,7 +47,18 @@ export default function CoursesFilter({
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Category</h4>
           <div className="space-y-2">
-            {categories.map((category) => (
+            <label key="all" className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="category"
+                value="all"
+                checked={selectedCategory === "all"}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+              />
+              <span className="ml-3 text-sm text-gray-700 flex-1">All</span>
+            </label>
+            {categories?.map((category) => (
               <label
                 key={category.id}
                 className="flex items-center cursor-pointer"
@@ -58,7 +75,7 @@ export default function CoursesFilter({
                   {category.name}
                 </span>
                 <span className="text-xs text-gray-500">
-                  ({category.count})
+                  ({category.total_courses})
                 </span>
               </label>
             ))}
@@ -112,8 +129,10 @@ export default function CoursesFilter({
                   type="radio"
                   name="price"
                   value={price.id}
-                  checked={selectedPrice === price.id}
-                  onChange={(e) => setSelectedPrice(e.target.value)}
+                  checked={priceFilter === (price.id as PriceFilter)}
+                  onChange={(e) =>
+                    setPriceFilter(e.target.value as PriceFilter)
+                  }
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                 />
                 <span className="ml-3 text-sm text-gray-700">
@@ -128,7 +147,7 @@ export default function CoursesFilter({
           onClick={() => {
             setSelectedCategory("all");
             setSelectedLevel("all");
-            setSelectedPrice("all");
+            setPriceFilter("all");
             setSearchQuery("");
           }}
           className="w-full text-purple-600 hover:text-purple-700 text-sm font-medium"

@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { USER_KEY } from "../../utils/constants";
+import {
+  ACCESS_TOKEN_KEY,
+  API_ENDPOINTS,
+  USER_KEY,
+} from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
+import { useCustomPost } from "../../hooks/useMutation";
 
 interface FormValues {
   email: string;
@@ -33,7 +38,7 @@ const LoginPage: React.FC = () => {
     },
   });
 
-  // const signUp = useCustomPost("/path-to-backend/", ["users", "sign-up"]);
+  const login = useCustomPost(API_ENDPOINTS.login, ["login"]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -41,13 +46,21 @@ const LoginPage: React.FC = () => {
       formData.append("email", data.email);
       formData.append("password", data.password);
 
-      // const res = await signUp.mutateAsync(formData);
+      const res = await login.mutateAsync(formData);
 
-      toast.success("Logged in successfully!");
+      if (res.status) {
+        toast.success("Logged in successfully!");
 
-      setIsAuthenticated();
-      reset();
-      navigate("/");
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+        localStorage.setItem(
+          ACCESS_TOKEN_KEY,
+          JSON.stringify(res.data.tokens.access)
+        );
+
+        setIsAuthenticated();
+        reset();
+        navigate("/");
+      }
     } catch (error: any) {
       const payload = error?.response?.data;
       handleErrorAlerts(

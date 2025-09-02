@@ -1,40 +1,133 @@
-import React, { useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import CourseCard from "../../components/course/CourseCard";
 import CoursesSortAndSearch from "../../components/course/CoursesSortAndSearch";
 import CoursesFilter from "../../components/course/CoursesFilter";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { useSearchParams } from "react-router";
+import Pagination from "../../components/reusable-components/Pagination";
+import { useEffect, useState } from "react";
+import { useDebounce } from "../../hooks/useDebounce";
+import CourseCardsSkeleton from "../../components/resource-stats/CourseLoading";
+
+type ViewMode = "grid" | "list";
+type PriceFilter = "all" | "free" | "paid";
+type SortKey =
+  | "most_popular"
+  | "high_rating"
+  | "newest"
+  | "price_low_to_high"
+  | "price_high_to_low";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 6;
 
 const CourseCatalogPage: React.FC = () => {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedLevel, setSelectedLevel] = useState("all");
-  const [selectedPrice, setSelectedPrice] = useState("all");
-  const [sortBy, setSortBy] = useState("most-popular");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const coursesData = useCustomQuery("course/courses/", ["courses"]);
+  const searchQuery = searchParams.get("search") ?? "";
+  const selectedCategory = searchParams.get("sub_category") ?? "all";
+  const selectedLevel = searchParams.get("level") ?? "all";
+  const priceFilter = (searchParams.get("price") ?? "all") as PriceFilter;
+  const sortBy = (searchParams.get("sort") ?? "most_popular") as SortKey;
+  const viewMode = (searchParams.get("view") ?? "grid") as ViewMode;
+  const page = parseInt(searchParams.get("page") ?? String(DEFAULT_PAGE), 10);
+  const pageSize = parseInt(
+    searchParams.get("page_size") ?? String(DEFAULT_PAGE_SIZE),
+    10
+  );
 
-  const courses: Course[] = coursesData?.data?.data ?? [];
+  const [searchInput, setSearchInput] = useState(searchQuery);
 
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.instructor.first_name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || course.sub_category === selectedCategory;
-    const matchesLevel =
-      selectedLevel === "all" ||
-      course.level.toLowerCase().replace(" ", "-") === selectedLevel;
-    const matchesPrice =
-      selectedPrice === "all" ||
-      (selectedPrice === "free" && +course.price === 0) ||
-      (selectedPrice === "paid" && +course.price > 0);
+  const updateParam = (key: string, value?: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value && value.length > 0) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
+  const setPage = (p: number) =>
+    updateParam("page", p > 1 ? String(p) : undefined);
+  // const setPageSize = (ps: number) => {
+  //   const next = new URLSearchParams(searchParams);
+  //   next.set("page_size", String(ps));
+  //   next.delete("page"); // reset to 1 when size changes
+  //   setSearchParams(next, { replace: true });
+  // };
+  const setSearchQuery = (v: string) => updateParam("search", v || undefined);
+  const setSelectedCategory = (v: string) =>
+    updateParam("sub_category", v === "all" ? undefined : v);
+  const setSelectedLevel = (v: string) =>
+    updateParam("level", v === "all" ? undefined : v);
+  const setPriceFilter = (v: PriceFilter) =>
+    updateParam("price", v === "all" ? undefined : v);
+  const setSortBy = (v: SortKey) =>
+    updateParam("sort", v === "most_popular" ? undefined : v);
+  const setViewMode = (v: ViewMode) =>
+    updateParam("view", v === "grid" ? undefined : v);
 
-    return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
-  });
+  const backendQueryParams = new URLSearchParams();
+  if (searchQuery) backendQueryParams.set("search", searchQuery);
+  if (selectedCategory !== "all")
+    backendQueryParams.set("sub_category", selectedCategory);
+  if (selectedLevel !== "all") backendQueryParams.set("level", selectedLevel);
+
+  // price mapping (only send one)
+  if (priceFilter === "free") backendQueryParams.set("is_free", "true");
+  if (priceFilter === "paid") backendQueryParams.set("is_paid", "true");
+
+  // sort mapping to your boolean switches
+  backendQueryParams.set("most_popular", String(sortBy === "most_popular"));
+  backendQueryParams.set("high_rating", String(sortBy === "high_rating"));
+  backendQueryParams.set(
+    "price_low_to_high",
+    String(sortBy === "price_low_to_high")
+  );
+  backendQueryParams.set(
+    "price_high_to_low",
+    String(sortBy === "price_high_to_low")
+  );
+  backendQueryParams.set("newest", String(sortBy === "newest"));
+  backendQueryParams.set("page", String(page));
+  backendQueryParams.set("page_size", String(pageSize));
+
+  // ---- GET COURSES (invalidate/refetch on URL changes)
+  const { data, isLoading } = useCustomQuery(
+    `${API_ENDPOINTS.courses}?${backendQueryParams.toString()}`,
+    ["courses", backendQueryParams.toString()]
+  );
+
+  const courses: Course[] = data?.data ?? [];
+  const totalCount: number = data?.count ?? 0;
+
+  // const PageSizeSelect = (
+  //   <select
+  //     value={pageSize}
+  //     onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+  //     className="ml-3 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+  //   >
+  //     {[6, 12, 18, 24].map((n) => (
+  //       <option key={n} value={n}>
+  //         {n} / page
+  //       </option>
+  //     ))}
+  //   </select>
+  // );
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  const debouncedSearch = useDebounce(searchInput, 500);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (debouncedSearch) next.set("search", debouncedSearch);
+    else next.delete("search");
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -45,18 +138,19 @@ const CourseCatalogPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">All Courses</h1>
               <p className="text-gray-600 mt-1">
-                {filteredCourses.length.toLocaleString()} courses available
+                {courses?.length ?? 0} courses available
               </p>
             </div>
 
             <CoursesSortAndSearch
-              searchQuery={searchQuery}
+              searchQuery={searchInput}
+              setSearchQuery={setSearchInput}
               sortBy={sortBy}
-              viewMode={viewMode}
-              setSearchQuery={setSearchQuery}
               setSortBy={setSortBy}
+              viewMode={viewMode}
               setViewMode={setViewMode}
             />
+            {/* {PageSizeSelect} */}
           </div>
         </div>
       </div>
@@ -64,20 +158,21 @@ const CourseCatalogPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
           {/* Filters Sidebar */}
-
           <CoursesFilter
             selectedCategory={selectedCategory}
             selectedLevel={selectedLevel}
-            selectedPrice={selectedPrice}
+            priceFilter={priceFilter}
             setSearchQuery={setSearchQuery}
             setSelectedCategory={setSelectedCategory}
             setSelectedLevel={setSelectedLevel}
-            setSelectedPrice={setSelectedPrice}
+            setPriceFilter={setPriceFilter}
           />
 
           {/* Course Grid */}
           <div className="flex-1">
-            {filteredCourses.length === 0 ? (
+            {isLoading ? (
+              <CourseCardsSkeleton count={6} isListView={viewMode === "list"} />
+            ) : !courses || courses.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -95,44 +190,23 @@ const CourseCatalogPage: React.FC = () => {
                     : "grid-cols-1"
                 }`}
               >
-                {filteredCourses.map((course) => (
+                {courses.map((course) => (
                   <CourseCard
                     key={course.id}
-                    course={course}
+                    courseId={course.id}
                     isListView={viewMode === "list"}
                   />
                 ))}
               </div>
             )}
 
-            {/* Pagination */}
-            {filteredCourses.length > 0 && (
-              <div className="mt-12 flex items-center justify-center">
-                <nav className="flex items-center space-x-2">
-                  <button
-                    className="px-4 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                    disabled
-                  >
-                    Previous
-                  </button>
-                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg">
-                    1
-                  </button>
-                  <button className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                    2
-                  </button>
-                  <button className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                    3
-                  </button>
-                  <span className="px-4 py-2 text-gray-500">...</span>
-                  <button className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-                    10
-                  </button>
-                  <button className="px-4 py-2 text-gray-700 hover:text-gray-900">
-                    Next
-                  </button>
-                </nav>
-              </div>
+            {!isLoading && totalCount > 0 && (
+              <Pagination
+                total={totalCount}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
             )}
           </div>
         </div>
