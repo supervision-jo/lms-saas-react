@@ -1,20 +1,20 @@
 import { Filter } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
-// import { categories } from "../../types/categories";
+import { API_ENDPOINTS } from "../../utils/constants";
+
+type PriceFilter = "all" | "free" | "paid";
 
 interface Props {
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedLevel: React.Dispatch<React.SetStateAction<string>>;
-  // setIsPaid: React.Dispatch<React.SetStateAction<boolean>>;
-  setSelectedPrice: React.Dispatch<React.SetStateAction<string>>;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedCategory: (v: string) => void;
+  setSelectedLevel: (v: string) => void;
+  setPriceFilter: (v: PriceFilter) => void;
+  setSearchQuery: (v: string) => void;
   selectedCategory: string;
   selectedLevel: string;
-  // isPaid: boolean;
-  selectedPrice: string;
+  priceFilter: PriceFilter;
 }
 
-interface category {
+interface Category {
   id: string;
   name: string;
   description: string;
@@ -28,18 +28,14 @@ export default function CoursesFilter({
   setSelectedCategory,
   setSelectedPrice,
   setSelectedLevel,
-  // setIsPaid,
+  setPriceFilter,
   selectedCategory,
   selectedLevel,
-  // isPaid,
-  selectedPrice,
+  priceFilter,
 }: Props) {
-  const { data: categories } = useCustomQuery("/api/course/categories/", [
-    "categories",
-  ]);
+  const { data } = useCustomQuery(API_ENDPOINTS.categories, ["categories"]);
+  const categories: Category[] = data?.data?.data;
 
-  const categoriesData: category[] = categories?.data?.data;
-  console.log("categories", categoriesData);
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
       <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-32">
@@ -52,40 +48,35 @@ export default function CoursesFilter({
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Category</h4>
           <div className="space-y-2">
-            <label className="flex items-center cursor-pointer">
+            <label key="all" className="flex items-center cursor-pointer">
               <input
                 type="radio"
                 name="category"
-                value={""}
-                checked={selectedCategory === ""}
+                value="all"
+                checked={selectedCategory === "all"}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               />
-              <span className="ml-3 text-sm text-gray-700 flex-1">
-                All Categories
-              </span>
-              <span className="text-xs text-gray-500">
-                {/* ({category?.total_courses}) */}
-              </span>
+              <span className="ml-3 text-sm text-gray-700 flex-1">All</span>
             </label>
-            {categoriesData?.map((category) => (
+            {categories?.map((category) => (
               <label
-                key={category?.id}
+                key={category.id}
                 className="flex items-center cursor-pointer"
               >
                 <input
                   type="radio"
                   name="category"
-                  value={category?.id}
+                  value={category.id}
                   checked={selectedCategory === category.id}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                 />
                 <span className="ml-3 text-sm text-gray-700 flex-1">
-                  {category?.name}
+                  {category.name}
                 </span>
                 <span className="text-xs text-gray-500">
-                  ({category?.total_courses})
+                  ({category.total_courses})
                 </span>
               </label>
             ))}
@@ -139,10 +130,10 @@ export default function CoursesFilter({
                   type="radio"
                   name="price"
                   value={price.id}
-                  checked={selectedPrice === price.id}
-                  onChange={(e) => {
-                    setSelectedPrice(e.target.value);
-                  }}
+                  checked={priceFilter === (price.id as PriceFilter)}
+                  onChange={(e) =>
+                    setPriceFilter(e.target.value as PriceFilter)
+                  }
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                 />
                 <span className="ml-3 text-sm text-gray-700">
@@ -155,9 +146,9 @@ export default function CoursesFilter({
 
         <button
           onClick={() => {
-            setSelectedCategory("");
-            setSelectedLevel("");
-            setSelectedPrice("");
+            setSelectedCategory("all");
+            setSelectedLevel("all");
+            setPriceFilter("all");
             setSearchQuery("");
           }}
           className="w-full text-purple-600 hover:text-purple-700 text-sm font-medium"

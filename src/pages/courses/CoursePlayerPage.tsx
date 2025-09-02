@@ -14,8 +14,12 @@ import {
 } from "lucide-react";
 import VideoPlayer from "../../components/reusable-components/VideoPlayer";
 import CourseContent from "../../components/course/CourseContent";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { useParams } from "react-router";
 
 const CoursePlayerPage: React.FC = () => {
+  const { courseId } = useParams();
   const [currentLessonId, setCurrentLessonId] = useState("1");
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
@@ -171,154 +175,14 @@ const CoursePlayerPage: React.FC = () => {
     ],
   };
 
-  const modules = [
-    {
-      id: "1",
-      title: "Getting Started with React",
-      totalDuration: "3h 45m",
-      lessonCount: 15,
-      lessons: [
-        {
-          id: "1",
-          title: "What is React?",
-          duration: "15m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "2",
-          title: "Setting up the Development Environment",
-          duration: "20m",
-          type: "video" as const,
-          isCompleted: true,
-          isFree: true,
-        },
-        {
-          id: "3",
-          title: "Creating Your First React App",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "4",
-          title: "React Fundamentals Guide",
-          duration: "12m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "5",
-          title: "Understanding JSX",
-          duration: "18m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "6",
-          title: "Quick Knowledge Check",
-          duration: "10m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: true,
-        },
-        {
-          id: "7",
-          title: "React Setup Files & Resources",
-          duration: "5m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/react-setup.zip",
-        },
-        {
-          id: "8",
-          title: "Module 1 Assessment",
-          duration: "25m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "React Components and Props",
-      totalDuration: "4h 20m",
-      lessonCount: 18,
-      lessons: [
-        {
-          id: "9",
-          title: "Functional Components",
-          duration: "22m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "10",
-          title: "Class Components",
-          duration: "25m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "11",
-          title: "Props and Prop Types",
-          duration: "30m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "12",
-          title: "Component Composition",
-          duration: "28m",
-          type: "video" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "13",
-          title: "Components Best Practices",
-          duration: "12m",
-          type: "article" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "14",
-          title: "Component Examples",
-          duration: "8m",
-          type: "material" as const,
-          isCompleted: false,
-          isFree: false,
-          fileUrl: "/downloads/components-examples.pdf",
-        },
-        {
-          id: "15",
-          title: "Props Quiz",
-          duration: "20m",
-          type: "quiz" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-        {
-          id: "16",
-          title: "Module 2 Final Exam",
-          duration: "45m",
-          type: "exam" as const,
-          isCompleted: false,
-          isFree: false,
-        },
-      ],
-    },
-  ];
+  const { data: modulesData } = useCustomQuery(
+    `${API_ENDPOINTS.modules}?course=${courseId}`,
+    ["modules", courseId],
+    undefined,
+    !!courseId
+  );
+
+  const modules: Module[] = modulesData?.data?.data ?? [];
 
   const handleLessonSelect = (lessonId: string) => {
     setCurrentLessonId(lessonId);
@@ -332,7 +196,7 @@ const CoursePlayerPage: React.FC = () => {
     const allLessons = modules.flatMap((m) => m.lessons);
     const selectedLesson = allLessons.find((l) => l.id === lessonId);
 
-    if (selectedLesson?.type === "exam") {
+    if (selectedLesson?.content_type === "exam") {
       setShowExam(true);
       setShowNotes(false);
       setShowQA(false);
@@ -547,7 +411,7 @@ const CoursePlayerPage: React.FC = () => {
                   (l) => l.id === currentLessonId
                 );
 
-                if (currentLessonData?.type === "article") {
+                if (currentLessonData?.content_type === "article") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto">
@@ -560,7 +424,7 @@ const CoursePlayerPage: React.FC = () => {
                               {currentLessonData.title}
                             </h1>
                             <p className="text-gray-600 mt-1">
-                              Reading time: {currentLessonData.duration}
+                              Reading time: {currentLessonData.duration_hours}
                             </p>
                           </div>
                         </div>
@@ -642,7 +506,7 @@ const CoursePlayerPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                } else if (currentLessonData?.type === "quiz") {
+                } else if (currentLessonData?.content_type === "quiz") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto">
@@ -659,7 +523,8 @@ const CoursePlayerPage: React.FC = () => {
                               {currentLessonData.title}
                             </h1>
                             <p className="text-gray-600 mt-1">
-                              Quick assessment • {currentLessonData.duration}
+                              Quick assessment •{" "}
+                              {currentLessonData.duration_hours}
                             </p>
                           </div>
                         </div>
@@ -791,7 +656,7 @@ const CoursePlayerPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                } else if (currentLessonData?.type === "material") {
+                } else if (currentLessonData?.content_type === "material") {
                   return (
                     <div className="bg-white rounded-lg p-8 shadow-lg">
                       <div className="max-w-4xl mx-auto text-center">

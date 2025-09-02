@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import {
   Mail,
@@ -18,7 +17,7 @@ import {
 import EditUserProfile from "../../components/userProfile/EditUserProfile";
 import { readUserFromStorage } from "../../services/auth";
 import toast from "react-hot-toast";
-import { useCustomQuery } from "../../hooks/useQuery";
+// import { useCustomQuery } from "../../hooks/useQuery";
 
 const ICONS = {
   Award,
@@ -36,42 +35,117 @@ type LearningState = {
   color: string;
 };
 
+const achievementsData = [
+  {
+    id: "1",
+    title: "First Course Completed",
+    icon: "🎓",
+    date: "2024-01-15",
+    description: "Completed your first course",
+  },
+  {
+    id: "2",
+    title: "Week Streak",
+    icon: "🔥",
+    date: "2024-01-20",
+    description: "Learned for 7 consecutive days",
+  },
+  {
+    id: "3",
+    title: "Fast Learner",
+    icon: "⚡",
+    date: "2024-01-25",
+    description: "Completed 3 courses in one month",
+  },
+  {
+    id: "4",
+    title: "Quiz Master",
+    icon: "🧠",
+    date: "2024-02-01",
+    description: "Scored 100% on 5 quizzes",
+  },
+  {
+    id: "5",
+    title: "Community Helper",
+    icon: "🤝",
+    date: "2024-02-05",
+    description: "Helped 10 fellow students",
+  },
+  {
+    id: "6",
+    title: "Dedicated Student",
+    icon: "📚",
+    date: "2024-02-10",
+    description: "Spent 100+ hours learning",
+  },
+];
+
+const certificatesData = [
+  {
+    id: "1",
+    title: "Complete React Developer Course",
+    issueDate: "2024-01-30",
+    instructor: "John Doe",
+    thumbnail:
+      "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300",
+  },
+  {
+    id: "2",
+    title: "Python for Data Science",
+    issueDate: "2024-02-15",
+    instructor: "Jane Smith",
+    thumbnail:
+      "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300",
+  },
+  {
+    id: "3",
+    title: "UI/UX Design Fundamentals",
+    issueDate: "2024-02-28",
+    instructor: "Alex Brown",
+    thumbnail:
+      "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300",
+  },
+];
+
+const learningStatsData = [
+  {
+    label: "Courses Completed",
+    value: "12",
+    icon: "BookOpen",
+    color: "text-blue-600",
+  },
+  {
+    label: "Hours Learned",
+    value: "156",
+    icon: "Clock",
+    color: "text-green-600",
+  },
+  {
+    label: "Certificates Earned",
+    value: "8",
+    icon: "Award",
+    color: "text-purple-600",
+  },
+  {
+    label: "Current Streak",
+    value: "23 days",
+    icon: "Calendar",
+    color: "text-orange-600",
+  },
+];
+
 const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
-  // const [profileData, setProfileData] = useState({
-  //   name: "John Doe",
-  //   email: "john.doe@example.com",
-  //   phone: "+1 (555) 123-4567",
-  //   location: "San Francisco, CA",
-  //   bio: "Passionate learner and software developer with 5+ years of experience in web development. Love exploring new technologies and sharing knowledge with others.",
-  //   joinDate: "January 2023",
-  //   avatar:
-  //     "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200",
-  // });
-
   const profileData = readUserFromStorage();
 
-  const achievementsData = useCustomQuery("/data/achievements.json", [
-    "achievements",
-    // profileData.id,
-  ]);
-  const certificatesData = useCustomQuery("/data/certificates.json", [
-    "certificates",
-    // profileData.id,
-  ]);
-  const learningStatsData = useCustomQuery("/data/learningStats.json", [
-    "learningStats",
-    // profileData.id,
-  ]);
+  const achievements: Acheivement[] = achievementsData ?? [];
 
-  const achievements: Acheivement[] = achievementsData?.data?.data ?? [];
-
-  const certificates: Certificate[] = certificatesData?.data?.data ?? [];
+  const certificates: Certificate[] = certificatesData ?? [];
 
   const learningStats =
-    (learningStatsData?.data?.data as LearningState[] | undefined)?.map(
+    (learningStatsData as LearningState[] | undefined)?.map(
       (s: LearningState) => ({
         ...s,
         Icon: ICONS[s.icon] as LucideIcon,

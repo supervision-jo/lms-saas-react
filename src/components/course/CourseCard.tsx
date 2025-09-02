@@ -1,14 +1,26 @@
 import React from "react";
-import { Star, Clock, Play } from "lucide-react";
+import { Star, Clock, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
 interface CourseCardProps {
-  course: Course;
+  courseId: string;
   isListView?: boolean;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
+const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
   const navigate = useNavigate();
+
+  const courseData = useCustomQuery(
+    `${API_ENDPOINTS.courses}${courseId}/`,
+    ["course", courseId],
+    undefined,
+    !!courseId
+  );
+
+  const course: Course = courseData?.data?.data;
+
   return (
     <div
       className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
@@ -18,7 +30,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
     >
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
-          src={course?.picture}
+          src={"course?.picture"}
           alt={course?.title}
           className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
             isListView ? "w-full h-48" : "w-full h-48"
@@ -35,7 +47,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate("/course");
+              navigate(`/catalog/${course.id}`);
             }}
             className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition-colors flex items-center"
           >
@@ -55,10 +67,13 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
             <div className="flex items-center mb-3">
               <img
                 src={course?.instructor?.profile_image}
-                alt={course?.instructor?.id}
+                alt={course?.instructor?.first_name}
                 className="w-6 h-6 rounded-full mr-2"
               />
-              <p className="text-gray-600 text-sm">{course?.instructor?.first_name} {course?.instructor?.last_name}</p>
+              <p className="text-gray-600 text-sm">
+                {course?.instructor?.first_name ?? "--"}{" "}
+                {course?.instructor?.last_name}
+              </p>
             </div>
 
             {isListView && (
@@ -70,14 +85,14 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
             <div className="flex items-center mb-4">
               <div className="flex items-center">
                 <span className="text-yellow-500 font-bold mr-1">
-                  {course?.rating}
+                  {course?.average_rating ?? 0}
                 </span>
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(course?.rating)
+                        i < Math.floor(course?.average_rating ?? 0)
                           ? "text-yellow-400 fill-current"
                           : "text-gray-300"
                       }`}
@@ -85,7 +100,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
                   ))}
                 </div>
                 <span className="text-gray-500 text-sm ml-2">
-                  ({course?.total_reviews})
+                  ({course?.total_reviews?.toLocaleString() ?? 0})
                 </span>
               </div>
             </div>
@@ -93,37 +108,35 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                <span>{course.duration ?? "-"}</span>
+                <span>{course?.duration ?? "0h 0m"}</span>
               </div>
-              {/* <div className="flex items-center">
+              <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1" />
-                <span>{course.studentCount.toLocaleString()}</span>
-              </div> */}
+                <span>{course?.total_students?.toLocaleString() ?? 0}</span>
+              </div>
               <span className="bg-gray-100 px-2 py-1 rounded text-xs">
                 {course?.level}
               </span>
             </div>
 
-            {/* {isListView && (
+            {isListView && (
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-2">
                   What you'll learn:
                 </h4>
                 <ul className="space-y-1">
-                  {course.whatYouLearn
-                    .slice(0, 3)
-                    .map((item: string, index: number) => (
-                      <li
-                        key={index}
-                        className="flex items-start text-sm text-gray-700"
-                      >
-                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mr-2 mt-2 flex-shrink-0"></div>
-                        {item}
-                      </li>
-                    ))}
+                  {course?.objectives?.map((item: TextLists) => (
+                    <li
+                      key={item?.id}
+                      className="flex items-start text-sm text-gray-700"
+                    >
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mr-2 mt-2 flex-shrink-0"></div>
+                      {item?.text}
+                    </li>
+                  ))}
                 </ul>
               </div>
-            )} */}
+            )}
           </div>
 
           <div
@@ -145,7 +158,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, isListView }) => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate("/course");
+                  navigate(`/catalog/${course.id}`);
                 }}
                 className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
               >

@@ -1,12 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from "lucide-react";
-import { USER_KEY } from "../../utils/constants";
+import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import handleErrorAlerts from "../../utils/showErrorMessages";
-// import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
+import { useCustomPost } from "../../hooks/useMutation";
+
+type Role = "instructor" | "student";
 
 interface FormValues {
   first_name: string;
@@ -14,6 +15,7 @@ interface FormValues {
   email: string;
   password: string;
   c_password: string;
+  role: Role;
   terms: boolean;
 }
 
@@ -24,7 +26,6 @@ const SignupPage: React.FC = () => {
     formState: { errors, isSubmitting },
     getValues,
     trigger,
-    setError,
     control,
     reset,
   } = useForm<FormValues>({
@@ -37,6 +38,7 @@ const SignupPage: React.FC = () => {
       password: "",
       c_password: "",
       terms: false,
+      role: "instructor",
     },
   });
 
@@ -52,126 +54,61 @@ const SignupPage: React.FC = () => {
   });
   const password = useWatch({ control, name: "password" });
 
-  // const signUp = useCustomPost("/path-to-backend/", ["users", "sign-up"]);
+  const signUp = useCustomPost(API_ENDPOINTS.signup, ["sign-up"]);
 
   const onSubmit = async (data: FormValues) => {
     if (data.password !== data.c_password) {
-      setError("c_password", {
-        type: "validate",
-        message: "Passwords do not match",
-      });
-      return;
+      return trigger("c_password"); // will show "Passwords do not match"
     }
     if (!data.terms) {
-      setError("terms", {
-        type: "validate",
-        message: "Please read the Terms and Privacy Policy and agree.",
-      });
-      return;
+      // force show terms error if not checked
+      return trigger("terms");
     }
+
     try {
       const formData = new FormData();
       formData.append("first_name", data.first_name);
       formData.append("last_name", data.last_name);
       formData.append("email", data.email);
       formData.append("password", data.password);
-      formData.append("c_password", data.c_password);
 
-      // const res = await signUp.mutateAsync(formData);
+      // Send only ONE boolean based on selection
+      if (data.role === "instructor") {
+        formData.append("is_instructor", "true");
+        // do NOT send is_student (backend defaults it to false)
+      } else {
+        formData.append("is_student", "true");
+        // do NOT send is_instructor (backend defaults it to false)
+      }
 
-      toast.success("Signed up successfully!");
-      const user = {
-        name: `${formData.get("first_name")} ${formData.get("last_name")}`,
-        email: formData.get("email"),
-        avatar:
-          "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-        joinDate: "August 2025",
-        location: "",
-        phone: "",
-        bio: "",
-      };
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      const res = await signUp.mutateAsync(formData);
 
-      reset();
-      navigate("/login");
+      if (res?.status) {
+        toast.success("Signed up successfully!");
+        const user = res.data.user;
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+        reset();
+        navigate("/login");
+      } else {
+        handleErrorAlerts(res?.data?.detail);
+      }
     } catch (error: any) {
       const payload = error?.response?.data;
       handleErrorAlerts(
-        payload?.message || "There is an unexpected error occured."
+        payload?.email[0] ||
+          payload?.password[0] ||
+          payload?.first_name[0] ||
+          payload?.last_name[0] ||
+          payload?.role[0] ||
+          "There is an unexpected error occured"
       );
     }
   };
 
-  // const [formData, setFormData] = useState({
-  //   firstName: "",
-  //   lastName: "",
-  //   email: "",
-  //   password: "",
-  //   confirmPassword: "",
-  // });
-
-  // const validateForm = () => {
-  //   const newErrors: any = {};
-
-  //   if (!formData.firstName.trim()) {
-  //     newErrors.firstName = "First name is required";
-  //   }
-
-  //   if (!formData.lastName.trim()) {
-  //     newErrors.lastName = "Last name is required";
-  //   }
-
-  //   if (!formData.email.trim()) {
-  //     newErrors.email = "Email is required";
-  //   } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-  //     newErrors.email = "Email is invalid";
-  //   }
-
-  //   if (!formData.password) {
-  //     newErrors.password = "Password is required";
-  //   } else if (formData.password.length < 8) {
-  //     newErrors.password = "Password must be at least 8 characters";
-  //   }
-
-  //   if (formData.password !== formData.confirmPassword) {
-  //     newErrors.confirmPassword = "Passwords do not match";
-  //   }
-
-  //   if (!agreeToTerms) {
-  //     newErrors.terms = "You must agree to the terms and conditions";
-  //   }
-
-  //   setErrors(newErrors);
-  //   return Object.keys(newErrors).length === 0;
-  // };
-
-  // const handleSignup = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-
-  //   if (!validateForm()) {
-  //     return;
-  //   }
-
-  //   setIsLoading(true);
-
-  //   // Simulate signup process
-  //   setTimeout(() => {
-  //     const user = {
-  //       name: `${formData.firstName} ${formData.lastName}`,
-  //       email: formData.email,
-  //       avatar:
-  //         "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-  //     };
-  //     localStorage.setItem(USER_KEY, JSON.stringify(user));
-  //     // navigate("/");
-  //     setIsLoading(false);
-  //   }, 2000);
-  // };
-
+  // Simulate Google signup
   const handleGoogleSignup = () => {
     setIsLoading(true);
-
-    // Simulate Google signup
     setTimeout(() => {
       const user = {
         name: "John Doe",
@@ -188,17 +125,6 @@ const SignupPage: React.FC = () => {
       setIsLoading(false);
     }, 2000);
   };
-
-  // const handleInputChange = (field: string, value: string) => {
-  //   setFormData({ ...formData, [field]: value });
-  //   if (errors[field]) {
-  //     setErrors({ ...errors, [field]: "" });
-  //   }
-  // };
-
-  useEffect(() => {
-    register("terms");
-  }, [register]);
 
   useEffect(() => {
     if (getValues("c_password")) trigger("c_password");
@@ -243,9 +169,7 @@ const SignupPage: React.FC = () => {
                 </div>
                 {errors.first_name && (
                   <p className="mt-1 text-sm text-red-600">
-                    {String(
-                      errors.first_name.message ?? "First name is required"
-                    )}
+                    {errors.first_name.message}
                   </p>
                 )}
               </div>
@@ -256,9 +180,7 @@ const SignupPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  {...register("last_name", {
-                    required: "Last name required",
-                  })}
+                  {...register("last_name", { required: "Last name required" })}
                   className={`block w-full px-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.last_name ? "border-red-300" : "border-gray-300"
                   }`}
@@ -299,6 +221,32 @@ const SignupPage: React.FC = () => {
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* Role Field (required, default Instructor) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Choose your role
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  {...register("role", { required: "Please choose a role" })}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
+                    errors.role ? "border-red-300" : "border-gray-300"
+                  }`}
+                >
+                  <option value="instructor">Instructor</option>
+                  <option value="student">Student</option>
+                </select>
+              </div>
+              {errors.role && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.role.message}
                 </p>
               )}
             </div>

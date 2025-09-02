@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { remove, edit, patch, post } from "../api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 

@@ -1,12 +1,19 @@
 import { Grid, List, Search } from "lucide-react";
 
+type SortKey =
+  | "most_popular"
+  | "high_rating"
+  | "newest"
+  | "price_low_to_high"
+  | "price_high_to_low";
+
 interface Props {
   searchQuery: string;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  sortBy: string;
-  setSortBy: React.Dispatch<React.SetStateAction<string>>;
+  setSearchQuery: (v: string) => void;
+  sortBy: SortKey;
+  setSortBy: (v: SortKey) => void;
   viewMode: "grid" | "list";
-  setViewMode: React.Dispatch<React.SetStateAction<"grid" | "list">>;
+  setViewMode: (v: "grid" | "list") => void;
 }
 
 export default function CoursesSortAndSearch({
@@ -34,14 +41,14 @@ export default function CoursesSortAndSearch({
       {/* Sort */}
       <select
         value={sortBy}
-        onChange={(e) => setSortBy(e.target.value)}
+        onChange={(e) => setSortBy(e.target.value as SortKey)}
         className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
       >
-        <option value="most-popular">Most Popular</option>
-        <option value="highest-rated">Highest Rated</option>
+        <option value="most_popular">Most Popular</option>
+        <option value="high_rating">Highest Rated</option>
         <option value="newest">Newest</option>
-        <option value="price-low-high">Price: Low to High</option>
-        <option value="price-high-low">Price: High to Low</option>
+        <option value="price_low_to_high">Price: Low to High</option>
+        <option value="price_high_to_low">Price: High to Low</option>
       </select>
 
       {/* View Mode */}

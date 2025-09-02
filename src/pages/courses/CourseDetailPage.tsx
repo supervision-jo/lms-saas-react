@@ -12,38 +12,76 @@ import {
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { formatDateTimeSimple } from "../../utils/formatDateTime";
+import { useCustomPost } from "../../hooks/useMutation";
+import toast from "react-hot-toast";
+import handleErrorAlerts from "../../utils/showErrorMessages";
 
-interface CourseDetailPageProps {
-  onNavigateToPlayer?: () => void;
-}
-
-const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
-  onNavigateToPlayer,
-}) => {
+const CourseDetailPage: React.FC = () => {
+  const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [isEnrolled, setIsEnrolled] = useState(false);
 
-  const coursesData = useCustomQuery("/data/allCourses.json", ["courses"]);
-  const modulesData = useCustomQuery("/data/modules.json", ["modules"]);
+  const courseData = useCustomQuery(
+    `${API_ENDPOINTS.courses}${courseId}`,
+    ["course", courseId],
+    undefined,
+    !!courseId
+  );
 
-  const courses: Course[] = coursesData?.data?.data ?? [];
+  const course: Course = courseData?.data?.data;
 
-  const targetCourse = courses.find((c) => c.id === courseId) as Course;
+  const { data: modulesData } = useCustomQuery(
+    `${API_ENDPOINTS.modules}?course=${courseId}`,
+    ["modules", courseId],
+    undefined,
+    !!courseId
+  );
+
+  const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
+    "categories",
+  ]);
+
+  const { data: instructorData } = useCustomQuery(
+    `${API_ENDPOINTS.instructor}${course?.instructor_?.id}/course/${course?.id}/`,
+    ["instructor", course?.id],
+    undefined,
+    !!course?.id && !!course?.instructor_?.id
+  );
+
+  const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
+    "enrolledCourses",
+  ]);
 
   const modules: Module[] = modulesData?.data?.data ?? [];
 
-  const handleEnroll = () => {
-    setIsEnrolled(true);
-    console.log("Enrolled in course");
+  const cates: Category[] = catesData?.data?.data ?? [];
+
+  const currentCategory = cates?.find((c) => c.id === course?.sub_category);
+
+  const instructor: Partial<Instructor> = instructorData?.data;
+
+  const handleEnroll = async () => {
+    try {
+      const res = await createEnroll.mutateAsync({ course: course?.id });
+
+      if (res.status) {
+        setIsEnrolled(true);
+        toast.success("You have been enrolled successfully!");
+      } else {
+        toast.error(res.error.non_field_errors[0]);
+      }
+    } catch (error: any) {
+      handleErrorAlerts(error.response.data.message);
+    }
   };
 
   const handleLessonSelect = (lessonId: string) => {
     console.log("Selected lesson:", lessonId);
-    if (onNavigateToPlayer) {
-      onNavigateToPlayer();
-    }
+    navigate(`/catalog/${course?.id}/player`);
   };
 
   return (
@@ -54,36 +92,34 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <nav className="text-sm mb-4">
-                <span className="text-purple-400">Development</span>
+                {/* <span className="text-purple-400">Development</span>
+                <span className="mx-2">›</span> */}
+                <span className="text-purple-400">{currentCategory?.name}</span>
                 <span className="mx-2">›</span>
-                <span className="text-purple-400">Web Development</span>
-                <span className="mx-2">›</span>
-                <span>React</span>
+                <span>{course?.title}</span>
               </nav>
 
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {targetCourse?.title}
+                {course?.title}
               </h1>
-              <p className="text-xl text-gray-300 mb-6">
-                {targetCourse?.subtitle}
-              </p>
+              <p className="text-xl text-gray-300 mb-6">{course?.subtitle}</p>
 
               <div className="flex flex-wrap items-center gap-4 mb-6">
-                {targetCourse?.isBestseller && (
+                {course?.is_best_seller && (
                   <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded">
                     Bestseller
                   </span>
                 )}
                 <div className="flex items-center">
                   <span className="text-yellow-400 font-bold mr-2">
-                    {targetCourse?.rating}
+                    {course?.rating ?? 0}
                   </span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < Math.floor(targetCourse?.rating)
+                          i < Math.floor(course?.rating ?? 0)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-400"
                         }`}
@@ -91,26 +127,28 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                     ))}
                   </div>
                   <span className="text-gray-300 ml-2">
-                    ({targetCourse?.reviewCount.toLocaleString()} ratings)
+                    ({course?.total_reviews.toLocaleString() ?? 0} ratings)
                   </span>
                 </div>
                 <span className="text-gray-300">
-                  {targetCourse?.studentCount.toLocaleString()} students
+                  {course?.total_students.toLocaleString() ?? 0} students
                 </span>
               </div>
 
               <div className="flex items-center text-gray-300 mb-6">
-                <span>Created by {targetCourse?.instructor.name}</span>
+                <span>Created by {instructor?.instructor_full_name}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300">
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>Last updated {targetCourse?.lastUpdated}</span>
+                  <span>
+                    Last updated {formatDateTimeSimple(course?.updated_at)}
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <Globe className="w-4 h-4 mr-2" />
-                  <span>{targetCourse?.language}</span>
+                  <span>English</span>
                 </div>
               </div>
             </div>
@@ -119,8 +157,8 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-4">
                 <div className="relative">
                   <img
-                    src={targetCourse?.thumbnail}
-                    alt={targetCourse?.title}
+                    src={course?.picture}
+                    alt={course?.title}
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -134,11 +172,11 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <span className="text-3xl font-bold text-gray-900">
-                        ${targetCourse?.price}
+                        ${course?.price ?? 0}
                       </span>
-                      {targetCourse?.originalPrice && (
+                      {course?.old_price && (
                         <span className="text-gray-500 line-through ml-3">
-                          ${targetCourse?.originalPrice}
+                          ${course?.old_price ?? 0}
                         </span>
                       )}
                     </div>
@@ -158,7 +196,9 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                         <span className="font-medium">Enrolled</span>
                       </div>
                       <button
-                        onClick={onNavigateToPlayer}
+                        onClick={() => {
+                          navigate(`/catalog/${course?.id}/player`);
+                        }}
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                       >
                         Start Learning
@@ -176,7 +216,7 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                     </h4>
                     <div className="flex items-center text-gray-700">
                       <Clock className="w-4 h-4 mr-3" />
-                      <span>{targetCourse?.duration} on-demand video</span>
+                      <span>{course?.duration ?? "0h 0m"} on-demand video</span>
                     </div>
                     <div className="flex items-center text-gray-700">
                       <Smartphone className="w-4 h-4 mr-3" />
@@ -228,35 +268,43 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
             <div className="bg-white rounded-lg shadow-md p-6">
               {activeTab === "overview" && (
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    What you'll learn
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    {targetCourse?.whatYouLearn.map((item, index) => (
-                      <div key={index} className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{item}</span>
+                  {course?.objectives && course?.objectives?.length > 0 && (
+                    <>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                        What you'll learn
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        {course?.objectives.map((item) => (
+                          <div key={item.id} className="flex items-start">
+                            <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700">{item.text}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
 
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Requirements
-                  </h3>
-                  <ul className="space-y-2 mb-8">
-                    {targetCourse?.requirements.map((req, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
-                        <span className="text-gray-700">{req}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {course?.requirements && course?.requirements?.length > 0 && (
+                    <>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                        Requirements
+                      </h3>
+                      <ul className="space-y-2 mb-8">
+                        {course?.requirements.map((req) => (
+                          <li key={req.id} className="flex items-start">
+                            <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
+                            <span className="text-gray-700">{req.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
 
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Description
                   </h3>
                   <div className="prose max-w-none text-gray-700">
-                    {targetCourse?.description
+                    {course?.description
                       .split("\n\n")
                       .map((paragraph, index) => (
                         <p key={index} className="mb-4">
@@ -287,34 +335,34 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                   </h3>
                   <div className="flex items-start mb-6">
                     <img
-                      src={targetCourse?.instructor.avatar}
-                      alt={targetCourse?.instructor.name}
+                      src={instructor?.instructor_image}
+                      alt={instructor?.instructor_full_name}
                       className="w-16 h-16 rounded-full mr-4"
                     />
                     <div>
                       <h4 className="text-xl font-bold text-gray-900">
-                        {targetCourse?.instructor.name}
+                        {instructor?.instructor_full_name}
                       </h4>
                       <p className="text-gray-600 mb-2">
-                        {targetCourse?.instructor.bio}
+                        Instructor BIO
+                        {/* {instructor.bio} */}
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center">
                           <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                          <span>{targetCourse?.instructor.rating} Rating</span>
+                          {/* <span>{instructor.rating} Rating</span> */}
+                          <span>0 Rating</span>
                         </div>
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>
-                            {targetCourse?.instructor.students.toLocaleString()}{" "}
+                            {instructor?.total_students?.toLocaleString() ?? 0}{" "}
                             Students
                           </span>
                         </div>
                         <div className="flex items-center">
                           <Award className="w-4 h-4 mr-1" />
-                          <span>
-                            {targetCourse?.instructor.courses} Courses
-                          </span>
+                          <span>{instructor?.total_courses ?? 0} Courses</span>
                         </div>
                       </div>
                     </div>
