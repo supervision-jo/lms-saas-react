@@ -34,6 +34,35 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
 
   const modules: Module[] = modulesData?.data?.data ?? [];
 
+  // Handle loading state and course not found
+  if (coursesData.isLoading || modulesData.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!targetCourse) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Course Not Found</h1>
+          <p className="text-gray-600 mb-6">The course you're looking for doesn't exist or has been removed.</p>
+          <button
+            onClick={() => window.history.back()}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleEnroll = () => {
     setIsEnrolled(true);
     console.log("Enrolled in course");
