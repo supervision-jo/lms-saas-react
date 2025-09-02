@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
-
+import GlobalLoading from "../globalLoading";
 import { Home, Users, Library, GraduationCap, LucideIcon } from "lucide-react";
 import Header from "../../components/navigations/Header";
 import { USER_KEY } from "../../utils/constants";
@@ -47,6 +47,7 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <GlobalLoading />
       {!pathname.includes("player") &&
         !pathname.includes("login") &&
         !pathname.includes("sign-up") && (

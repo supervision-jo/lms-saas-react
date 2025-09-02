@@ -48,7 +48,10 @@ export default function TestimonialsSection() {
             >
               <div className="flex items-center mb-6">
                 <img
-                  src={testimonial.image}
+                  src={
+                    testimonial.image ??
+                    "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                  }
                   alt={testimonial.name}
                   className="w-12 h-12 rounded-full mr-4"
                 />

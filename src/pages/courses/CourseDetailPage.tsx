@@ -157,7 +157,10 @@ const CourseDetailPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-4">
                 <div className="relative">
                   <img
-                    src={course?.picture}
+                    src={
+                      course?.picture ??
+                      "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                    }
                     alt={course?.title}
                     className="w-full h-48 object-cover"
                   />
@@ -335,7 +338,10 @@ const CourseDetailPage: React.FC = () => {
                   </h3>
                   <div className="flex items-start mb-6">
                     <img
-                      src={instructor?.instructor_image}
+                      src={
+                        instructor?.instructor_image ??
+                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                      }
                       alt={instructor?.instructor_full_name}
                       className="w-16 h-16 rounded-full mr-4"
                     />

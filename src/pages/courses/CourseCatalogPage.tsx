@@ -164,7 +164,6 @@ const CourseCatalogPage: React.FC = () => {
             priceFilter={priceFilter}
             setSearchQuery={setSearchQuery}
             setSelectedCategory={setSelectedCategory}
-            setSelectedPrice={setSelectedPrice}
             setSelectedLevel={setSelectedLevel}
             setPriceFilter={setPriceFilter}
           />

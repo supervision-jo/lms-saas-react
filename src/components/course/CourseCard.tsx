@@ -30,7 +30,10 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
     >
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
-          src={"course?.picture"}
+          src={
+            course?.picture ??
+            "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+          }
           alt={course?.title}
           className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
             isListView ? "w-full h-48" : "w-full h-48"
@@ -66,7 +69,10 @@ const CourseCard: React.FC<CourseCardProps> = ({ courseId, isListView }) => {
 
             <div className="flex items-center mb-3">
               <img
-                src={course?.instructor?.profile_image}
+                src={
+                  course?.instructor?.profile_image ??
+                  "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                }
                 alt={course?.instructor?.first_name}
                 className="w-6 h-6 rounded-full mr-2"
               />

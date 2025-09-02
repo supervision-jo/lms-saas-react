@@ -5,11 +5,10 @@ import { API_ENDPOINTS } from "../../utils/constants";
 
 export default function CategoriesSection() {
   const navigate = useNavigate();
-
-  const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
-    "categories",
-  ]);
-
+  const { data: categoriesData } = useCustomQuery(
+    API_ENDPOINTS.categories,
+    ["categories"]
+  );
   const categories: Category[] = categoriesData?.data?.data;
   return (
     <section className="py-20 bg-gray-50">
@@ -43,7 +42,7 @@ export default function CategoriesSection() {
                 <img
                   src={
                     category?.icon ??
-                    "https://ralfvanveen.com/en/glossary/placeholder/"
+                    "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                   }
                   alt={category?.id}
                   className="w-16 h-16 mb-4"

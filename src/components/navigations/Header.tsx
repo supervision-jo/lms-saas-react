@@ -103,7 +103,10 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   {currentUser.profile_image ? (
                     <img
-                      src={currentUser.profile_image}
+                      src={
+                        currentUser.profile_image ??
+                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                      }
                       alt={currentUser.first_name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
@@ -130,10 +133,10 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => {
                               if (i.id === "logout") {
                                 if (onLogout) onLogout();
-                                setIsUserMenuOpen(false);
                               } else {
                                 navigate(i.id);
                               }
+                              setIsUserMenuOpen(false);
                             }}
                             className={`block w-full text-left px-4 py-2 text-sm ${
                               i.id === "logout"

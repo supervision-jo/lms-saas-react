@@ -26,7 +26,6 @@ interface Category {
 export default function CoursesFilter({
   setSearchQuery,
   setSelectedCategory,
-  setSelectedPrice,
   setSelectedLevel,
   setPriceFilter,
   selectedCategory,
@@ -88,7 +87,7 @@ export default function CoursesFilter({
           <h4 className="font-medium text-gray-900 mb-3">Level</h4>
           <div className="space-y-2">
             {[
-              { id: "", label: "All Levels" },
+              { id: "all", label: "All Levels" },
               { id: "beginner", label: "Beginner" },
               { id: "intermediate", label: "Intermediate" },
               { id: "advanced", label: "Advanced" },
@@ -118,7 +117,7 @@ export default function CoursesFilter({
           <h4 className="font-medium text-gray-900 mb-3">Price</h4>
           <div className="space-y-2">
             {[
-              { id: "", label: "All Prices" },
+              { id: "all", label: "All Prices" },
               { id: "free", label: "Free" },
               { id: "paid", label: "Paid" },
             ].map((price) => (

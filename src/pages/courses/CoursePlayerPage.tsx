@@ -1067,7 +1067,10 @@ const CoursePlayerPage: React.FC = () => {
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center space-x-3">
                               <img
-                                src={qa.studentImage}
+                                src={
+                                  qa.studentImage ??
+                                  "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                                }
                                 alt={qa.student}
                                 className="w-8 h-8 rounded-full object-cover border-2 border-purple-500"
                               />
@@ -1122,7 +1125,10 @@ const CoursePlayerPage: React.FC = () => {
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center space-x-2">
                                     <img
-                                      src={reply.authorImage}
+                                      src={
+                                        reply.authorImage ??
+                                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                                      }
                                       alt={reply.author}
                                       className="w-6 h-6 rounded-full object-cover border border-gray-500"
                                     />

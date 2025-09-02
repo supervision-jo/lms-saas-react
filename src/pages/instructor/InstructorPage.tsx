@@ -318,7 +318,10 @@ const InstructorPage: React.FC = () => {
                     >
                       <div className="flex items-start">
                         <img
-                          src={course.thumbnail}
+                          src={
+                            course.thumbnail ??
+                            "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                          }
                           alt={course.title}
                           className="w-20 h-20 rounded-lg object-cover"
                         />

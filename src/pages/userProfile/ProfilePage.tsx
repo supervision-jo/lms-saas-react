@@ -172,7 +172,10 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
             <div className="relative">
               <img
-                src={profileData.avatar}
+                src={
+                  profileData.avatar ??
+                  "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                }
                 alt={profileData.name}
                 className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
               />
@@ -351,7 +354,10 @@ const ProfilePage: React.FC = () => {
                   className="border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors"
                 >
                   <img
-                    src={certificate.thumbnail}
+                    src={
+                      certificate.thumbnail ??
+                      "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                    }
                     alt={certificate.title}
                     className="w-full h-32 object-cover"
                   />
