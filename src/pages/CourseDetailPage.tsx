@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Star, Clock, Users, Award, CheckCircle, Globe, Smartphone, Trophy, Play } from 'lucide-react';
 import CourseContent from '../components/CourseContent';
+import CourseRating from '../components/CourseRating';
 
 interface CourseDetailPageProps {
   onNavigateToPlayer?: () => void;
@@ -9,6 +10,7 @@ interface CourseDetailPageProps {
 const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onNavigateToPlayer }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   const courseData = {
     id: '1',
@@ -118,6 +120,11 @@ The course is project-based, so you'll build real-world applications while learn
     }
   };
 
+  const handleRatingSubmit = (ratingData: any) => {
+    console.log('Course rating submitted:', ratingData);
+    // Here you would typically send the rating to your backend
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Course Header */}
@@ -215,12 +222,20 @@ The course is project-based, so you'll build real-world applications while learn
                         <CheckCircle className="w-5 h-5 mr-2" />
                         <span className="font-medium">Enrolled</span>
                       </div>
-                      <button 
-                        onClick={onNavigateToPlayer}
-                        className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-                      >
-                        Start Learning
-                      </button>
+                      <div className="space-y-2">
+                        <button 
+                          onClick={onNavigateToPlayer}
+                          className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                        >
+                          Start Learning
+                        </button>
+                        <button 
+                          onClick={() => setShowRatingModal(true)}
+                          className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
+                        >
+                          Rate This Course
+                        </button>
+                      </div>
                     </div>
                   )}
                   
@@ -375,6 +390,16 @@ The course is project-based, so you'll build real-world applications while learn
           </div>
         </div>
       </div>
+      
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <CourseRating
+          courseId={courseData.id}
+          courseTitle={courseData.title}
+          onSubmit={handleRatingSubmit}
+          onClose={() => setShowRatingModal(false)}
+        />
+      )}
     </div>
   );
 };
