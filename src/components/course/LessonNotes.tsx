@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { formatDateTimeSimple } from "../../utils/formatDateTime";
+import toast from "react-hot-toast";
 const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
   const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
   const { data } = useCustomQuery(
@@ -17,7 +18,7 @@ const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
     }));
 
     // Show success message (you could add a toast notification here)
-    alert("Notes saved successfully!");
+    toast.success("Notes saved successfully!");
     console.log("Notes saved for lesson:", currentLessonId, notes);
   };
   return (
@@ -48,25 +49,27 @@ const LessonNotes = ({ currentLessonId, notes, setNotes }: any) => {
           </div>
         </div>
       </div>
-      {notesData?.map((note: any) => (
-        <div
-          key={note.id}
-          className="w-full rounded-2xl bg-white shadow-md border border-gray-200 p-6 my-6 flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-lg transition-shadow"
-        >
-          {/* Left: title + content */}
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {note?.title || "-"}
-            </h2>
-            <p className="text-gray-700">{note?.content || "-"}</p>
-          </div>
+      <div className="max-w-5xl mx-auto mt-6 space-y-4">
+        {notesData?.map((note: any) => (
+          <div
+            key={note.id}
+            className="bg-gray-900 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-700 hover:border-purple-500 transition-colors"
+          >
+            {/* Left: title + content */}
+            <div className="space-y-2">
+              <h2 className="text-base font-semibold text-white">
+                {note?.title || "-"}
+              </h2>
+              <p className="text-gray-300 text-sm">{note?.content || "-"}</p>
+            </div>
 
-          {/* Right: created date */}
-          <p className="mt-4 sm:mt-0 text-sm text-gray-500 whitespace-nowrap">
-            {formatDateTimeSimple(note?.created_at) || "-"}
-          </p>
-        </div>
-      ))}
+            {/* Right: created date */}
+            <p className="mt-3 sm:mt-0 text-xs text-gray-400 whitespace-nowrap">
+              {formatDateTimeSimple(note?.created_at) || "-"}
+            </p>
+          </div>
+        ))}
+      </div>
     </>
   );
 };
