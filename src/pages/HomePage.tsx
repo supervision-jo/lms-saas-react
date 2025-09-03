@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Star, Users, Clock, TrendingUp, BookOpen, Award, ArrowRight } from 'lucide-react';
+import YouTubeCourseForm from '../components/YouTubeCourseForm';
 
 interface HomePageProps {
   onNavigate: (page: string) => void;
@@ -301,6 +302,9 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+
+      {/* YouTube Course Form */}
+      <YouTubeCourseForm onNavigate={onNavigate} />
 
       {/* Stats Section */}
       <section className="py-20 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
