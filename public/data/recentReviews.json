@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": "1",
+      "student": "Sarah Johnson",
+      "course": "Complete React Developer Course",
+      "rating": 5,
+      "comment": "Excellent course! Very detailed and easy to follow.",
+      "date": "2024-01-25"
+    },
+    {
+      "id": "2",
+      "student": "Mike Chen",
+      "course": "Advanced JavaScript Concepts",
+      "rating": 4,
+      "comment": "Great content, but could use more practical examples.",
+      "date": "2024-01-24"
+    },
+    {
+      "id": "3",
+      "student": "Emily Davis",
+      "course": "Complete React Developer Course",
+      "rating": 5,
+      "comment": "Best React course I've taken. Highly recommended!",
+      "date": "2024-01-23"
+    }
+  ]
+}

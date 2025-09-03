@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": "1",
+      "title": "Complete React Developer Course",
+      "issueDate": "2024-01-30",
+      "instructor": "John Doe",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300"
+    },
+    {
+      "id": "2",
+      "title": "Python for Data Science",
+      "issueDate": "2024-02-15",
+      "instructor": "Jane Smith",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300"
+    },
+    {
+      "id": "3",
+      "title": "UI/UX Design Fundamentals",
+      "issueDate": "2024-02-28",
+      "instructor": "Alex Brown",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300"
+    }
+  ]
+}
