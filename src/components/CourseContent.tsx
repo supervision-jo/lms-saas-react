@@ -99,6 +99,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
         fileName: lesson.title,
         fileUrl: lesson.fileUrl,
         fileType: getFileType(lesson.title),
+        description: undefined,
       });
     } else {
       onLessonSelect(lesson.id);
@@ -220,6 +221,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
         fileName={fileViewer.fileName}
         fileUrl={fileViewer.fileUrl}
         fileType={fileViewer.fileType}
+        fileSize={fileViewer.fileSize}
+        description={fileViewer.description}
+        downloadCount={fileViewer.downloadCount}
       />
     </div>
   );
