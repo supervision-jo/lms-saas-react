@@ -84,7 +84,5 @@ interface Module {
   title: string;
   description: string;
   order: number;
-  totalDuration: string;
-  lessonCount: number;
   lessons: Lesson[];
 }

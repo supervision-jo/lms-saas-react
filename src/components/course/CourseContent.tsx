@@ -1,21 +1,22 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
   Play,
   Lock,
-  // CheckCircle,
   Clock,
   FileText,
   Award,
   Download,
 } from "lucide-react";
+import { formatDuration } from "../../utils/formatDuration";
 
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
+  className?: string;
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
@@ -23,10 +24,11 @@ const CourseContent: React.FC<CourseContentProps> = ({
   currentLessonId,
   onLessonSelect,
   isEnrolled,
+  className,
 }) => {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(
     new Set(["1"])
-  ); // Expand first module by default
+  );
 
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
@@ -44,7 +46,6 @@ const CourseContent: React.FC<CourseContentProps> = ({
     if (!canAccess) return;
 
     if (lesson.content_type === "material" && lesson.video_url) {
-      // Handle material download
       const link = document.createElement("a");
       link.href = lesson.video_url;
       link.download = lesson.title;
@@ -61,11 +62,11 @@ const CourseContent: React.FC<CourseContentProps> = ({
     // if (lesson.isCompleted) {
     //   return <CheckCircle className="w-4 h-4 text-green-500 fill-current" />;
     // }
-    if (!isEnrolled && !lesson.free_preview) {
+    if (!isEnrolled && !lesson?.free_preview) {
       return <Lock className="w-4 h-4 text-gray-500" />;
     }
 
-    switch (lesson.content_type) {
+    switch (lesson?.content_type?.toLowerCase()) {
       case "video":
         return <Play className="w-4 h-4 text-purple-600 fill-current" />;
       case "article":
@@ -85,27 +86,38 @@ const CourseContent: React.FC<CourseContentProps> = ({
     }
   };
 
+  const sumModuleHours = useCallback((mod?: Module): number => {
+    if (!mod) return 0;
+    return (mod.lessons ?? []).reduce((sum, l) => {
+      const v = (l as any)?.duration_hours;
+      const n = typeof v === "number" ? v : parseFloat(v ?? "0");
+      return sum + (Number.isFinite(n) ? n : 0);
+    }, 0);
+  }, []);
+
   return (
-    <div className="bg-white h-full overflow-hidden shadow-lg">
+    <div
+      className={`bg-white h-full flex flex-col shadow-lg ${className ?? ""}`}
+    >
       <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <h3 className="text-xl font-bold">Course Content</h3>
         <p className="text-purple-100 mt-1 text-sm">
           {modules.length} modules •{" "}
-          {modules.reduce((acc, m) => acc + m.lessonCount, 0)} lessons
+          {modules.reduce((acc, m) => acc + m?.lessons?.length, 0)} lessons
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-50">
         {modules.map((module) => {
-          const isExpanded = expandedModules.has(module.id);
+          const isExpanded = expandedModules.has(module?.id);
 
           return (
             <div
-              key={module.id}
+              key={module?.id}
               className="bg-white mb-2 mx-3 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden"
             >
               <button
-                onClick={() => toggleModule(module.id)}
+                onClick={() => toggleModule(module?.id)}
                 className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
               >
                 <div className="flex items-center">
@@ -116,24 +128,25 @@ const CourseContent: React.FC<CourseContentProps> = ({
                   )}
                   <div className="text-left">
                     <h4 className="font-semibold text-gray-900 text-base">
-                      {module.title}
+                      {module?.title}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {module.lessonCount} lessons • {module.totalDuration}
+                      {module?.lessons?.length} lessons •{" "}
+                      {formatDuration(sumModuleHours(module))}
                     </p>
                   </div>
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="px-5 pb-4 bg-gray-50">
+                <div className="px-5 py-4 bg-gray-50">
                   {module.lessons.map((lesson) => {
-                    const isCurrentLesson = lesson.id === currentLessonId;
-                    const canAccess = isEnrolled || lesson.free_preview;
+                    const isCurrentLesson = lesson?.id === currentLessonId;
+                    const canAccess = isEnrolled || lesson?.free_preview;
 
                     return (
                       <button
-                        key={lesson.id}
+                        key={lesson?.id}
                         onClick={() => handleLessonClick(lesson)}
                         disabled={!canAccess}
                         className={`w-full flex items-center justify-between py-3 px-4 rounded-lg mb-2 transition-all duration-200 text-left ${
@@ -151,23 +164,23 @@ const CourseContent: React.FC<CourseContentProps> = ({
                               isCurrentLesson ? "text-white" : "text-gray-700"
                             }`}
                           >
-                            {lesson.title}
+                            {lesson?.title}
                           </span>
-                          {lesson.free_preview && !isEnrolled && (
+                          {lesson?.free_preview && !isEnrolled && (
                             <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
                               Free
                             </span>
                           )}
                         </div>
                         <div
-                          className={`flex items-center text-xs ${
+                          className={`flex items-center text-xs min-w-16 ${
                             isCurrentLesson
                               ? "text-purple-200"
                               : "text-gray-600"
                           }`}
                         >
                           <Clock className="w-3 h-3 mr-1" />
-                          {lesson.duration_hours}h
+                          {formatDuration(lesson?.duration_hours)}
                         </div>
                       </button>
                     );

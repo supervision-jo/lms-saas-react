@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Star,
   Clock,
@@ -19,11 +19,13 @@ import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { formatDuration } from "../../utils/formatDuration";
+import CourseRatingModal from "../../components/course/CourseRatingModal";
 
 const CourseDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
 
   const courseData = useCustomQuery(
     `${API_ENDPOINTS.courses}${courseId}`,
@@ -59,8 +61,18 @@ const CourseDetailPage: React.FC = () => {
   const enrolledCourses: EnrolledCourse[] =
     enrolledCoursesData?.data?.data ?? [];
 
+  const computedEnrolled = enrolledCourses.some(
+    (c) => String(c.course.id) === String(course?.id ?? courseId)
+  );
+
+  const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
+
+  const isEnrolled = enrolledOptimistic || computedEnrolled;
+
   const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
     "enrolledCourses",
+    "course",
+    courseId as string,
   ]);
 
   const modules: Module[] = modulesData?.data?.data ?? [];
@@ -71,28 +83,33 @@ const CourseDetailPage: React.FC = () => {
 
   const instructor: Partial<Instructor> = instructorData?.data;
 
-  const courseEnrollStatus: boolean = enrolledCourses.some(
-    (c) => c.course.id === courseId
-  );
-  const [isEnrolled, setIsEnrolled] = useState(courseEnrollStatus);
+  useEffect(() => {
+    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
+  }, [computedEnrolled, enrolledOptimistic]);
+
   const handleEnroll = async () => {
     try {
+      setEnrolledOptimistic(true); // instant UI
       const res = await createEnroll.mutateAsync({ course: course?.id });
-
-      if (res.status) {
-        setIsEnrolled(true);
+      if (res?.status) {
         toast.success("You have been enrolled successfully!");
       } else {
-        toast.error(res.error.non_field_errors[0]);
+        setEnrolledOptimistic(false);
+        toast.error(res?.error?.non_field_errors?.[0] ?? "Failed to enroll");
       }
     } catch (error: any) {
-      handleErrorAlerts(error.response.data.message);
+      setEnrolledOptimistic(false);
+      handleErrorAlerts(error?.response?.data?.message ?? "Unexpected error");
     }
   };
 
   const handleLessonSelect = (lessonId: string) => {
     console.log("Selected lesson:", lessonId);
     navigate(`/catalog/${course?.id}/player`);
+  };
+
+  const handleRatingSubmit = (ratingData: any) => {
+    console.log("Course rating submitted:", ratingData);
   };
 
   return (
@@ -215,9 +232,15 @@ const CourseDetailPage: React.FC = () => {
                         onClick={() => {
                           navigate(`/catalog/${course?.id}/player`);
                         }}
-                        className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                        className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold mb-2 hover:bg-purple-700 transition-colors"
                       >
                         Start Learning
+                      </button>
+                      <button
+                        onClick={() => setShowRatingModal(true)}
+                        className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
+                      >
+                        Rate This Course
                       </button>
                     </div>
                   )}
@@ -259,7 +282,7 @@ const CourseDetailPage: React.FC = () => {
             {/* Tabs */}
             <div className="mb-8">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8">
+                <nav className="-mb-px grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
                   {[
                     { id: "overview", label: "Overview" },
                     { id: "curriculum", label: "Curriculum" },
@@ -419,6 +442,14 @@ const CourseDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {showRatingModal && (
+        <CourseRatingModal
+          courseId={course.id}
+          courseTitle={course.title}
+          onSubmit={handleRatingSubmit}
+          onClose={() => setShowRatingModal(false)}
+        />
+      )}
     </div>
   );
 };
