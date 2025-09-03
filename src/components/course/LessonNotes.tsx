@@ -3,7 +3,7 @@ import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import toast from "react-hot-toast";
-import { useCustomPost, useCustomUpdate } from "../../hooks/useMutation";
+import { useCustomPatch, useCustomPost } from "../../hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 const LessonNotes = ({
@@ -14,6 +14,8 @@ const LessonNotes = ({
   setTitle,
 }: any) => {
   const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
+  const [editNoteValue, setEditNoteValue] = useState("");
+  const [editNoteTitle, setEditNoteTitle] = useState("");
   const [editNote, setEditNote] = useState(null);
   const queryClient = useQueryClient();
   // GET Notes
@@ -29,7 +31,7 @@ const LessonNotes = ({
     "post-lesson-notes",
   ]);
   //PATCH Notes
-  const { mutateAsync: editNotes } = useCustomUpdate(
+  const { mutateAsync: editNotes } = useCustomPatch(
     API_ENDPOINTS.lessonNotes,
     ["patch-lesson-notes"]
   );
@@ -57,8 +59,8 @@ const LessonNotes = ({
     try {
       const editData = {
         id: id,
-        title: title,
-        content: notes,
+        title: editNoteTitle,
+        content: editNoteValue,
       };
       await editNotes(editData);
       setSavedNotes((prev) => ({
@@ -68,8 +70,9 @@ const LessonNotes = ({
       queryClient.invalidateQueries({
         queryKey: ["lesson-notes", currentLessonId],
       });
-      setNotes("");
-      setTitle("");
+      setEditNoteValue("");
+      setEditNoteTitle("");
+      setEditNote(null);
     } catch (error: any) {
       handleErrorAlerts(error.response?.data?.error || "Unknown error");
     }
@@ -119,15 +122,15 @@ const LessonNotes = ({
               <div className="w-full">
                 <input
                   type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={editNoteTitle}
+                  onChange={(e) => setEditNoteTitle(e.target.value)}
                   placeholder="Title"
                   className="w-full mb-5 px-3 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
                 />
                 <textarea
                   placeholder="Take notes while watching..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  value={editNoteValue}
+                  onChange={(e) => setEditNoteValue(e.target.value)}
                   className="w-full h-40 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
                 />
                 <div className="mt-2 flex justify-end space-x-3">
@@ -138,9 +141,9 @@ const LessonNotes = ({
                     Cancel
                   </button>
                   <button
-                  disabled
+                    disabled={!editNoteTitle || !editNoteValue}
                     onClick={() => handleEditNotes(note?.id)}
-                    className="px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    className="cursor-pointer px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                   >
                     Save
                   </button>
@@ -151,8 +154,8 @@ const LessonNotes = ({
                 {/* Hover action button */}
                 <button
                   onClick={() => {
-                    setTitle(note?.title ?? "");
-                    setNotes(note?.content ?? "");
+                    setEditNoteTitle(note?.title ?? "");
+                    setEditNoteValue(note?.content ?? "");
                     setEditNote(note?.id);
                   }}
                   className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg"
