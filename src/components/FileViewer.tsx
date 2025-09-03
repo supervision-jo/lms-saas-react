@@ -7,6 +7,7 @@ interface FileViewerProps {
   fileName: string;
   fileUrl: string;
   fileType: 'pdf' | 'doc' | 'docx' | 'txt' | 'jpg' | 'png' | 'zip' | 'code' | 'unknown';
+  description?: string;
 }
 
 const FileViewer: React.FC<FileViewerProps> = ({
@@ -15,6 +16,7 @@ const FileViewer: React.FC<FileViewerProps> = ({
   fileName,
   fileUrl,
   fileType,
+  description,
 }) => {
   const fileSize = '2.4 MB';
   const downloadCount = 1247;
