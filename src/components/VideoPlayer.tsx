@@ -3,12 +3,13 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Settings, SkipBack, SkipForwar
 
 interface VideoPlayerProps {
   videoUrl: string;
+  youtubeUrl?: string;
   title: string;
   onProgress?: (progress: number) => void;
   onComplete?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, title, onProgress, onComplete }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, youtubeUrl, title, onProgress, onComplete }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -20,7 +21,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, title, onProgress, 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Extract YouTube video ID
+  const getYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const youtubeVideoId = youtubeUrl ? getYouTubeVideoId(youtubeUrl) : null;
+
   useEffect(() => {
+    if (youtubeVideoId) return; // Skip for YouTube videos
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -127,6 +146,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, title, onProgress, 
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  // If YouTube URL is provided, render YouTube embed
+  if (youtubeVideoId) {
+    return (
+      <div 
+        ref={containerRef}
+        className="relative bg-black rounded-lg overflow-hidden aspect-video"
+      >
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeVideoId}?enablejsapi=1&origin=${window.location.origin}`}
+          title={title}
+          className="w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
 
   return (
     <div 
