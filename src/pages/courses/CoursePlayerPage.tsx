@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ChevronLeft,
   BookOpen,
@@ -25,6 +25,7 @@ const CoursePlayerPage: React.FC = () => {
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
   const [notes, setNotes] = useState("");
+  const [title, setTitle] = useState("");
   const [newQuestion, setNewQuestion] = useState("");
   const [qaData, setQaData] = useState([
     {
@@ -87,7 +88,8 @@ const CoursePlayerPage: React.FC = () => {
   const [examScore, setExamScore] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [savedNotes
+  const [
+    savedNotes,
     // , setSavedNotes
   ] = useState<{ [key: string]: string }>({});
   const [showExam, setShowExam] = useState(false);
@@ -178,15 +180,20 @@ const CoursePlayerPage: React.FC = () => {
     ],
   };
 
-  const { data: modulesData } = useCustomQuery(
+  const { data: modules } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
     undefined,
     !!courseId
   );
 
-  const modules: Module[] = modulesData?.data?.data ?? [];
-  console.log("modules",modules)
+  const modulesData: Module[] = modules?.data?.data ?? [];
+  console.log("modulesData", modulesData);
+  useEffect(() => {
+    if (modulesData.length > 0) {
+      setCurrentLessonId(modulesData[0].lessons[0].id);
+    }
+  }, [modulesData]);
   const handleLessonSelect = (lessonId: string) => {
     console.log("Selected lesson:", lessonId);
     setCurrentLessonId(lessonId);
@@ -197,7 +204,7 @@ const CoursePlayerPage: React.FC = () => {
     setReplyText("");
 
     // Handle different lesson types
-    const allLessons = modules.flatMap((m) => m.lessons);
+    const allLessons = modulesData.flatMap((m) => m.lessons);
     const selectedLesson = allLessons.find((l) => l.id === lessonId);
 
     if (selectedLesson?.content_type === "exam") {
@@ -410,7 +417,7 @@ const CoursePlayerPage: React.FC = () => {
           <div className="flex-1 p-4">
             <div className="max-w-5xl mx-auto">
               {(() => {
-                const allLessons = modules.flatMap((m) => m.lessons);
+                const allLessons = modulesData.flatMap((m) => m.lessons);
                 const currentLessonData = allLessons.find(
                   (l) => l.id === currentLessonId
                 );
@@ -802,6 +809,8 @@ const CoursePlayerPage: React.FC = () => {
               currentLessonId={currentLessonId}
               notes={notes}
               setNotes={setNotes}
+              title={title}
+              setTitle={setTitle}
             />
           )}
 
@@ -1229,7 +1238,7 @@ const CoursePlayerPage: React.FC = () => {
         {/* Sidebar */}
         <div className="w-80 bg-white text-gray-900 border-l border-gray-700 overflow-y-auto min-h-screen">
           <CourseContent
-            modules={modules}
+            modulesData={modulesData}
             currentLessonId={currentLessonId}
             onLessonSelect={handleLessonSelect}
             isEnrolled={true}

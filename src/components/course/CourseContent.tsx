@@ -12,32 +12,31 @@ import {
 } from "lucide-react";
 
 interface CourseContentProps {
-  modules: Module[];
+  modulesData: Module[];
   currentLessonId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
-  modules,
+  modulesData,
   currentLessonId,
   onLessonSelect,
   isEnrolled,
 }) => {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+  const [expandedmodulesData, setExpandedmodulesData] = useState<Set<string>>(
     new Set(["1"])
   ); // Expand first module by default
 
   const toggleModule = (moduleId: string) => {
-    const newExpanded = new Set(expandedModules);
+    const newExpanded = new Set(expandedmodulesData);
     if (newExpanded.has(moduleId)) {
       newExpanded.delete(moduleId);
     } else {
       newExpanded.add(moduleId);
     }
-    setExpandedModules(newExpanded);
+    setExpandedmodulesData(newExpanded);
   };
-console.log("module.lessons",modules)
   const handleLessonClick = (lesson: Lesson) => {
     const canAccess = isEnrolled || lesson.free_preview;
     
@@ -90,14 +89,14 @@ console.log("module.lessons",modules)
       <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <h3 className="text-xl font-bold">Course Content</h3>
         <p className="text-purple-100 mt-1 text-sm">
-          {modules.length} modules •{" "}
-          {modules.reduce((acc, m) => acc + m.lessonCount, 0)} lessons
+          {modulesData?.length} modulesData •{" "}
+          {modulesData?.reduce((acc, m) => acc + m.lessonCount, 0)} lessons
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-50">
-        {modules.map((module) => {
-          const isExpanded = expandedModules.has(module.id);
+        {modulesData?.map((module) => {
+          const isExpanded = expandedmodulesData.has(module.id);
 
           return (
             <div
