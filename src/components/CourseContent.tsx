@@ -99,7 +99,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
         fileName: lesson.title,
         fileUrl: lesson.fileUrl,
         fileType: getFileType(lesson.title),
-        description: undefined,
+        fileSize: '2.4 MB',
+        description: 'Complete setup files and configuration templates for the course project.',
+        downloadCount: 1247,
       });
     } else {
       onLessonSelect(lesson.id);
