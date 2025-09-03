@@ -1,0 +1,60 @@
+{
+  "data": [
+    {
+      "id": "1",
+      "title": "Complete React Developer Course",
+      "instructor": "John Doe",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=400",
+      "progress": 68,
+      "totalLessons": 45,
+      "completedLessons": 31,
+      "timeSpent": "24h 30m",
+      "lastAccessed": "2 hours ago",
+      "rating": 4.7,
+      "category": "Development"
+    },
+    {
+      "id": "2",
+      "title": "Python for Data Science",
+      "instructor": "Jane Smith",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400",
+      "progress": 45,
+      "totalLessons": 32,
+      "completedLessons": 14,
+      "timeSpent": "18h 15m",
+      "lastAccessed": "1 day ago",
+      "rating": 4.6,
+      "category": "Data Science"
+    },
+    {
+      "id": "3",
+      "title": "UI/UX Design Masterclass",
+      "instructor": "Alex Brown",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=400",
+      "progress": 25,
+      "totalLessons": 28,
+      "completedLessons": 7,
+      "timeSpent": "12h 45m",
+      "lastAccessed": "3 days ago",
+      "rating": 4.4,
+      "category": "Design"
+    },
+    {
+      "id": "4",
+      "title": "Digital Marketing Strategy",
+      "instructor": "Sarah Wilson",
+      "thumbnail":
+        "https://images.pexels.com/photos/3184639/pexels-photo-3184639.jpeg?auto=compress&cs=tinysrgb&w=400",
+      "progress": 80,
+      "totalLessons": 24,
+      "completedLessons": 19,
+      "timeSpent": "16h 20m",
+      "lastAccessed": "5 hours ago",
+      "rating": 4.5,
+      "category": "Marketing"
+    }
+  ]
+}

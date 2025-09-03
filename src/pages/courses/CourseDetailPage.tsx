@@ -12,86 +12,67 @@ import {
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
-import { useNavigate, useParams } from "react-router";
-import { API_ENDPOINTS } from "../../utils/constants";
-import { formatDateTimeSimple } from "../../utils/formatDateTime";
-import { useCustomPost } from "../../hooks/useMutation";
-import toast from "react-hot-toast";
-import handleErrorAlerts from "../../utils/showErrorMessages";
-import { formatDuration } from "../../utils/formatDuration";
+import { useParams } from "react-router";
 
-const CourseDetailPage: React.FC = () => {
-  const navigate = useNavigate();
+interface CourseDetailPageProps {
+  onNavigateToPlayer?: () => void;
+}
+
+const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
+  onNavigateToPlayer,
+}) => {
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEnrolled, setIsEnrolled] = useState(false);
 
-  const courseData = useCustomQuery(
-    `${API_ENDPOINTS.courses}${courseId}`,
-    ["course", courseId],
-    undefined,
-    !!courseId
-  );
+  const coursesData = useCustomQuery("/data/allCourses.json", ["courses"]);
+  const modulesData = useCustomQuery("/data/modules.json", ["modules"]);
 
-  const course: Course = courseData?.data?.data;
-  console.log("course", course);
-  const { data: modules } = useCustomQuery(
-    `${API_ENDPOINTS.modules}?course=${courseId}`,
-    ["modules", courseId],
-    undefined,
-    !!courseId
-  );
-  const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
-    "categories",
-  ]);
+  const courses: Course[] = coursesData?.data?.data ?? [];
 
-  const { data: instructorData } = useCustomQuery(
-    `${API_ENDPOINTS.instructor}${course?.instructor_?.id}/course/${course?.id}/`,
-    ["instructor", course?.id],
-    undefined,
-    !!course?.id && !!course?.instructor_?.id
-  );
+  const targetCourse = courses.find((c) => c.id === courseId) as Course;
 
-  const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
-    "enrolledCourses",
-  ]);
+  const modules: Module[] = modulesData?.data?.data ?? [];
 
-  const enrolledCourses: EnrolledCourse[] =
-    enrolledCoursesData?.data?.data ?? [];
+  // Handle loading state and course not found
+  if (coursesData.isLoading || modulesData.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
-    "enrolledCourses",
-  ]);
+  if (!targetCourse) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Course Not Found</h1>
+          <p className="text-gray-600 mb-6">The course you're looking for doesn't exist or has been removed.</p>
+          <button
+            onClick={() => window.history.back()}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const modulesData: Module[] = modules?.data?.data ?? [];
-
-  const cates: Category[] = catesData?.data?.data ?? [];
-
-  const currentCategory = cates?.find((c) => c.id === course?.sub_category);
-
-  const instructor: Partial<Instructor> = instructorData?.data;
-
-  const courseEnrollStatus: boolean = enrolledCourses.some(
-    (c) => c.course.id === courseId
-  );
-  const [isEnrolled, setIsEnrolled] = useState(courseEnrollStatus);
-  const handleEnroll = async () => {
-    try {
-      const res = await createEnroll.mutateAsync({ course: course?.id });
-
-      if (res.status) {
-        setIsEnrolled(true);
-        toast.success("You have been enrolled successfully!");
-      } else {
-        toast.error(res.error.non_field_errors[0]);
-      }
-    } catch (error: any) {
-      handleErrorAlerts(error.response.data.message);
-    }
+  const handleEnroll = () => {
+    setIsEnrolled(true);
+    console.log("Enrolled in course");
   };
 
   const handleLessonSelect = (lessonId: string) => {
     console.log("Selected lesson:", lessonId);
-    navigate(`/catalog/${course?.id}/player`);
+    if (onNavigateToPlayer) {
+      onNavigateToPlayer();
+    }
   };
 
   return (
@@ -102,36 +83,36 @@ const CourseDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <nav className="text-sm mb-4">
-                {/* <span className="text-purple-400">Development</span>
-                <span className="mx-2">›</span> */}
-                <span className="text-purple-400">
-                  {currentCategory?.name ?? "Development"}
-                </span>
+                <span className="text-purple-400">Development</span>
                 <span className="mx-2">›</span>
-                <span>{course?.title}</span>
+                <span className="text-purple-400">Web Development</span>
+                <span className="mx-2">›</span>
+                <span>React</span>
               </nav>
 
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {course?.title}
+                {targetCourse?.title}
               </h1>
-              <p className="text-xl text-gray-300 mb-6">{course?.subtitle}</p>
+              <p className="text-xl text-gray-300 mb-6">
+                {targetCourse?.subtitle}
+              </p>
 
               <div className="flex flex-wrap items-center gap-4 mb-6">
-                {course?.is_best_seller && (
+                {targetCourse?.isBestseller && (
                   <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded">
                     Bestseller
                   </span>
                 )}
                 <div className="flex items-center">
                   <span className="text-yellow-400 font-bold mr-2">
-                    {course?.rating ?? 0}
+                    {targetCourse?.rating}
                   </span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < Math.floor(course?.rating ?? 0)
+                          i < Math.floor(targetCourse?.rating)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-400"
                         }`}
@@ -139,28 +120,26 @@ const CourseDetailPage: React.FC = () => {
                     ))}
                   </div>
                   <span className="text-gray-300 ml-2">
-                    ({course?.total_reviews.toLocaleString() ?? 0} ratings)
+                    ({targetCourse?.reviewCount.toLocaleString()} ratings)
                   </span>
                 </div>
                 <span className="text-gray-300">
-                  {course?.total_students.toLocaleString() ?? 0} students
+                  {targetCourse?.studentCount.toLocaleString()} students
                 </span>
               </div>
 
               <div className="flex items-center text-gray-300 mb-6">
-                <span>Created by {instructor?.instructor_full_name}</span>
+                <span>Created by {targetCourse?.instructor.name}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300">
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>
-                    Last updated {formatDateTimeSimple(course?.updated_at)}
-                  </span>
+                  <span>Last updated {targetCourse?.lastUpdated}</span>
                 </div>
                 <div className="flex items-center">
                   <Globe className="w-4 h-4 mr-2" />
-                  <span>English</span>
+                  <span>{targetCourse?.language}</span>
                 </div>
               </div>
             </div>
@@ -169,11 +148,8 @@ const CourseDetailPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-4">
                 <div className="relative">
                   <img
-                    src={
-                      course?.picture ??
-                      "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
-                    }
-                    alt={course?.title}
+                    src={targetCourse?.thumbnail}
+                    alt={targetCourse?.title}
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -187,11 +163,11 @@ const CourseDetailPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <span className="text-3xl font-bold text-gray-900">
-                        ${course?.price ?? 0}
+                        ${targetCourse?.price}
                       </span>
-                      {course?.old_price && (
+                      {targetCourse?.originalPrice && (
                         <span className="text-gray-500 line-through ml-3">
-                          ${course?.old_price ?? 0}
+                          ${targetCourse?.originalPrice}
                         </span>
                       )}
                     </div>
@@ -211,9 +187,7 @@ const CourseDetailPage: React.FC = () => {
                         <span className="font-medium">Enrolled</span>
                       </div>
                       <button
-                        onClick={() => {
-                          navigate(`/catalog/${course?.id}/player`);
-                        }}
+                        onClick={onNavigateToPlayer}
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                       >
                         Start Learning
@@ -231,9 +205,7 @@ const CourseDetailPage: React.FC = () => {
                     </h4>
                     <div className="flex items-center text-gray-700">
                       <Clock className="w-4 h-4 mr-3" />
-                      <span>
-                        {formatDuration(course?.total_hours)} on-demand video
-                      </span>
+                      <span>{targetCourse?.duration} on-demand video</span>
                     </div>
                     <div className="flex items-center text-gray-700">
                       <Smartphone className="w-4 h-4 mr-3" />
@@ -285,43 +257,35 @@ const CourseDetailPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               {activeTab === "overview" && (
                 <div>
-                  {course?.objectives && course?.objectives?.length > 0 && (
-                    <>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                        What you'll learn
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        {course?.objectives.map((item) => (
-                          <div key={item.id} className="flex items-start">
-                            <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700">{item.text}</span>
-                          </div>
-                        ))}
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    What you'll learn
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    {targetCourse?.whatYouLearn.map((item, index) => (
+                      <div key={index} className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{item}</span>
                       </div>
-                    </>
-                  )}
+                    ))}
+                  </div>
 
-                  {course?.requirements && course?.requirements?.length > 0 && (
-                    <>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                        Requirements
-                      </h3>
-                      <ul className="space-y-2 mb-8">
-                        {course?.requirements.map((req) => (
-                          <li key={req.id} className="flex items-start">
-                            <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
-                            <span className="text-gray-700">{req.text}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    Requirements
+                  </h3>
+                  <ul className="space-y-2 mb-8">
+                    {targetCourse?.requirements.map((req, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
+                        <span className="text-gray-700">{req}</span>
+                      </li>
+                    ))}
+                  </ul>
 
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Description
                   </h3>
                   <div className="prose max-w-none text-gray-700">
-                    {course?.description
+                    {targetCourse?.description
                       .split("\n\n")
                       .map((paragraph, index) => (
                         <p key={index} className="mb-4">
@@ -338,7 +302,7 @@ const CourseDetailPage: React.FC = () => {
                     Course Content
                   </h3>
                   <CourseContent
-                    modulesData={modulesData}
+                    modules={modules}
                     onLessonSelect={handleLessonSelect}
                     isEnrolled={isEnrolled}
                   />
@@ -351,44 +315,35 @@ const CourseDetailPage: React.FC = () => {
                     Instructor
                   </h3>
                   <div className="flex items-start mb-6">
-                    {instructor?.instructor_image ? (
-                      <img
-                        src={instructor?.instructor_image}
-                        alt={instructor?.instructor_full_name}
-                        className="w-6 h-6 rounded-full mr-2"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-medium">
-                          {instructor?.instructor_full_name?.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-
+                    <img
+                      src={targetCourse?.instructor.avatar}
+                      alt={targetCourse?.instructor.name}
+                      className="w-16 h-16 rounded-full mr-4"
+                    />
                     <div>
                       <h4 className="text-xl font-bold text-gray-900">
-                        {instructor?.instructor_full_name}
+                        {targetCourse?.instructor.name}
                       </h4>
                       <p className="text-gray-600 mb-2">
-                        Instructor BIO
-                        {/* {instructor.bio} */}
+                        {targetCourse?.instructor.bio}
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center">
                           <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                          {/* <span>{instructor.rating} Rating</span> */}
-                          <span>0 Rating</span>
+                          <span>{targetCourse?.instructor.rating} Rating</span>
                         </div>
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>
-                            {instructor?.total_students?.toLocaleString() ?? 0}{" "}
+                            {targetCourse?.instructor.students.toLocaleString()}{" "}
                             Students
                           </span>
                         </div>
                         <div className="flex items-center">
                           <Award className="w-4 h-4 mr-1" />
-                          <span>{instructor?.total_courses ?? 0} Courses</span>
+                          <span>
+                            {targetCourse?.instructor.courses} Courses
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -411,7 +366,7 @@ const CourseDetailPage: React.FC = () => {
 
           <div className="lg:col-span-1">
             <CourseContent
-              modulesData={modulesData}
+              modules={modules}
               onLessonSelect={handleLessonSelect}
               isEnrolled={isEnrolled}
             />
