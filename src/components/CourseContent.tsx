@@ -32,8 +32,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
   onLessonSelect,
   isEnrolled,
 }) => {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['1'])); // Expand first module by default
-
+  const [expandedmodulesData, setExpandedmodulesData] = useState<Set<string>>(
+    new Set(["1"])
+  ); // Expand first module by default
+  console.log("modulesData", modulesData);
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
@@ -45,8 +47,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    const canAccess = isEnrolled || lesson.isFree;
-    
+    const canAccess = isEnrolled || lesson.free_preview;
+
     if (!canAccess) return;
     
     if (lesson.type === 'material' && lesson.fileUrl) {
@@ -88,24 +90,28 @@ const CourseContent: React.FC<CourseContentProps> = ({
         return <Play className="w-4 h-4 text-purple-600 fill-current" />;
     }
   };
-
+  console.log("modulesData", modulesData);
   return (
     <div className="bg-white h-full overflow-hidden shadow-lg">
       <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <h3 className="text-xl font-bold">Course Content</h3>
         <p className="text-purple-100 mt-1 text-sm">
-          {modules.length} modules • {modules.reduce((acc, m) => acc + m.lessonCount, 0)} lessons
+          {modulesData?.length} modulesData •{" "}
+          {modulesData?.reduce((acc, m) => acc + m.lessons.length, 0)} lessons
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-50">
-        {modules.map((module) => {
-          const isExpanded = expandedModules.has(module.id);
-          
+        {modulesData?.map((module) => {
+          const isExpanded = expandedmodulesData.has(module?.id);
+
           return (
-            <div key={module.id} className="bg-white mb-2 mx-3 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div
+              key={module?.id}
+              className="bg-white mb-2 mx-3 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+            >
               <button
-                onClick={() => toggleModule(module.id)}
+                onClick={() => toggleModule(module?.id)}
                 className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
               >
                 <div className="flex items-center">
