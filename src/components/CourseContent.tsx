@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Play, Lock, CheckCircle, Clock, FileText, Award, Download } from 'lucide-react';
+import FileViewer from './FileViewer';
 
 interface Lesson {
   id: string;
@@ -33,6 +34,17 @@ const CourseContent: React.FC<CourseContentProps> = ({
   isEnrolled,
 }) => {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['1'])); // Expand first module by default
+  const [fileViewer, setFileViewer] = useState<{
+    isOpen: boolean;
+    fileName: string;
+    fileUrl: string;
+    fileType: 'pdf' | 'doc' | 'docx' | 'txt' | 'jpg' | 'png' | 'zip' | 'code' | 'unknown';
+  }>({
+    isOpen: false,
+    fileName: '',
+    fileUrl: '',
+    fileType: 'unknown',
+  });
 
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
@@ -44,20 +56,50 @@ const CourseContent: React.FC<CourseContentProps> = ({
     setExpandedModules(newExpanded);
   };
 
+  const getFileType = (fileName: string): 'pdf' | 'doc' | 'docx' | 'txt' | 'jpg' | 'png' | 'zip' | 'code' | 'unknown' => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return 'pdf';
+      case 'doc':
+      case 'docx':
+        return 'docx';
+      case 'txt':
+      case 'md':
+        return 'txt';
+      case 'jpg':
+      case 'jpeg':
+        return 'jpg';
+      case 'png':
+        return 'png';
+      case 'zip':
+      case 'rar':
+        return 'zip';
+      case 'js':
+      case 'jsx':
+      case 'ts':
+      case 'tsx':
+      case 'html':
+      case 'css':
+        return 'code';
+      default:
+        return 'unknown';
+    }
+  };
+
   const handleLessonClick = (lesson: Lesson) => {
     const canAccess = isEnrolled || lesson.isFree;
     
     if (!canAccess) return;
     
     if (lesson.type === 'material' && lesson.fileUrl) {
-      // Handle material download
-      const link = document.createElement('a');
-      link.href = lesson.fileUrl;
-      link.download = lesson.title;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      alert('Download started!');
+      // Open file viewer instead of direct download
+      setFileViewer({
+        isOpen: true,
+        fileName: lesson.title,
+        fileUrl: lesson.fileUrl,
+        fileType: getFileType(lesson.title),
+      });
     } else {
       onLessonSelect(lesson.id);
     }
@@ -170,6 +212,15 @@ const CourseContent: React.FC<CourseContentProps> = ({
           );
         })}
       </div>
+
+      {/* File Viewer Modal */}
+      <FileViewer
+        isOpen={fileViewer.isOpen}
+        onClose={() => setFileViewer({ ...fileViewer, isOpen: false })}
+        fileName={fileViewer.fileName}
+        fileUrl={fileViewer.fileUrl}
+        fileType={fileViewer.fileType}
+      />
     </div>
   );
 };
