@@ -86,3 +86,30 @@ interface Module {
   order: number;
   lessons: Lesson[];
 }
+
+interface CourseReview {
+  student_: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    is_student: boolean;
+    is_instructor: boolean;
+    profile_image: string | null;
+    bio: string | null;
+    phone: string | null;
+    location: string | null;
+    data_joined: string;
+  };
+  id: number;
+  course: string;
+  course_title: string;
+  rating: number;
+  tell_about_your_experience: string;
+  like_course: string[];
+  recommend: boolean;
+  anonymous: boolean;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+}

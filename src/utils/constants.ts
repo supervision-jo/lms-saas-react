@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   instructor: "course/instructor/",
   StudentEnrollements: "course/get-course-enrollment/",
   enrolledCourses: "enrollments/my-enrollments/",
+  courseReviews: "enrollments/reviews/",
   createEnrollment: "enrollments/create-enroll/",
   lessonNotes: "enrollments/lesson-notes/",
   signup: "users/register/",

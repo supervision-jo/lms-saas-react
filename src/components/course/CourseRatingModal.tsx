@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Star, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
+import { useParams } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
 interface CourseRatingProps {
   courseTitle: string;
@@ -16,12 +19,33 @@ interface CourseRatingData {
   anonymous: boolean;
 }
 
+interface DataToSend {
+  course: string; // Course ID
+  rating: number;
+  tell_about_your_experience: string; // review
+  like_course: string[]; // reasons
+  recommend: boolean; // wouldRecommend
+  anonymous: boolean;
+  comment: string;
+}
+
 export default function CourseRatingModal({
   courseTitle,
   onSubmit,
   onClose,
   existingRating,
 }: CourseRatingProps) {
+  const { courseId } = useParams();
+
+  const { data: reviewData } = useCustomQuery(
+    `${API_ENDPOINTS.courseReviews}?course=${courseId}`,
+    ["reviews", courseId],
+    undefined,
+    !!courseId
+  );
+
+  const existingReviews = reviewData.data;
+
   const [rating, setRating] = useState(existingRating?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [review, setReview] = useState(existingRating?.review || "");
