@@ -46,6 +46,8 @@ export default function CourseRatingModal({
 
   const existingReviews = reviewData.data;
 
+  console.log(existingReviews);
+
   const [rating, setRating] = useState(existingRating?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [review, setReview] = useState(existingRating?.review || "");
