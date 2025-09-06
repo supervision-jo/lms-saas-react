@@ -4,7 +4,7 @@ import ExamSection from "./ExamSection";
 import { SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { formatDuration } from "../../../utils/formatDuration";
 
-interface VideoPlayerProps {
+interface LessonContentProps {
   modules: Module[];
   currentLessonId: string;
   handleComplete: any;
@@ -31,7 +31,7 @@ export default function LessonContentPlayer({
   setShowExam,
   showExam,
   onLessonSelect,
-}: VideoPlayerProps) {
+}: LessonContentProps) {
   const allLessons = useMemo(
     () => modules?.flatMap((m) => m?.lessons ?? []) ?? [],
     [modules]

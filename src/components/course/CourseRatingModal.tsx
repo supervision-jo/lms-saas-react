@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Star, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 
 interface CourseRatingProps {
-  courseId: string;
   courseTitle: string;
   onSubmit: (rating: CourseRatingData) => void;
   onClose: () => void;
@@ -18,7 +17,6 @@ interface CourseRatingData {
 }
 
 export default function CourseRatingModal({
-  // courseId,
   courseTitle,
   onSubmit,
   onClose,

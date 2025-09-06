@@ -1,29 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import toast from "react-hot-toast";
+import { useCustomPatch, useCustomPost } from "../../hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomPatch, useCustomPost } from "../../../hooks/useMutation";
-import { API_ENDPOINTS } from "../../../utils/constants";
-import handleErrorAlerts from "../../../utils/showErrorMessages";
-import { formatDateTimeSimple } from "../../../utils/formatDateTime";
-
-interface LessonNotesProps {
-  currentLessonId: string;
-  notes: string;
-  setNotes: React.Dispatch<React.SetStateAction<string>>;
-  title: string;
-  setTitle: React.Dispatch<React.SetStateAction<string>>;
-  setNotesCount?: React.Dispatch<React.SetStateAction<number>>;
-}
-
-export default function LessonNotes({
+import handleErrorAlerts from "../../utils/showErrorMessages";
+const LessonNotes = ({
   currentLessonId,
   notes,
   setNotes,
   title,
   setTitle,
-  setNotesCount,
-}: LessonNotesProps) {
+}: any) => {
   const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
   const [editNoteValue, setEditNoteValue] = useState("");
   const [editNoteTitle, setEditNoteTitle] = useState("");
@@ -42,9 +31,10 @@ export default function LessonNotes({
     "post-lesson-notes",
   ]);
   //PATCH Notes
-  const { mutateAsync: editNotes } = useCustomPatch(API_ENDPOINTS.lessonNotes, [
-    "patch-lesson-notes",
-  ]);
+  const { mutateAsync: editNotes } = useCustomPatch(
+    API_ENDPOINTS.lessonNotes,
+    ["patch-lesson-notes"]
+  );
   const handleSaveNotes = async () => {
     try {
       await addNotes({ lesson: currentLessonId, title: title, content: notes });
@@ -61,6 +51,7 @@ export default function LessonNotes({
       handleErrorAlerts(error.response?.data?.error || "Unknown error");
     }
 
+    // Show success message (you could add a toast notification here)
     toast.success("Notes saved successfully!");
     console.log("Notes saved for lesson:", currentLessonId, notes);
   };
@@ -86,10 +77,6 @@ export default function LessonNotes({
       handleErrorAlerts(error.response?.data?.error || "Unknown error");
     }
   };
-
-  useEffect(() => {
-    setNotesCount?.(notesData?.length ?? 0);
-  }, [notesData?.length, setNotesCount]);
   return (
     <div className="bg-gray-800 p-6 border-b border-gray-700">
       <div className="max-w-5xl mx-auto">
@@ -107,9 +94,7 @@ export default function LessonNotes({
           <input
             type="text"
             value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-            }}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
             className="w-full mb-5 px-3 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
           />
@@ -196,4 +181,5 @@ export default function LessonNotes({
       </div>
     </div>
   );
-}
+};
+export default LessonNotes;

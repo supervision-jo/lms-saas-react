@@ -160,7 +160,6 @@ const ProfilePage: React.FC = () => {
         Icon: ICONS[s.icon] as LucideIcon,
       })
     ) ?? [];
-
   const handleDownloadCertificate = (certificate: any) => {
     console.log("Downloading certificate for:", certificate.title);
     // Create a mock download
@@ -274,15 +273,15 @@ const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600 mb-4">
                 <div className="flex items-center justify-center md:justify-start">
                   <Mail className="w-4 h-4 mr-2" />
-                  <span>{profileData.email || "--"}</span>
+                  <span>{profileData?.email || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <Phone className="w-4 h-4 mr-2" />
-                  <span>{profileData.phone || "--"}</span>
+                  <span>{profileData?.phone || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <MapPin className="w-4 h-4 mr-2" />
-                  <span>{profileData.location || "--"}</span>
+                  <span>{profileData?.location || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -294,7 +293,7 @@ const ProfilePage: React.FC = () => {
               </div>
 
               <p className="text-gray-700 leading-relaxed">
-                {profileData.bio || "--"}
+                {profileData?.bio || "--"}
               </p>
             </div>
           </div>
@@ -330,7 +329,7 @@ const ProfilePage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 focus:outline-none px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.id
                       ? "border-purple-500 text-purple-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -357,6 +356,14 @@ const ProfilePage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name
+                    </label>
+                    <p className="text-gray-900">
+                      {profileData?.first_name || "--"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name
                     </label>
                     <p className="text-gray-900">
@@ -368,20 +375,20 @@ const ProfilePage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
                     </label>
-                    <p className="text-gray-900">{profileData.email || "--"}</p>
+                    <p className="text-gray-900">{profileData?.email || "--"}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone
                     </label>
-                    <p className="text-gray-900">{profileData.phone || "--"}</p>
+                    <p className="text-gray-900">{profileData?.phone || "--"}</p>
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Location
                     </label>
                     <p className="text-gray-900">
-                      {profileData.location || "--"}
+                      {profileData?.location || "--"}
                     </p>
                   </div>
                 </div>
@@ -389,7 +396,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Bio
                   </label>
-                  <p className="text-gray-900">{profileData.bio || "--"}</p>
+                  <p className="text-gray-900">{profileData?.bio || "--"}</p>
                 </div>
               </div>
             )}
@@ -433,7 +440,10 @@ const ProfilePage: React.FC = () => {
                   className="border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors"
                 >
                   <img
-                    src={certificate.thumbnail}
+                    src={
+                      certificate.thumbnail ??
+                      "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                    }
                     alt={certificate.title}
                     className="w-full h-32 object-cover"
                   />

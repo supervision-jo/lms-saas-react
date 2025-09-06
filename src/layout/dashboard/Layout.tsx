@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
-
+import GlobalLoading from "../globalLoading";
 import { Home, Users, Library, GraduationCap, LucideIcon } from "lucide-react";
 import Header from "../../components/navigations/Header";
 import { USER_KEY } from "../../utils/constants";

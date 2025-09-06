@@ -13,6 +13,7 @@ interface FormValues {
   location: string;
   phone: string;
   bio: string;
+  profile_image: File;
 }
 
 interface Props {
@@ -96,6 +97,23 @@ export default function EditUserProfile({ setIsEditing }: Props) {
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* First Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            First Name
+          </label>
+          <input
+            type="text"
+            {...register("first_name", { required: "First Name is required" })}
+            className={inputClass(!!errors.first_name)}
+          />
+          {errors.first_name && (
+            <p className="mt-1 text-sm text-red-600">
+              {String(errors.first_name.message ?? "First Name is required")}
+            </p>
+          )}
+        </div>
+        {/* Last Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Fisrt Name
@@ -143,6 +161,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
             className={inputClass(!!errors.email)}
           />
         </div>
+        {/* Phone */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Phone
@@ -178,7 +197,8 @@ export default function EditUserProfile({ setIsEditing }: Props) {
             </span>
           )}
         </div>
-        <div>
+        {/* Location */}
+        <div className="md:col-span-2 ">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Location
           </label>
@@ -189,6 +209,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
           />
         </div>
       </div>
+      {/* Bio */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Bio
@@ -199,6 +220,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
           className={inputClass(!!errors.bio)}
         />
       </div>
+      {/* Actions */}
       <div className="flex justify-end space-x-4">
         <button
           onClick={() => setIsEditing(false)}

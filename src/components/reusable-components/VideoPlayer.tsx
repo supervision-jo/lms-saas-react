@@ -15,7 +15,6 @@ type Provider = "html5" | "youtube";
 interface VideoPlayerProps {
   videoUrl: string;
   title?: string;
-  // onProgress?: (progressPercent: number) => void;
   onComplete?: () => void;
   startMuted?: boolean;
   poster?: string;
@@ -29,12 +28,12 @@ declare global {
   }
 }
 
+// ----------------- helpers -----------------
 function detectProvider(url: string): Provider {
   const u = url?.trim();
   const isYouTube =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))/i.test(u);
-  if (isYouTube) return "youtube";
-  return "html5";
+  return isYouTube ? "youtube" : "html5";
 }
 
 function isHls(url: string) {
@@ -65,22 +64,23 @@ function formatTime(time: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// ----------------- component -----------------
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoUrl,
   title,
-  // onProgress,
   onComplete,
   startMuted = false,
   poster = "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=800",
   privacyEnhanced = false,
 }) => {
+  // Sanitize URL (block example.com and non-media/non-YouTube)
   const safeUrl = useMemo(
-    () => (isPlayableUrl(videoUrl) ? videoUrl : ""),
+    () => (isPlayableUrl(videoUrl) ? videoUrl.trim() : ""),
     [videoUrl]
   );
   const provider = useMemo(() => detectProvider(safeUrl), [safeUrl]);
 
-  // Local states
+  // UI state
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -96,15 +96,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     [currentTime, duration]
   );
 
-  // Refs for providers
+  // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const ytDivRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<any>(null);
-  const progressTimer = useRef<number | null>(null);
+  const progressTimer = useRef<number | null>(null); // YouTube polling
   const pendingPlayRef = useRef(false);
+  const rafRef = useRef<number | null>(null); // HTML5 rAF progress
+  const lastVolumeRef = useRef(1); // for mute/unmute restore
 
-  // Reset basic state when URL changes
+  // Reset on URL change
   useEffect(() => {
     setIsPlaying(false);
     setCurrentTime(0);
@@ -113,7 +115,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     pendingPlayRef.current = false;
   }, [safeUrl]);
 
-  // HTML5 setup (including HLS fallback)
+  // ----------------- HTML5 setup -----------------
   useEffect(() => {
     if (provider !== "html5") return;
     const video = videoRef.current;
@@ -121,15 +123,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     const url = (safeUrl || "").trim();
 
-    // if no URL show poster only
-    if (!url) {
-      video.removeAttribute("src");
-      video.load();
-      return;
-    }
-
-    // if URL is not a direct media file show poster only
-    if (!isDirectMediaUrl(url)) {
+    // poster-only
+    if (!url || !isDirectMediaUrl(url)) {
       video.removeAttribute("src");
       video.load();
       return;
@@ -137,7 +132,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     let hls: any | null = null;
 
-    // Prepare video element
+    // rAF ticker
+    const tick = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      setCurrentTime(v.currentTime || 0);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    const startRaf = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    const stopRaf = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+
+    // Prepare element
     video.crossOrigin = "anonymous";
     video.muted = isMuted;
     video.volume = volume;
@@ -146,28 +157,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const onLoadedMetadata = () => {
       setDuration(video.duration || 0);
     };
-    const onTimeUpdate = () => {
-      setCurrentTime(video.currentTime || 0);
-      // if (onProgress && video.duration) {
-      //   onProgress((video.currentTime / video.duration) * 100);
-      // }
+    const onDurationChange = () => {
+      const d = videoRef.current?.duration;
+      setDuration(Number.isFinite(d as number) ? (d as number) : 0);
+    };
+    const onPlay = () => {
+      setIsPlaying(true);
+      startRaf();
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      stopRaf();
     };
     const onEnded = () => {
       setIsPlaying(false);
-      if (onComplete) onComplete();
+      stopRaf();
+      onComplete?.();
     };
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
     const onError = () =>
       setError(
         "This video source isn't playable by the browser (CORS/format?)"
       );
 
     video.addEventListener("loadedmetadata", onLoadedMetadata);
-    video.addEventListener("timeupdate", onTimeUpdate);
-    video.addEventListener("ended", onEnded);
+    video.addEventListener("durationchange", onDurationChange);
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
+    video.addEventListener("ended", onEnded);
     video.addEventListener("error", onError);
 
     const setupSrc = async () => {
@@ -182,15 +198,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               setDuration(video.duration || 0);
             });
           } else {
-            // keep poster
+            // keep poster, no errors
             video.removeAttribute("src");
             video.load();
           }
         } else {
-          video.src = url;
+          video.src = url; // mp4/webm/ogg OR native HLS (Safari)
         }
-      } catch (e) {
-        console.log("Error", e);
+      } catch {
         setError("Failed to initialize video source.");
       }
     };
@@ -198,31 +213,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setupSrc();
 
     return () => {
+      stopRaf();
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
-      video.removeEventListener("timeupdate", onTimeUpdate);
-      video.removeEventListener("ended", onEnded);
+      video.removeEventListener("durationchange", onDurationChange);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
+      video.removeEventListener("ended", onEnded);
       video.removeEventListener("error", onError);
       if (hls) {
         try {
           hls.destroy();
-        } catch (e) {
-          console.log("Error", e);
+        } catch {
+          //
         }
       }
     };
-  }, [
-    provider,
-    safeUrl,
-    isMuted,
-    volume,
-    playbackRate,
-    // onProgress,
-    onComplete,
-  ]);
+  }, [provider, safeUrl, isMuted, volume, playbackRate, onComplete]);
 
-  // YouTube setup
+  // ----------------- YouTube setup -----------------
   useEffect(() => {
     if (provider !== "youtube") return;
 
@@ -267,7 +275,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       await loadYT();
       if (cancelled) return;
 
-      // clear previous iframe if any (without destroying React-owned nodes)
+      // clear previous iframe (without destroying React nodes outside)
       if (ytDivRef.current) ytDivRef.current.innerHTML = "";
 
       ytPlayerRef.current = new window.YT.Player(ytDivRef.current!, {
@@ -293,7 +301,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 "autoplay; clipboard-write; encrypted-media; picture-in-picture"
               );
               setDuration(e.target.getDuration?.() || 0);
-              e.target.setVolume(Math.round(volume * 100));
+              e.target.setVolume(Math.round((isMuted ? 0 : volume) * 100));
               if (isMuted) e.target.mute();
               else e.target.unMute();
               e.target.setPlaybackRate?.(playbackRate);
@@ -302,11 +310,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 e.target.playVideo?.();
                 pendingPlayRef.current = false;
               }
-            } catch (e) {
-              console.log("Error", e);
+            } catch {
+              //
             }
           },
           onStateChange: (e: any) => {
+            // 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
             if (e.data === 1) setIsPlaying(true);
             if (e.data === 2 || e.data === 5) setIsPlaying(false);
             if (e.data === 0) {
@@ -318,10 +327,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             const code = err?.data;
             const map: Record<number, string> = {
               2: "YouTube: Invalid parameter (check the video URL)",
-              5: "YouTube: HTML5 player error (video not available in this embed mode)",
+              5: "YouTube: HTML5 player error (not available in this embed mode)",
               100: "YouTube: Video not found or removed",
-              101: "YouTube: Owner has disabled embedding",
-              150: "YouTube: Owner has disabled embedding",
+              101: "YouTube: Owner disabled embedding",
+              150: "YouTube: Owner disabled embedding",
             };
             setError(
               map[code] || "YouTube blocked or unavailable for this URL"
@@ -339,8 +348,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           const du = p.getDuration?.() || duration;
           setCurrentTime(ct);
           if (du && du !== duration) setDuration(du);
-        } catch (e) {
-          console.log("Error", e);
+        } catch {
+          //
         }
       }, 250);
     };
@@ -352,34 +361,66 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (progressTimer.current) window.clearInterval(progressTimer.current);
       try {
         const p = ytPlayerRef.current;
-        if (p) {
-          try {
-            p.stopVideo?.();
-          } catch {
-            //
-          }
-        }
-      } catch (e) {
-        console.log("Error", e);
+        if (p) p.stopVideo?.();
+      } catch {
+        //
       }
       ytPlayerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    provider,
-    videoUrl,
-    onComplete,
-    privacyEnhanced,
-    volume,
-    isMuted,
-    playbackRate,
-  ]);
+  }, [provider, safeUrl, onComplete, privacyEnhanced]);
 
-  // Controls
+  useEffect(() => {
+    if (provider !== "youtube") return;
+    const p = ytPlayerRef.current;
+    if (!p) return;
+    p.setVolume?.(Math.round(volume * 100));
+    // keep mute state consistent with slider
+    if (volume === 0) p.mute?.();
+    else if (isMuted) p.unMute?.();
+    // (avoid setState here to prevent loops)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, volume]);
+
+  useEffect(() => {
+    if (provider !== "youtube") return;
+    const p = ytPlayerRef.current;
+    if (!p) return;
+    if (isMuted) p.mute?.();
+    else p.unMute?.();
+  }, [provider, isMuted]);
+
+  useEffect(() => {
+    if (provider !== "youtube") return;
+    const p = ytPlayerRef.current;
+    if (!p) return;
+    const avail: number[] = p.getAvailablePlaybackRates?.() || [1];
+    const closest = avail.reduce(
+      (a, b) =>
+        Math.abs(b - playbackRate) < Math.abs(a - playbackRate) ? b : a,
+      avail[0]
+    );
+    try {
+      p.setPlaybackRate?.(closest);
+    } catch {
+      //
+    }
+    // optional: reflect the actual rate in UI
+    // if (closest !== playbackRate) setPlaybackRate(closest);
+  }, [provider, playbackRate]);
+
+  // ----------------- controls -----------------
   const togglePlay = async () => {
     if (provider === "html5") {
       const v = videoRef.current;
       if (!v) return;
+      // no valid source (poster-only)
+      if (!v.currentSrc) {
+        setError(
+          "No playable source for this lesson. Use an MP4/WebM/OGG/HLS URL with CORS or a YouTube link."
+        );
+        return;
+      }
       try {
         if (v.paused) {
           await v.play();
@@ -388,8 +429,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           v.pause();
           setIsPlaying(false);
         }
-      } catch (e) {
-        console.log("Error", e);
+      } catch {
         setError("Autoplay blocked or playback error");
       }
     } else {
@@ -449,12 +489,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVol = Math.max(0, Math.min(1, parseFloat(e.target.value) / 100));
+    if (newVol > 0) lastVolumeRef.current = newVol;
     setVolume(newVol);
     if (provider === "html5") {
       const v = videoRef.current;
       if (!v) return;
       v.volume = newVol;
-      v.muted = newVol === 0 ? true : isMuted && newVol === 0;
+      v.muted = newVol === 0;
       setIsMuted(v.muted);
     } else {
       const p = ytPlayerRef.current;
@@ -474,16 +515,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (provider === "html5") {
       const v = videoRef.current;
       if (!v) return;
-      v.muted = !isMuted;
-      setIsMuted(v.muted);
-      setVolume(!isMuted ? 0 : 100);
+      if (isMuted) {
+        v.muted = false;
+        setIsMuted(false);
+        const restore = lastVolumeRef.current || 1;
+        v.volume = restore;
+        setVolume(restore);
+      } else {
+        lastVolumeRef.current = volume || 1;
+        v.muted = true;
+        setIsMuted(true);
+        v.volume = 0;
+        setVolume(0);
+      }
     } else {
       const p = ytPlayerRef.current;
       if (!p) return;
-      if (isMuted) p.unMute?.();
-      else p.mute?.();
-      setIsMuted(!isMuted);
-      setVolume(!isMuted ? 0 : 100);
+      if (isMuted) {
+        p.unMute?.();
+        setIsMuted(false);
+        const restore = lastVolumeRef.current || 1;
+        p.setVolume?.(Math.round(restore * 100));
+        setVolume(restore);
+      } else {
+        lastVolumeRef.current = volume || 1;
+        p.mute?.();
+        setIsMuted(true);
+        setVolume(0);
+      }
     }
   };
 
@@ -498,8 +557,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (!p) return;
       try {
         p.setPlaybackRate?.(rate);
-      } catch (e) {
-        console.log("Error", e);
+      } catch {
+        //
       }
     }
   };
@@ -511,6 +570,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     else el.requestFullscreen?.().catch(() => {});
   };
 
+  // ----------------- UI -----------------
   return (
     <div
       ref={containerRef}
@@ -518,7 +578,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
-      {/* Title */}
+      {/* Title (optional) */}
       {title ? (
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent px-4 py-2 text-white text-sm">
           {title}
@@ -528,6 +588,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Renderer */}
       {provider === "html5" ? (
         <video
+          key={safeUrl || "poster"} // force remount when source changes
           ref={videoRef}
           className="w-full h-full"
           playsInline
@@ -545,7 +606,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Play button overlay when not playing */}
+      {/* Play overlay */}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <button
@@ -564,7 +625,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }`}
       >
         <div className="sm:p-4 p-2">
-          {/* Progress bar */}
+          {/* Progress */}
           <div className="sm:mb-4 mb-2">
             <input
               type="range"
@@ -638,7 +699,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="relative group/settings">
+              <div className="relative group/settings h-5">
                 <button className="text-white hover:text-purple-400 transition-colors">
                   <Settings className="w-3 sm:w-5 h-3 sm:h-5" />
                 </button>

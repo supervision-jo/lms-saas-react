@@ -35,14 +35,13 @@ const CourseDetailPage: React.FC = () => {
   );
 
   const course: Course = courseData?.data?.data;
-
-  const { data: modulesData } = useCustomQuery(
+  console.log("course", course);
+  const { data: modules } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
     undefined,
     !!courseId
   );
-
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
@@ -75,7 +74,7 @@ const CourseDetailPage: React.FC = () => {
     courseId as string,
   ]);
 
-  const modules: Module[] = modulesData?.data?.data ?? [];
+  const modulesData: Module[] = modules?.data?.data ?? [];
 
   const cates: Category[] = catesData?.data?.data ?? [];
 
@@ -362,7 +361,7 @@ const CourseDetailPage: React.FC = () => {
                     Course Content
                   </h3>
                   <CourseContent
-                    modules={modules}
+                    modules={modulesData}
                     onLessonSelect={handleLessonSelect}
                     isEnrolled={isEnrolled}
                   />
@@ -435,7 +434,7 @@ const CourseDetailPage: React.FC = () => {
 
           <div className="lg:col-span-1">
             <CourseContent
-              modules={modules}
+              modules={modulesData}
               onLessonSelect={handleLessonSelect}
               isEnrolled={isEnrolled}
             />
@@ -444,7 +443,6 @@ const CourseDetailPage: React.FC = () => {
       </div>
       {showRatingModal && (
         <CourseRatingModal
-          courseId={course.id}
           courseTitle={course.title}
           onSubmit={handleRatingSubmit}
           onClose={() => setShowRatingModal(false)}

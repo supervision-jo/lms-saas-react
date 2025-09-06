@@ -7,7 +7,7 @@ import {
   Award,
   Users,
   X,
-  ListVideo, // ← trigger icon for the drawer on mobile
+  ListVideo,
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
@@ -20,6 +20,21 @@ import { formatDuration } from "../../utils/formatDuration";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
+  const [currentLessonId, setCurrentLessonId] = useState<string>("");
+  const [showNotes, setShowNotes] = useState(true);
+  const [showQA, setShowQA] = useState(false);
+  const [showGroups, setShowGroups] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [noteTitle, setNoteTitle] = useState("");
+  const [notesCount, setNotesCount] = useState<number>(0);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [showExam, setShowExam] = useState(false);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
+    undefined
+  );
+  const [contentOpen, setContentOpen] = useState(false);
 
   const { data: courseRes } = useCustomQuery(
     `${API_ENDPOINTS.courses}${courseId}/`,
@@ -36,30 +51,12 @@ export default function CoursePlayerPage() {
   );
 
   const courseData: Course = courseRes?.data;
+
   const modules: Module[] = useMemo(
     () => modulesData?.data?.data ?? [],
     [modulesData]
   );
 
-  // ---- State ----
-  const [currentLessonId, setCurrentLessonId] = useState<string>("");
-  const [showNotes, setShowNotes] = useState(true);
-  const [showQA, setShowQA] = useState(false);
-  const [showGroups, setShowGroups] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [newQuestion, setNewQuestion] = useState("");
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [savedNotes, setSavedNotes] = useState<{ [key: string]: string }>({});
-  const [showExam, setShowExam] = useState(false);
-  const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
-    undefined
-  );
-
-  // NEW: mobile drawer open/close
-  const [contentOpen, setContentOpen] = useState(false);
-
-  // Auto-select the first lesson of the first module once modules load
   useEffect(() => {
     if (!modules?.length) return;
     const first = modules[0]?.lessons?.[0];
@@ -77,7 +74,6 @@ export default function CoursePlayerPage() {
 
   const handleLessonSelect = (lessonId: string) => {
     setCurrentLessonId(lessonId);
-    setNotes(savedNotes[lessonId] || "");
     setReplyingTo(null);
     setReplyText("");
 
@@ -99,15 +95,6 @@ export default function CoursePlayerPage() {
 
   const handleComplete = () => {
     console.log("Lesson completed");
-  };
-
-  const handleSaveNotes = () => {
-    setSavedNotes((prev) => ({
-      ...prev,
-      [currentLessonId]: notes,
-    }));
-    alert("Notes saved successfully!");
-    console.log("Notes saved for lesson:", currentLessonId, notes);
   };
 
   return (
@@ -178,7 +165,7 @@ export default function CoursePlayerPage() {
         </div>
       </header>
 
-      <div className="flex min-h-screen">
+      <div className="md:flex min-h-screen">
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Lesson Player */}
@@ -210,7 +197,7 @@ export default function CoursePlayerPage() {
           {!showExam && (
             <div className="bg-gray-800 border-b border-gray-700">
               <div className="max-w-5xl mx-auto px-6">
-                <div className="whitespace-nowrap flex sm:space-x-8 space-x-8">
+                <div className="grid sm:grid-cols-3 grid-cols-1 items-center justify-items-center whitespace-nowrap">
                   <button
                     onClick={() => {
                       setShowNotes(true);
@@ -224,7 +211,7 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <span>📝</span>
-                    <span>Lesson Notes</span>
+                    <span>Lesson Notes ({notesCount})</span>
                   </button>
                   <button
                     onClick={() => {
@@ -265,10 +252,11 @@ export default function CoursePlayerPage() {
           {showNotes && !showExam && (
             <NotesSection
               currentLessonId={currentLessonId}
-              handleSaveNotes={handleSaveNotes}
               notes={notes}
-              savedNotes={savedNotes}
               setNotes={setNotes}
+              title={noteTitle}
+              setTitle={setNoteTitle}
+              setNotesCount={setNotesCount}
             />
           )}
 
@@ -290,7 +278,7 @@ export default function CoursePlayerPage() {
           )}
         </div>
 
-        {/* Desktop Sidebar (unchanged) */}
+        {/* Desktop Sidebar */}
         <div className="hidden md:block w-80 bg-white text-gray-900 border-l border-gray-700 overflow-y-auto min-h-screen">
           <CourseContent
             modules={modules}
@@ -300,7 +288,7 @@ export default function CoursePlayerPage() {
           />
         </div>
 
-        {/* Mobile Drawer for Course Content */}
+        {/* Mobile Drawer */}
         <div
           className={`md:hidden fixed inset-0 z-40 ${
             contentOpen ? "" : "pointer-events-none"
@@ -317,9 +305,10 @@ export default function CoursePlayerPage() {
 
           {/* Panel */}
           <div
-            className={`absolute right-0 top-0 h-full w-80 bg-white text-gray-900 border-l border-gray-200 transform transition-transform ${
-              contentOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+            className={`absolute right-0 top-0 h-full w-80 bg-white text-gray-900 border-l border-gray-200
+              transform transition-transform ${
+                contentOpen ? "translate-x-0" : "translate-x-full"
+              } flex flex-col min-h-0`}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <span className="font-semibold text-gray-900">

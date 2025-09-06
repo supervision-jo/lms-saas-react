@@ -139,14 +139,17 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   {currentUser.profile_image ? (
                     <img
-                      src={currentUser.profile_image}
-                      alt={currentUser.first_name}
+                      src={
+                        currentUser.profile_image ??
+                        "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
+                      }
+                      alt={currentUser?.first_name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {currentUser.first_name.charAt(0)}
+                        {currentUser?.first_name?.charAt(0)}
                       </span>
                     </div>
                   )}

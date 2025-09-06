@@ -26,23 +26,21 @@ const CourseContent: React.FC<CourseContentProps> = ({
   isEnrolled,
   className,
 }) => {
+  const safeModules: Module[] = Array.isArray(modules) ? modules : [];
+
   const [expandedModules, setExpandedModules] = useState<Set<string>>(
     new Set(["1"])
   );
 
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
-    if (newExpanded.has(moduleId)) {
-      newExpanded.delete(moduleId);
-    } else {
-      newExpanded.add(moduleId);
-    }
+    if (newExpanded.has(moduleId)) newExpanded.delete(moduleId);
+    else newExpanded.add(moduleId);
     setExpandedModules(newExpanded);
   };
 
   const handleLessonClick = (lesson: Lesson) => {
     const canAccess = isEnrolled || lesson.free_preview;
-
     if (!canAccess) return;
 
     if (lesson.content_type === "material" && lesson.video_url) {
@@ -59,13 +57,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
   };
 
   const getLessonIcon = (lesson: Lesson) => {
-    // if (lesson.isCompleted) {
-    //   return <CheckCircle className="w-4 h-4 text-green-500 fill-current" />;
-    // }
-    if (!isEnrolled && !lesson?.free_preview) {
+    if (!isEnrolled && !lesson?.free_preview)
       return <Lock className="w-4 h-4 text-gray-500" />;
-    }
-
     switch (lesson?.content_type?.toLowerCase()) {
       case "video":
         return <Play className="w-4 h-4 text-purple-600 fill-current" />;
@@ -97,20 +90,23 @@ const CourseContent: React.FC<CourseContentProps> = ({
 
   return (
     <div
-      className={`bg-white h-full flex flex-col shadow-lg ${className ?? ""}`}
+      className={`bg-white h-full min-h-0 flex flex-col shadow-lg ${
+        className ?? ""
+      }`}
     >
       <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <h3 className="text-xl font-bold">Course Content</h3>
         <p className="text-purple-100 mt-1 text-sm">
-          {modules.length} modules •{" "}
-          {modules.reduce((acc, m) => acc + m?.lessons?.length, 0)} lessons
+          {safeModules.length} modules •{" "}
+          {safeModules.reduce((acc, m) => acc + (m?.lessons?.length ?? 0), 0)}{" "}
+          lessons
         </p>
       </div>
 
+      {/* this is the scroller */}
       <div className="flex-1 overflow-y-auto bg-gray-50">
-        {modules.map((module) => {
+        {safeModules.map((module) => {
           const isExpanded = expandedModules.has(module?.id);
-
           return (
             <div
               key={module?.id}

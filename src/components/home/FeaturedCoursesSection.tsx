@@ -39,7 +39,7 @@ export default function FeaturedCoursesSection() {
                     "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                   }
                   alt={course?.title ?? "--"}
-                  className="w-full w-h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 {course?.is_best_seller && (
                   <div className="absolute top-4 left-4">
