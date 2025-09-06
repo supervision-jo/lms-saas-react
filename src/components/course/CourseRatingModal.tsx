@@ -1,42 +1,34 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Star, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 import { useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { useCustomPost } from "../../hooks/useMutation";
+import toast from "react-hot-toast";
+import handleErrorAlerts from "../../utils/showErrorMessages";
 
 interface CourseRatingProps {
   courseTitle: string;
-  onSubmit: (rating: CourseRatingData) => void;
   onClose: () => void;
-  existingRating?: CourseRatingData;
-}
-
-interface CourseRatingData {
-  rating: number;
-  review: string;
-  reasons: string[];
-  wouldRecommend: boolean;
-  anonymous: boolean;
 }
 
 interface DataToSend {
-  course: string; // Course ID
+  course: string;
   rating: number;
-  tell_about_your_experience: string; // review
-  like_course: string[]; // reasons
-  recommend: boolean; // wouldRecommend
+  tell_about_your_experience: string;
+  like_course: string[];
+  recommend: boolean;
   anonymous: boolean;
   comment: string;
 }
 
 export default function CourseRatingModal({
   courseTitle,
-  onSubmit,
   onClose,
-  existingRating,
 }: CourseRatingProps) {
   const { courseId } = useParams();
 
+  // fetch existing review(s)
   const { data: reviewData } = useCustomQuery(
     `${API_ENDPOINTS.courseReviews}?course=${courseId}`,
     ["reviews", courseId],
@@ -44,32 +36,52 @@ export default function CourseRatingModal({
     !!courseId
   );
 
-  const existingReviews = reviewData.data;
+  // create review
+  const { mutateAsync: createReview, isPending } = useCustomPost(
+    API_ENDPOINTS.createReview,
+    ["reviews", courseId as string]
+  );
 
-  console.log(existingReviews);
+  // normalize API shape: support {data: Review[]} or {data: Review}
+  const existingReviews: CourseReview[] = useMemo(() => {
+    const raw = reviewData?.data;
+    if (!raw) return [];
+    return Array.isArray(raw) ? (raw as CourseReview[]) : [raw as CourseReview];
+  }, [reviewData?.data]);
 
-  const [rating, setRating] = useState(existingRating?.rating || 0);
+  const lastReview: CourseReview | null = existingReviews.length
+    ? existingReviews[existingReviews.length - 1]
+    : null;
+
+  // local state (seed from lastReview if present)
+  const [rating, setRating] = useState<number>(lastReview?.rating ?? 0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [review, setReview] = useState(existingRating?.review || "");
+  const [review, setReview] = useState<string>(
+    lastReview?.tell_about_your_experience ?? ""
+  );
   const [selectedReasons, setSelectedReasons] = useState<string[]>(
-    existingRating?.reasons || []
+    (lastReview?.like_course ?? []).map((r) => r.toLowerCase())
   );
-  const [wouldRecommend, setWouldRecommend] = useState(
-    existingRating?.wouldRecommend ?? true
+  const [wouldRecommend, setWouldRecommend] = useState<boolean>(
+    lastReview?.recommend ?? true
   );
-  const [anonymous, setAnonymous] = useState(
-    existingRating?.anonymous ?? false
+  const [anonymous, setAnonymous] = useState<boolean>(
+    lastReview?.anonymous ?? false
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const ratingLabels = [
-    "", // 0 stars
-    "Terrible",
-    "Poor",
-    "Average",
-    "Good",
-    "Excellent",
-  ];
+  // keep state in sync if/when the fetch finishes
+  useEffect(() => {
+    if (!lastReview) return;
+    setRating(lastReview.rating ?? 0);
+    setReview(lastReview.tell_about_your_experience ?? "");
+    setSelectedReasons(
+      (lastReview.like_course ?? []).map((r) => r.toLowerCase())
+    );
+    setAnonymous(lastReview.anonymous ?? false);
+    setWouldRecommend(lastReview.recommend ?? true);
+  }, [lastReview]);
+
+  const ratingLabels = ["", "Terrible", "Poor", "Average", "Good", "Excellent"];
 
   const reasonOptions = [
     "Clear explanations",
@@ -102,38 +114,46 @@ export default function CourseRatingModal({
   const currentReasons = rating >= 4 ? reasonOptions : negativeReasons;
 
   const toggleReason = (reason: string) => {
+    const key = reason.toLowerCase();
     setSelectedReasons((prev) =>
-      prev.includes(reason)
-        ? prev.filter((r) => r !== reason)
-        : [...prev, reason]
+      prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]
     );
   };
 
   const handleSubmit = async () => {
+    if (!courseId) {
+      handleErrorAlerts("Missing course id.");
+      return;
+    }
     if (rating === 0) {
-      alert("Please select a rating");
+      toast.error("Please select rating");
       return;
     }
 
-    setIsSubmitting(true);
-
-    const ratingData: CourseRatingData = {
+    const payload: DataToSend = {
+      course: String(courseId),
       rating,
-      review: review.trim(),
-      reasons: selectedReasons,
-      wouldRecommend,
+      tell_about_your_experience: review.trim(),
+      like_course: selectedReasons, // already lowercased
+      recommend: wouldRecommend,
       anonymous,
+      comment: "",
     };
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-      onSubmit(ratingData);
-      alert("Thank you for your feedback!");
-      onClose();
+      const res = await createReview(payload);
+      if (res?.status) {
+        toast.success("Your review has been sent.");
+        onClose();
+      } else {
+        toast.success("Submitted."); // fallback if your hook doesn’t return .status
+        onClose();
+      }
     } catch (error: any) {
-      alert(error);
-    } finally {
-      setIsSubmitting(false);
+      const payloadErr = error?.response?.data ||
+        error?.data ||
+        error?.message || { message: "Something went wrong!" };
+      handleErrorAlerts(payloadErr.message ?? "Something went wrong!");
     }
   };
 
@@ -198,19 +218,23 @@ export default function CourseRatingModal({
                 course?
               </h4>
               <div className="grid grid-cols-2 gap-3">
-                {currentReasons.map((reason) => (
-                  <button
-                    key={reason}
-                    onClick={() => toggleReason(reason)}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                      selectedReasons.includes(reason)
-                        ? "border-purple-500 bg-purple-50 text-purple-700"
-                        : "border-gray-200 hover:border-purple-300 text-gray-700"
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
+                {currentReasons.map((reason) => {
+                  const key = reason.toLowerCase();
+                  const active = selectedReasons.includes(key);
+                  return (
+                    <button
+                      key={reason}
+                      onClick={() => toggleReason(reason)}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        active
+                          ? "border-purple-500 bg-purple-50 text-purple-700"
+                          : "border-gray-200 hover:border-purple-300 text-gray-700"
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -303,15 +327,15 @@ export default function CourseRatingModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={rating === 0 || isSubmitting}
+              disabled={rating === 0 || isPending}
               className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {isSubmitting ? (
+              {isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
               ) : (
                 <Send className="w-5 h-5 mr-2" />
               )}
-              {isSubmitting ? "Submitting..." : "Submit Review"}
+              {isPending ? "Submitting..." : "Submit Review"}
             </button>
           </div>
         </div>

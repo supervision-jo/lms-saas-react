@@ -107,10 +107,6 @@ const CourseDetailPage: React.FC = () => {
     navigate(`/catalog/${course?.id}/player`);
   };
 
-  const handleRatingSubmit = (ratingData: any) => {
-    console.log("Course rating submitted:", ratingData);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Course Header */}
@@ -444,7 +440,6 @@ const CourseDetailPage: React.FC = () => {
       {showRatingModal && (
         <CourseRatingModal
           courseTitle={course.title}
-          onSubmit={handleRatingSubmit}
           onClose={() => setShowRatingModal(false)}
         />
       )}

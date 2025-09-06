@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   StudentEnrollements: "course/get-course-enrollment/",
   enrolledCourses: "enrollments/my-enrollments/",
   courseReviews: "enrollments/reviews/",
+  createReview: "enrollments/create-review/",
   createEnrollment: "enrollments/create-enroll/",
   lessonNotes: "enrollments/lesson-notes/",
   signup: "users/register/",
