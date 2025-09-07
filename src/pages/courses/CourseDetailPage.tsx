@@ -20,12 +20,14 @@ import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { formatDuration } from "../../utils/formatDuration";
 import CourseRatingModal from "../../components/course/CourseRatingModal";
+import { readUserFromStorage } from "../../services/auth";
 
 const CourseDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
+  const currentUser = readUserFromStorage();
 
   const courseData = useCustomQuery(
     `${API_ENDPOINTS.courses}${courseId}`,
@@ -35,7 +37,6 @@ const CourseDetailPage: React.FC = () => {
   );
 
   const course: Course = courseData?.data?.data;
-  console.log("course", course);
   const { data: modules } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
@@ -55,6 +56,7 @@ const CourseDetailPage: React.FC = () => {
 
   const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
     "enrolledCourses",
+    currentUser?.id,
   ]);
 
   const enrolledCourses: EnrolledCourse[] =
@@ -190,24 +192,37 @@ const CourseDetailPage: React.FC = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center">
+                    <button
+                      onClick={() => {
+                        navigate(`/catalog/${course?.id}/player`);
+                      }}
+                      className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center"
+                    >
                       <Play className="w-6 h-6 text-white ml-1" />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <span className="text-3xl font-bold text-gray-900">
-                        ${course?.price ?? 0}
-                      </span>
-                      {course?.old_price && (
-                        <span className="text-gray-500 line-through ml-3">
-                          ${course?.old_price ?? 0}
+                    {course?.is_paid ? (
+                      <div className="flex items-center">
+                        <span className="text-3xl font-bold text-gray-900">
+                          ${course?.price ?? 0}
                         </span>
-                      )}
-                    </div>
+                        {course?.old_price && (
+                          <span className="text-gray-500 line-through ml-3">
+                            ${course?.old_price ?? 0}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span
+                        className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
+                      >
+                        Free
+                      </span>
+                    )}
                   </div>
 
                   {!isEnrolled ? (
@@ -379,7 +394,9 @@ const CourseDetailPage: React.FC = () => {
                     ) : (
                       <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                         <span className="text-white text-sm font-medium">
-                          {instructor?.instructor_full_name?.charAt(0)}
+                          {instructor?.instructor_full_name
+                            ?.charAt(0)
+                            .toUpperCase()}
                         </span>
                       </div>
                     )}

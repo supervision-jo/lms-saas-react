@@ -4,7 +4,13 @@ import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 
-export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
+export default function EnrolledCourses({
+  item,
+  isStudent,
+}: {
+  item: EnrolledCourse;
+  isStudent: boolean;
+}) {
   const navigate = useNavigate();
 
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
@@ -18,13 +24,24 @@ export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
     !!item?.course?.id && !!item?.course?.instructor
   );
 
+  const { data: enrollStatsData } = useCustomQuery(
+    `${API_ENDPOINTS.studentEnrollements}${item?.course?.id}/`,
+    ["student-enrollements"],
+    undefined,
+    !!isStudent
+  );
+
+  const enrollStats: EnrolledCourseStats[] = enrollStatsData?.data ?? [];
+
+  const currentEnrollStat = enrollStats?.find((s) => s.id === item?.course?.id);
+
   const cates: Category[] = catesData?.data?.data ?? [];
 
   const currentCategory = cates?.find(
     (c) => c.id === item?.course?.sub_category
   );
 
-  const instructor: Partial<Instructor> = instructorData?.data;
+  const instructor: any = instructorData?.data;
 
   return (
     <div
@@ -41,9 +58,14 @@ export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
             alt={item?.course?.title}
             className="w-24 h-24 rounded-xl object-cover"
           />
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-xl transition-all duration-300 flex items-center justify-center">
+          <button
+            onClick={() => {
+              navigate(`/catalog/${item?.course?.id}/player`);
+            }}
+            className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-xl transition-all duration-300 flex items-center justify-center"
+          >
             <Play className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </div>
+          </button>
         </div>
         <div className="ml-6 flex-1">
           <div className="flex items-start justify-between">
@@ -52,51 +74,61 @@ export default function EnrolledCourses({ item }: { item: EnrolledCourse }) {
                 {item?.course?.title}
               </h4>
               <div className="flex items-center mb-3">
-                {instructor?.instructor_image ? (
+                {instructor?.instructor?.profile_image ? (
                   <img
-                    src={instructor?.instructor_image}
-                    alt={instructor?.instructor_full_name}
+                    src={instructor?.instructor?.profile_image}
+                    alt={instructor?.instructor?.first_name}
                     className="w-6 h-6 rounded-full mr-2"
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
-                      {instructor?.instructor_full_name?.charAt(0)}
+                      {instructor?.instructor?.first_name
+                        ?.charAt(0)
+                        .toUpperCase()}
                     </span>
                   </div>
                 )}
                 <p className="text-gray-600">
-                  {instructor?.instructor_full_name}
+                  {instructor?.instructor?.first_name}{" "}
+                  {instructor?.instructor?.last_name}
                 </p>
               </div>
               <div className="flex items-center text-sm text-gray-500 mb-4">
-                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium mr-4">
-                  {currentCategory?.name}
-                </span>
+                {currentCategory && (
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium mr-4">
+                    {currentCategory?.name}
+                  </span>
+                )}
                 <Clock className="w-4 h-4 mr-1" />
                 <span className="mr-4">{item?.course?.duration}</span>
-                <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                <span className="mr-4">{item?.course?.rating}</span>
+                {Array.from({ length: 5 }).map((_, i) =>
+                  i < item?.course?.rating ? (
+                    <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
+                  ) : (
+                    <Star className="text-gray-300 w-4 h-4 mr-1" />
+                  )
+                )}
+                <span className="mr-4">({item?.course?.rating})</span>
                 <span className="text-gray-400">
-                  Last accessed {formatDateTimeSimple(item?.course?.created_at)}
+                  Last accessed{" "}
+                  {formatDateTimeSimple(
+                    currentEnrollStat?.last_accessed ?? item?.date_enrolled
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex-1 mr-6">
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                     <span className="font-medium">
-                      {/* {item.progress} */}
-                      50% complete
+                      {currentEnrollStat?.progress} %
                     </span>
-                    <span>
-                      {/* {item.completedLessons} */}3 /
-                      {/* {item.totalLessons}  */}6 lessons
-                    </span>
+                    <span>{currentEnrollStat?.lessons_progress}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="bg-gradient-to-r from-purple-600 to-indigo-600 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `50%` }}
+                      style={{ width: `${currentEnrollStat?.progress}%` }}
                     />
                   </div>
                 </div>

@@ -70,9 +70,9 @@ const CourseCard: React.FC<CourseCardProps> = ({
                   className="w-6 h-6 rounded-full mr-2"
                 />
               ) : (
-                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-purple-600 mr-2 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
-                    {course?.instructor?.first_name?.charAt(0)}
+                    {course?.instructor?.first_name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
@@ -91,14 +91,14 @@ const CourseCard: React.FC<CourseCardProps> = ({
             <div className="flex items-center mb-4">
               <div className="flex items-center">
                 <span className="text-yellow-500 font-bold mr-1">
-                  {course?.average_rating ?? 0}
+                  {Math.floor(course?.average_rating) ?? 0}
                 </span>
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(course?.average_rating ?? 0)
+                        i < Math.floor(Math.floor(course?.average_rating) ?? 0)
                           ? "text-yellow-400 fill-current"
                           : "text-gray-300"
                       }`}

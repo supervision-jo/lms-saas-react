@@ -23,6 +23,23 @@ interface EnrolledCourse {
   };
 }
 
+interface EnrolledCourseStats {
+  id: string;
+  title: string;
+  description: string;
+  completed_lessons: number;
+  progress: number;
+  lessons_progress: string; // "0/31 lessons"
+  last_accessed: string | null;
+  sub_category: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  total_hours: number;
+  average_rating: number;
+}
+
 interface Instructor {
   id: string;
   first_name: string;

@@ -3,9 +3,10 @@ import { Star, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 import { useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
-import { useCustomPost } from "../../hooks/useMutation";
+import { useCustomPatch, useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
+import { readUserFromStorage } from "../../services/auth";
 
 interface CourseRatingProps {
   courseTitle: string;
@@ -22,16 +23,18 @@ interface DataToSend {
   comment: string;
 }
 
+type DataToSendWithId = DataToSend & { id?: number | string };
+
 export default function CourseRatingModal({
   courseTitle,
   onClose,
 }: CourseRatingProps) {
   const { courseId } = useParams();
-
+  const currentUser = readUserFromStorage();
   // fetch existing review(s)
   const { data: reviewData } = useCustomQuery(
-    `${API_ENDPOINTS.courseReviews}?course=${courseId}`,
-    ["reviews", courseId],
+    `${API_ENDPOINTS.courseStudentReview}?course=${courseId}`,
+    ["student-review", courseId, currentUser?.id],
     undefined,
     !!courseId
   );
@@ -39,7 +42,12 @@ export default function CourseRatingModal({
   // create review
   const { mutateAsync: createReview, isPending } = useCustomPost(
     API_ENDPOINTS.createReview,
-    ["reviews", courseId as string]
+    ["student-review", courseId as string]
+  );
+
+  const { mutateAsync: editReview, isPending: editPending } = useCustomPatch(
+    API_ENDPOINTS.updateReview,
+    ["student-review", courseId as string]
   );
 
   // normalize API shape: support {data: Review[]} or {data: Review}
@@ -52,6 +60,8 @@ export default function CourseRatingModal({
   const lastReview: CourseReview | null = existingReviews.length
     ? existingReviews[existingReviews.length - 1]
     : null;
+
+  const isEdit = !!lastReview;
 
   // local state (seed from lastReview if present)
   const [rating, setRating] = useState<number>(lastReview?.rating ?? 0);
@@ -80,6 +90,10 @@ export default function CourseRatingModal({
     setAnonymous(lastReview.anonymous ?? false);
     setWouldRecommend(lastReview.recommend ?? true);
   }, [lastReview]);
+
+  const headerTitle = isEdit ? "Update Your Review" : "Rate This Course";
+  const primaryBtnLabel = isEdit ? "Update Review" : "Submit Review";
+  const loadingLabel = isEdit ? "Updating..." : "Submitting...";
 
   const ratingLabels = ["", "Terrible", "Poor", "Average", "Good", "Excellent"];
 
@@ -130,23 +144,34 @@ export default function CourseRatingModal({
       return;
     }
 
-    const payload: DataToSend = {
+    // Build payload. Using the same text for comment for now.
+    const basePayload: DataToSendWithId = {
       course: String(courseId),
       rating,
       tell_about_your_experience: review.trim(),
-      like_course: selectedReasons, // already lowercased
+      like_course: selectedReasons, // lowercased already
       recommend: wouldRecommend,
       anonymous,
-      comment: "",
+      comment: review.trim(),
     };
 
     try {
-      const res = await createReview(payload);
-      if (res?.status) {
-        toast.success("Your review has been sent.");
+      if (isEdit && lastReview?.id != null) {
+        // include id for PATCH body as you requested
+        const res = await editReview({ ...basePayload, id: lastReview.id });
+        if (res?.status) {
+          toast.success("Your review has been updated.");
+        } else {
+          toast.success("Updated.");
+        }
         onClose();
       } else {
-        toast.success("Submitted."); // fallback if your hook doesn’t return .status
+        const res = await createReview(basePayload);
+        if (res?.status) {
+          toast.success("Your review has been sent.");
+        } else {
+          toast.success("Submitted.");
+        }
         onClose();
       }
     } catch (error: any) {
@@ -165,7 +190,7 @@ export default function CourseRatingModal({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Rate This Course
+                {headerTitle}
               </h2>
               <p className="text-gray-600 mt-1">{courseTitle}</p>
             </div>
@@ -327,15 +352,15 @@ export default function CourseRatingModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={rating === 0 || isPending}
+              disabled={rating === 0 || isPending || editPending}
               className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {isPending ? (
+              {isPending || editPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
               ) : (
                 <Send className="w-5 h-5 mr-2" />
               )}
-              {isPending ? "Submitting..." : "Submit Review"}
+              {isPending || editPending ? loadingLabel : primaryBtnLabel}
             </button>
           </div>
         </div>

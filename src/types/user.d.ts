@@ -27,3 +27,17 @@ interface User {
   location: string | null;
   data_joined: string;
 }
+
+interface StudentStats {
+  id: string;
+  first_name: string;
+  last_name: string;
+  courses_completed: number;
+  hours_learned: number | string | null;
+  certificates_earned: number;
+  current_streak: number;
+  new_courses_this_month: number;
+  hours_learned_this_month: number | string | null;
+  certificates_this_month: number;
+  streak_days_this_month: number;
+}

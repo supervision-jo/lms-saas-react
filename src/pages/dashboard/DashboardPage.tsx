@@ -1,17 +1,11 @@
 import React, { useState } from "react";
-import {
-  Award,
-  BookOpen,
-  Clock,
-  LucideIcon,
-  TrendingUp,
-  Trophy,
-} from "lucide-react";
+import { BookOpen, Trophy } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import EnrolledCourses from "../../components/dashboard/EnrolledCourses";
-import { readUserFromStorage } from "../../services/auth";
+import { readUserFromStorage, roleOf } from "../../services/auth";
+import HeaderStatistics from "../../components/dashboard/HeaderStatistics";
 
 const achievements = [
   {
@@ -58,91 +52,31 @@ const achievements = [
   },
 ];
 
-const dashboardStatsData = [
-  {
-    label: "Courses Enrolled",
-    value: "12",
-    icon: "BookOpen",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-  },
-  {
-    label: "Hours Learned",
-    value: "156",
-    icon: "Clock",
-    color: "text-green-600",
-    bg: "bg-green-50",
-    border: "border-green-200",
-  },
-  {
-    label: "Certificates",
-    value: "8",
-    icon: "Award",
-    color: "text-purple-600",
-    bg: "bg-purple-50",
-    border: "border-purple-200",
-  },
-  {
-    label: "Streak Days",
-    value: "23",
-    icon: "TrendingUp",
-    color: "text-orange-600",
-    bg: "bg-orange-50",
-    border: "border-orange-200",
-  },
-];
-
-const ICONS = {
-  Award,
-  BookOpen,
-  Clock,
-  TrendingUp,
-} as const;
-
-type IconName = keyof typeof ICONS;
-
-type DashboardState = {
-  label: string;
-  value: string;
-  icon: IconName;
-  color: string;
-  bg: string;
-  border: string;
-};
-
 const DashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("courses");
   const navigate = useNavigate();
 
-  const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
-    "enrolledCourses",
-  ]);
+  const currentUser: User = readUserFromStorage();
+  const isStudent = roleOf(currentUser) === "student";
+
+  const enrolledCoursesData = useCustomQuery(
+    `${API_ENDPOINTS.enrolledCourses}`,
+    ["enrolledCourses"],
+    undefined,
+    !!isStudent
+  );
+
+  const { data: studentStatsData } = useCustomQuery(
+    API_ENDPOINTS.studentStats,
+    ["student-stats", currentUser?.id],
+    undefined,
+    !!isStudent
+  );
+
+  const studentStats: StudentStats = studentStatsData?.data;
 
   const enrolledCourses: EnrolledCourse[] =
     enrolledCoursesData?.data?.data ?? [];
-
-  const stats =
-    (dashboardStatsData as DashboardState[] | undefined)?.map(
-      (s: DashboardState) => ({
-        ...s,
-        Icon: ICONS[s.icon] as LucideIcon,
-      })
-    ) ?? [];
-
-  // const weeklyActivity = [
-  //   { day: "Mon", hours: 2.5 },
-  //   { day: "Tue", hours: 1.8 },
-  //   { day: "Wed", hours: 3.2 },
-  //   { day: "Thu", hours: 2.1 },
-  //   { day: "Fri", hours: 1.5 },
-  //   { day: "Sat", hours: 4.0 },
-  //   { day: "Sun", hours: 2.8 },
-  // ];
-
-  // const maxHours = Math.max(...weeklyActivity.map((d) => d.hours));
-
-  const currentUser: User = readUserFromStorage();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -174,28 +108,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className={`bg-white rounded-2xl shadow-sm p-6 border-2 ${stat.border} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}
-            >
-              <div className="flex items-center">
-                <div className={`p-4 rounded-xl ${stat.bg}`}>
-                  <stat.Icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                  <p className="text-sm text-gray-600 font-medium">
-                    {stat.label}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <HeaderStatistics stats={studentStats} />
 
         {/* Tabs */}
         <div className="mb-8">
@@ -240,7 +153,11 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-6">
                   {enrolledCourses.map((item) => (
-                    <EnrolledCourses item={item} key={item.id} />
+                    <EnrolledCourses
+                      item={item}
+                      key={item.id}
+                      isStudent={isStudent}
+                    />
                   ))}
                 </div>
               </div>
@@ -309,19 +226,33 @@ const DashboardPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-purple-100">New Courses</span>
-                  <span className="font-bold text-xl">+3</span>
+                  <span className="font-bold text-xl">
+                    {studentStats?.new_courses_this_month
+                      ? `+${studentStats?.new_courses_this_month}`
+                      : 0}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-purple-100">Hours Learned</span>
-                  <span className="font-bold text-xl">+42h</span>
+                  <span className="font-bold text-xl">
+                    {studentStats?.hours_learned_this_month
+                      ? `+${studentStats?.hours_learned_this_month}h`
+                      : 0}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-purple-100">Certificates</span>
-                  <span className="font-bold text-xl">+2</span>
+                  <span className="font-bold text-xl">
+                    {studentStats?.certificates_this_month
+                      ? `+${studentStats?.certificates_this_month}`
+                      : 0}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-purple-100">Streak Days</span>
-                  <span className="font-bold text-xl">23</span>
+                  <span className="font-bold text-xl">
+                    {studentStats?.streak_days_this_month ?? 0}
+                  </span>
                 </div>
               </div>
             </div>

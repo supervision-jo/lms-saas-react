@@ -1,43 +1,14 @@
 import React, { useRef, useState } from "react";
-import {
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Camera,
-  Edit,
-  Clock,
-  BookOpen,
-  Award,
-  LucideIcon,
-  // Award,
-  // BookOpen,
-  // Clock,
-} from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Camera, Edit } from "lucide-react";
 import EditUserProfile from "../../components/userProfile/EditUserProfile";
-import { readUserFromStorage } from "../../services/auth";
+import { readUserFromStorage, roleOf } from "../../services/auth";
 import toast from "react-hot-toast";
 import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomPatch } from "../../hooks/useMutation";
 import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import handleErrorAlerts from "../../utils/showErrorMessages";
-// import { useCustomQuery } from "../../hooks/useQuery";
-
-const ICONS = {
-  Award,
-  BookOpen,
-  Clock,
-  Calendar,
-} as const;
-
-type IconName = keyof typeof ICONS;
-
-type LearningState = {
-  label: string;
-  value: string;
-  icon: IconName;
-  color: string;
-};
+import { useCustomQuery } from "../../hooks/useQuery";
+import LearningStats from "../../components/userProfile/LearningStats";
 
 const achievementsData = [
   {
@@ -111,38 +82,12 @@ const certificatesData = [
   },
 ];
 
-const learningStatsData = [
-  {
-    label: "Courses Completed",
-    value: "12",
-    icon: "BookOpen",
-    color: "text-blue-600",
-  },
-  {
-    label: "Hours Learned",
-    value: "156",
-    icon: "Clock",
-    color: "text-green-600",
-  },
-  {
-    label: "Certificates Earned",
-    value: "8",
-    icon: "Award",
-    color: "text-purple-600",
-  },
-  {
-    label: "Current Streak",
-    value: "23 days",
-    icon: "Calendar",
-    color: "text-orange-600",
-  },
-];
-
 const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
   const profileData: User = readUserFromStorage();
+  const isStudent = roleOf(profileData) === "student";
 
   const [profileImage, setProfileImage] = useState<string | null>(
     profileData?.profile_image
@@ -153,13 +98,6 @@ const ProfilePage: React.FC = () => {
 
   const certificates: Certificate[] = certificatesData ?? [];
 
-  const learningStats =
-    (learningStatsData as LearningState[] | undefined)?.map(
-      (s: LearningState) => ({
-        ...s,
-        Icon: ICONS[s.icon] as LucideIcon,
-      })
-    ) ?? [];
   const handleDownloadCertificate = (certificate: any) => {
     console.log("Downloading certificate for:", certificate.title);
     // Create a mock download
@@ -171,6 +109,15 @@ const ProfilePage: React.FC = () => {
     document.body.removeChild(link);
     toast.success("Certificate download started!");
   };
+
+  const { data: studentStatsData } = useCustomQuery(
+    API_ENDPOINTS.studentStats,
+    ["student-stats", profileData?.id],
+    undefined,
+    !!isStudent
+  );
+
+  const studentStats: StudentStats = studentStatsData?.data;
 
   const { mutateAsync, isPending } = useCustomPatch(
     API_ENDPOINTS.updateProfile,
@@ -228,7 +175,7 @@ const ProfilePage: React.FC = () => {
               ) : (
                 <div className="w-32 h-32 bg-purple-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
-                    {profileData?.first_name?.charAt(0)}
+                    {profileData?.first_name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
@@ -300,22 +247,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Learning Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {learningStats?.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-xl shadow-sm p-6 text-center"
-            >
-              <div className="flex items-center justify-center mb-3">
-                <stat.Icon className={`w-8 h-8 ${stat.color}`} />
-              </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">
-                {stat.value}
-              </p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
-            </div>
-          ))}
-        </div>
+        <LearningStats stats={studentStats} />
 
         {/* Tabs */}
         <div className="mb-8">
@@ -375,13 +307,17 @@ const ProfilePage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
                     </label>
-                    <p className="text-gray-900">{profileData?.email || "--"}</p>
+                    <p className="text-gray-900">
+                      {profileData?.email || "--"}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone
                     </label>
-                    <p className="text-gray-900">{profileData?.phone || "--"}</p>
+                    <p className="text-gray-900">
+                      {profileData?.phone || "--"}
+                    </p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">

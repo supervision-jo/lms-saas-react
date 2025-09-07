@@ -48,5 +48,5 @@ export function readUserFromStorage(): any | null {
   return null;
 }
 
-export const roleOf = (u: any | null): string | null =>
-  u?.type?.name?.toLowerCase?.() ?? null;
+export const roleOf = (u: User | null): "student" | "instructor" =>
+  u?.is_student ? "student" : "instructor";
