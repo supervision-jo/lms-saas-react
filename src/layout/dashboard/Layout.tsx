@@ -1,8 +1,8 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Home, Users, Library, GraduationCap, LucideIcon } from "lucide-react";
 import Header from "../../components/navigations/Header";
-import { ACCESS_TOKEN_KEY, USER_KEY } from "../../utils/constants";
 import useAuth from "../../store/useAuth";
+import { removeTokens } from "../../services/auth";
 
 export interface NavItems {
   id: string;
@@ -13,7 +13,7 @@ export interface NavItems {
 const Layout = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, setIsAuthenticated } = useAuth();
 
   const mainNavigationItems: NavItems[] = [
     { id: "", label: "Home", icon: Home },
@@ -43,9 +43,7 @@ const Layout = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    navigate("/");
+    removeTokens(navigate, setIsAuthenticated);
   };
 
   const handleSearch = (query: string) => {
