@@ -1,7 +1,17 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Star, Clock, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router";
 import { formatDuration } from "../../utils/formatDuration";
+import useAuth from "../../store/useAuth";
+import LoginPopup from "../auth-modals/LoginPopup";
+import SignupPopup from "../auth-modals/SignupPopup";
+import handleErrorAlerts from "../../utils/showErrorMessages";
+import toast from "react-hot-toast";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { readUserFromStorage } from "../../services/auth";
+import { useCustomPost } from "../../hooks/useMutation";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CourseCardProps {
   course: Course;
@@ -15,6 +25,74 @@ const CourseCard: React.FC<CourseCardProps> = ({
   isListView,
 }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const [userId, setUserId] = useState<string | null>(
+    readUserFromStorage()?.id ?? null
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const id = readUserFromStorage()?.id ?? null;
+      setUserId(id);
+      queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
+    }
+  }, [isAuthenticated, queryClient]);
+
+  const enrolledCoursesData = useCustomQuery(
+    API_ENDPOINTS.enrolledCourses,
+    ["enrolledCourses", isAuthenticated, userId],
+    undefined,
+    !!isAuthenticated
+  );
+
+  const enrolledCourses: EnrolledCourse[] =
+    enrolledCoursesData?.data?.data ?? [];
+
+  const computedEnrolled = enrolledCourses.some(
+    (c) => String(c?.course?.id) === String(course?.id ?? course?.id)
+  );
+
+  const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
+
+  const isEnrolled = enrolledOptimistic || computedEnrolled;
+
+  const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
+    "enrolledCourses",
+    "course",
+    course?.id as string,
+  ]);
+
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
+  }, [computedEnrolled, enrolledOptimistic]);
+
+  const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login first!");
+      setShowLoginModal(true);
+      return;
+    }
+    if (isEnrolled || createEnroll.isPending) return;
+
+    try {
+      setEnrolledOptimistic(true);
+      const res = await createEnroll.mutateAsync({ course: course?.id });
+      if (res?.status) {
+        toast.success("You have been enrolled successfully!");
+        queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
+      } else {
+        setEnrolledOptimistic(false);
+        toast.error(res?.error?.non_field_errors?.[0] ?? "Failed to enroll");
+      }
+    } catch (error: any) {
+      setEnrolledOptimistic(false);
+      handleErrorAlerts(error?.response?.data?.message ?? "Unexpected error");
+    }
+  };
 
   return (
     <div
@@ -173,12 +251,32 @@ const CourseCard: React.FC<CourseCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/catalog/${course.id}`);
+                  handleEnroll();
                 }}
+                disabled={
+                  enrolledCoursesData?.isFetching || createEnroll?.isPending
+                }
                 className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
               >
-                Enroll Now
+                {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
               </button>
+            )}
+
+            {showLoginModal && (
+              <LoginPopup
+                onClose={() => {
+                  setShowLoginModal(false);
+                }}
+                setShowSignupModal={setShowSignupModal}
+              />
+            )}
+            {showSignupModal && (
+              <SignupPopup
+                onClose={() => {
+                  setShowSignupModal(false);
+                }}
+                setShowLoginModal={setShowLoginModal}
+              />
             )}
           </div>
         </div>

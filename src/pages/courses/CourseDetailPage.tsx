@@ -21,16 +21,32 @@ import handleErrorAlerts from "../../utils/showErrorMessages";
 import { formatDuration } from "../../utils/formatDuration";
 import CourseRatingModal from "../../components/course/CourseRatingModal";
 import { readUserFromStorage } from "../../services/auth";
+import LoginPopup from "../../components/auth-modals/LoginPopup";
+import SignupPopup from "../../components/auth-modals/SignupPopup";
+import useAuth from "../../store/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CourseDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
-  const currentUser = readUserFromStorage();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const [userId, setUserId] = useState<string | null>(
+    readUserFromStorage()?.id ?? null
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const id = readUserFromStorage()?.id ?? null;
+      setUserId(id);
+      queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
+    }
+  }, [isAuthenticated, queryClient]);
 
   const courseData = useCustomQuery(
-    `${API_ENDPOINTS.courses}${courseId}`,
+    `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId
@@ -54,16 +70,18 @@ const CourseDetailPage: React.FC = () => {
     !!course?.id && !!course?.instructor_?.id
   );
 
-  const enrolledCoursesData = useCustomQuery(API_ENDPOINTS.enrolledCourses, [
-    "enrolledCourses",
-    currentUser?.id,
-  ]);
+  const enrolledCoursesData = useCustomQuery(
+    API_ENDPOINTS.enrolledCourses,
+    ["enrolledCourses", isAuthenticated, userId],
+    undefined,
+    !!isAuthenticated
+  );
 
   const enrolledCourses: EnrolledCourse[] =
     enrolledCoursesData?.data?.data ?? [];
 
   const computedEnrolled = enrolledCourses.some(
-    (c) => String(c.course.id) === String(course?.id ?? courseId)
+    (c) => String(c?.course?.id) === String(course?.id ?? courseId)
   );
 
   const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
@@ -84,16 +102,27 @@ const CourseDetailPage: React.FC = () => {
 
   const instructor: Partial<Instructor> = instructorData?.data;
 
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
+
   useEffect(() => {
     if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
   }, [computedEnrolled, enrolledOptimistic]);
 
   const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login first!");
+      setShowLoginModal(true);
+      return;
+    }
+    if (isEnrolled || createEnroll.isPending) return;
+
     try {
-      setEnrolledOptimistic(true); // instant UI
+      setEnrolledOptimistic(true);
       const res = await createEnroll.mutateAsync({ course: course?.id });
       if (res?.status) {
         toast.success("You have been enrolled successfully!");
+        queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
       } else {
         setEnrolledOptimistic(false);
         toast.error(res?.error?.non_field_errors?.[0] ?? "Failed to enroll");
@@ -154,11 +183,11 @@ const CourseDetailPage: React.FC = () => {
                     ))}
                   </div>
                   <span className="text-gray-300 ml-2">
-                    ({course?.total_reviews.toLocaleString() ?? 0} ratings)
+                    ({course?.total_reviews?.toLocaleString() ?? 0} ratings)
                   </span>
                 </div>
                 <span className="text-gray-300">
-                  {course?.total_students.toLocaleString() ?? 0} students
+                  {course?.total_students?.toLocaleString() ?? 0} students
                 </span>
               </div>
 
@@ -228,9 +257,13 @@ const CourseDetailPage: React.FC = () => {
                   {!isEnrolled ? (
                     <button
                       onClick={handleEnroll}
+                      disabled={
+                        enrolledCoursesData?.isFetching ||
+                        createEnroll?.isPending
+                      }
                       className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors mb-4"
                     >
-                      Enroll Now
+                      {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
                     </button>
                   ) : (
                     <div className="text-center mb-4">
@@ -326,9 +359,9 @@ const CourseDetailPage: React.FC = () => {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                         {course?.objectives.map((item) => (
-                          <div key={item.id} className="flex items-start">
+                          <div key={item?.id} className="flex items-start">
                             <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700">{item.text}</span>
+                            <span className="text-gray-700">{item?.text}</span>
                           </div>
                         ))}
                       </div>
@@ -342,9 +375,9 @@ const CourseDetailPage: React.FC = () => {
                       </h3>
                       <ul className="space-y-2 mb-8">
                         {course?.requirements.map((req) => (
-                          <li key={req.id} className="flex items-start">
+                          <li key={req?.id} className="flex items-start">
                             <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
-                            <span className="text-gray-700">{req.text}</span>
+                            <span className="text-gray-700">{req?.text}</span>
                           </li>
                         ))}
                       </ul>
@@ -456,8 +489,24 @@ const CourseDetailPage: React.FC = () => {
       </div>
       {showRatingModal && (
         <CourseRatingModal
-          courseTitle={course.title}
+          courseTitle={course?.title}
           onClose={() => setShowRatingModal(false)}
+        />
+      )}
+      {showLoginModal && (
+        <LoginPopup
+          onClose={() => {
+            setShowLoginModal(false);
+          }}
+          setShowSignupModal={setShowSignupModal}
+        />
+      )}
+      {showSignupModal && (
+        <SignupPopup
+          onClose={() => {
+            setShowSignupModal(false);
+          }}
+          setShowLoginModal={setShowLoginModal}
         />
       )}
     </div>

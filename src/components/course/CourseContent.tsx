@@ -40,19 +40,19 @@ const CourseContent: React.FC<CourseContentProps> = ({
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    const canAccess = isEnrolled || lesson.free_preview;
+    const canAccess = isEnrolled || lesson?.free_preview;
     if (!canAccess) return;
 
-    if (lesson.content_type === "material" && lesson.video_url) {
+    if (lesson?.content_type === "material" && lesson?.video_url) {
       const link = document.createElement("a");
-      link.href = lesson.video_url;
-      link.download = lesson.title;
+      link.href = lesson?.video_url;
+      link.download = lesson?.title;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       alert("Download started!");
     } else {
-      onLessonSelect(lesson.id);
+      onLessonSelect(lesson?.id);
     }
   };
 
