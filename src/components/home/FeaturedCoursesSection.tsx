@@ -30,7 +30,7 @@ export default function FeaturedCoursesSection() {
             <div
               key={course?.id}
               className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
-              onClick={() => navigate("/course")}
+              onClick={() => navigate(`/catalog/${course?.id}`)}
             >
               <div className="relative">
                 <img
