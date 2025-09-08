@@ -124,12 +124,12 @@ const Header: React.FC<HeaderProps> = ({
               <Search className="h-5 w-5 text-gray-400" />
             </button>
 
-            <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
+            {/* <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
               <Bell className="h-6 w-6" />
-            </button>
-            <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
+            </button> */}
+            {/* <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
               <ShoppingCart className="h-6 w-6" />
-            </button>
+            </button> */}
 
             {currentUser ? (
               <div className="relative">
