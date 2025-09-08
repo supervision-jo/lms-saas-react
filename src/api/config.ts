@@ -2,7 +2,13 @@ import axios from "axios";
 import { getStoredTokens } from "../services/auth";
 import { ACCESS_TOKEN_KEY, BASE_URL } from "../utils/constants";
 
-const axiosInstance = axios.create();
+const axiosInstance = axios.create({
+  withCredentials: false, // ✅ مهم جدًا لو السيرفر بيرد بكوكي
+  headers: {
+    Accept: "*/*", // زي الـ curl
+  },
+  // baseURL: BASE_URL,
+});
 
 axiosInstance.interceptors.request.use(
   (config) => {
