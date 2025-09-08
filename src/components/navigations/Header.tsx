@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Search, Bell, ShoppingCart, Menu, X } from "lucide-react";
+import { Search, Menu, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";

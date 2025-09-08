@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate } from "react-router";
 import { Home, Users, Library, GraduationCap, LucideIcon } from "lucide-react";
 import Header from "../../components/navigations/Header";
 import { ACCESS_TOKEN_KEY, USER_KEY } from "../../utils/constants";
+import useAuth from "../../store/useAuth";
 
 export interface NavItems {
   id: string;
@@ -12,12 +13,21 @@ export interface NavItems {
 const Layout = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const mainNavigationItems: NavItems[] = [
     { id: "", label: "Home", icon: Home },
     { id: "catalog", label: "Courses", icon: GraduationCap },
-    { id: "dashboard", label: "My Learning", icon: Users },
-    { id: "instructor", label: "Teach", icon: Library },
+    {
+      id: !isAuthenticated ? "login" : "dashboard",
+      label: "My Learning",
+      icon: Users,
+    },
+    {
+      id: !isAuthenticated ? "login" : "instructor",
+      label: "Teach",
+      icon: Library,
+    },
   ];
 
   const userNavigationItems: NavItems[] = [
