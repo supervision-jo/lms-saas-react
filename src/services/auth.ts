@@ -32,6 +32,8 @@ export async function removeTokens(
   if (setIsAuthenticated) setIsAuthenticated();
 
   if (navigate) navigate("/", { replace: true });
+
+  document.location.reload();
 }
 
 export function isAuthenticated(): boolean {
