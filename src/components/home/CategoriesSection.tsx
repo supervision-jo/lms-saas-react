@@ -5,10 +5,9 @@ import { API_ENDPOINTS } from "../../utils/constants";
 
 export default function CategoriesSection() {
   const navigate = useNavigate();
-  const { data: categoriesData } = useCustomQuery(
-    API_ENDPOINTS.categories,
-    ["categories"]
-  );
+  const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
+    "categories",
+  ]);
   const categories: Category[] = categoriesData?.data?.data;
   return (
     <section className="py-20 bg-gray-50">
@@ -31,22 +30,20 @@ export default function CategoriesSection() {
               className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden"
             >
               <div
-                className={`absolute top-0 right-0 w-24 bg-[${
-                  category?.color[0] === "#"
-                    ? category?.color
-                    : "#" + category?.color
-                }] h-24 rounded-full transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
+                style={{ backgroundColor: category?.color + "50" }}
+                className={`absolute top-0 right-0 w-24 h-24 rounded-full transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
               ></div>
 
               <div className="relative z-10">
-                <img
+                {/* <img
                   src={
                     category?.icon ??
                     "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                   }
                   alt={category?.id}
                   className="w-16 h-16 mb-4"
-                />
+                /> */}
+                <span className="text-4xl mb-2 block">{category?.icon}</span>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
                   {category?.name}
                 </h3>
