@@ -50,6 +50,8 @@ interface Instructor {
   total_courses: number;
   instructor_full_name: string;
   instructor_image: string;
+  bio: string;
+  average_rating: number;
 }
 
 type TextLists = {
@@ -83,6 +85,7 @@ interface Course {
   is_best_seller: boolean;
   objectives: TextLists[];
   requirements: TextLists[];
+  language: string;
 }
 
 interface Lesson {

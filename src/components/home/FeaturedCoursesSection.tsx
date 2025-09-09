@@ -75,14 +75,14 @@ export default function FeaturedCoursesSection() {
                 <div className="flex items-center mb-4">
                   <div className="flex items-center">
                     <span className="text-yellow-500 font-bold mr-1">
-                      {course?.rating ?? 0}
+                      {course?.average_rating ?? 0}
                     </span>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
                           className={`w-4 h-4 ${
-                            i < Math.floor(course?.rating ?? 0)
+                            i < Math.floor(course?.average_rating ?? 0)
                               ? "text-yellow-400 fill-current"
                               : "text-gray-300"
                           }`}
