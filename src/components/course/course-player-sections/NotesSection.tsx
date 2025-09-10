@@ -126,7 +126,7 @@ export default function LessonNotes({
           )}
         </div>
       </div>
-      <div className="w-full mx-auto px-5 my-10 space-y-4">
+      <div className="w-full max-w-5xl mx-auto my-10 space-y-4">
         {notesData?.map((note: any) => (
           <div
             key={note.id}

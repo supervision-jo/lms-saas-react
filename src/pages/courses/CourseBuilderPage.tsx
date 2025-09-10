@@ -12,9 +12,13 @@ import {
   Trash2,
   Edit,
   GripVertical,
+  Users,
+  UserCheck,
 } from "lucide-react";
 import QuizBuilder from "../../components/quizes/QuizBuilder";
 import QuizPreview from "../../components/quizes/QuizPreview";
+import UserManagement from "../../components/course/course-builder/UserManagement";
+import GroupManagement from "../../components/course/course-builder/GroupManagement";
 
 interface Lesson {
   id: string;
@@ -262,36 +266,26 @@ const CourseBuilderPage: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
               <nav className="space-y-2">
-                <button
-                  onClick={() => setActiveTab("course-info")}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === "course-info"
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Course Information
-                </button>
-                <button
-                  onClick={() => setActiveTab("curriculum")}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === "curriculum"
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Curriculum
-                </button>
-                <button
-                  onClick={() => setActiveTab("settings")}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === "settings"
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Settings
-                </button>
+                {[
+                  { id: "course-info", label: "Course Information" },
+                  { id: "curriculum", label: "Curriculum" },
+                  { id: "users", label: "Users", icon: Users },
+                  { id: "groups", label: "Groups", icon: UserCheck },
+                  { id: "settings", label: "Settings" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center ${
+                      activeTab === tab.id
+                        ? "bg-purple-100 text-purple-700"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+                    {tab.label}
+                  </button>
+                ))}
               </nav>
             </div>
           </div>
@@ -604,6 +598,10 @@ const CourseBuilderPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {activeTab === "users" && <UserManagement />}
+
+            {activeTab === "groups" && <GroupManagement />}
 
             {activeTab === "settings" && (
               <div className="bg-white rounded-xl shadow-sm p-8">

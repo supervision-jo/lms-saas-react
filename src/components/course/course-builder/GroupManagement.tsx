@@ -21,13 +21,7 @@ interface Group {
   createdAt: string;
 }
 
-interface GroupManagementProps {
-  courseId: string;
-}
-
-export default function GroupManagement({ courseId }: GroupManagementProps) {
-  console.log(courseId);
-
+export default function GroupManagement() {
   const [groups, setGroups] = useState<Group[]>([
     {
       id: "1",

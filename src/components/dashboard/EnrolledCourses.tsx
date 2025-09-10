@@ -26,7 +26,7 @@ export default function EnrolledCourses({
 
   const { data: enrollStatsData } = useCustomQuery(
     `${API_ENDPOINTS.studentEnrollements}${item?.course?.id}/`,
-    ["student-enrollements"],
+    ["student-enrollements", item?.course?.id],
     undefined,
     !!isStudent
   );

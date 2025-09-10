@@ -63,12 +63,12 @@ const CourseDetailPage: React.FC = () => {
     "categories",
   ]);
 
-  // const { data: instructorData } = useCustomQuery(
-  //   `${API_ENDPOINTS.instructor}${course?.instructor_?.id}/course/${course?.id}/`,
-  //   ["instructor", course?.id],
-  //   undefined,
-  //   !!course?.id && !!course?.instructor_?.id
-  // );
+  const { data: instructorData } = useCustomQuery(
+    `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
+    ["instructor", course?.id],
+    undefined,
+    !!course?.id && !!course?.instructor?.id
+  );
 
   const enrolledCoursesData = useCustomQuery(
     API_ENDPOINTS.enrolledCourses,
@@ -88,8 +88,6 @@ const CourseDetailPage: React.FC = () => {
 
   const isEnrolled = enrolledOptimistic || computedEnrolled;
 
-  console.log("isEnrolled", isEnrolled);
-
   const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
     "enrolledCourses",
     "course",
@@ -102,7 +100,7 @@ const CourseDetailPage: React.FC = () => {
 
   const currentCategory = cates?.find((c) => c.id === course?.sub_category);
 
-  // const instructor: Partial<Instructor> = instructorData?.data;
+  const instructor: CourseInstructor = instructorData?.data[0];
 
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
@@ -175,7 +173,7 @@ const CourseDetailPage: React.FC = () => {
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star
-                        key={i}
+                        key={i + 1000}
                         className={`w-4 h-4 ${
                           i < Math.floor(course?.average_rating ?? 0)
                             ? "text-yellow-400 fill-current"
@@ -398,7 +396,7 @@ const CourseDetailPage: React.FC = () => {
                     {course?.description
                       .split("\n\n")
                       .map((paragraph, index) => (
-                        <p key={index} className="mb-4">
+                        <p key={index + 2000} className="mb-4">
                           {paragraph}
                         </p>
                       ))}
@@ -425,14 +423,14 @@ const CourseDetailPage: React.FC = () => {
                     Instructor
                   </h3>
                   <div className="flex items-start mb-6">
-                    {course?.instructor?.profile_image ? (
+                    {instructor?.instructor?.profile_image ? (
                       <img
-                        src={course?.instructor?.profile_image}
-                        alt={course?.instructor?.first_name}
-                        className="w-6 h-6 rounded-full mr-2"
+                        src={instructor?.instructor?.profile_image}
+                        alt={instructor?.instructor?.first_name}
+                        className="w-16 h-16 rounded-full mr-4"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-purple-600 mr-4 rounded-full flex items-center justify-center">
                         <span className="text-white text-sm font-medium">
                           {course?.instructor?.first_name
                             ?.charAt(0)
@@ -440,37 +438,40 @@ const CourseDetailPage: React.FC = () => {
                         </span>
                       </div>
                     )}
-
                     <div>
                       <h4 className="text-xl font-bold text-gray-900">
-                        {course?.instructor?.first_name}{" "}
-                        {course?.instructor?.last_name}
+                        {instructor?.instructor?.first_name}{" "}
+                        {instructor?.instructor?.last_name}
                       </h4>
                       <p className="text-gray-600 mb-2">
-                        {/* Instructor BIO */}
-                        {course?.instructor?.bio}
+                        {instructor?.instructor?.bio}
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center">
-                          {/* <Star className="w-4 h-4 text-yellow-400 mr-1" /> */}
-                          <span>
-                            {course?.instructor?.average_rating} Rating
-                          </span>
-                          {/* <span>0 Rating</span> */}
+                          {Array.from({ length: 5 }).map((_, i) =>
+                            i < +instructor?.average_rating?.toFixed(0) ? (
+                              <Star
+                                key={i + 3000}
+                                className="w-4 h-4 mr-1 text-yellow-400 fill-current"
+                              />
+                            ) : (
+                              <Star
+                                key={i + 4000}
+                                className="text-gray-300 w-4 h-4 mr-1"
+                              />
+                            )
+                          )}
                         </div>
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>
-                            {course?.instructor?.total_students?.toLocaleString() ??
-                              0}{" "}
+                            {instructor?.total_students?.toLocaleString()}{" "}
                             Students
                           </span>
                         </div>
                         <div className="flex items-center">
                           <Award className="w-4 h-4 mr-1" />
-                          <span>
-                            {course?.instructor?.total_courses ?? 0} Courses
-                          </span>
+                          <span>{instructor?.total_courses} Courses</span>
                         </div>
                       </div>
                     </div>
@@ -491,7 +492,7 @@ const CourseDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <CourseContent
               modules={modulesData}
               onLessonSelect={handleLessonSelect}

@@ -54,6 +54,21 @@ interface Instructor {
   average_rating: number;
 }
 
+interface CourseInstructor {
+  title: string;
+  total_students: number;
+  total_courses: number;
+  instructor: {
+    first_name: string;
+    last_name: string;
+    profile_image: string;
+    id: string;
+    bio: string;
+  };
+  total_reviews: number;
+  average_rating: number;
+}
+
 type TextLists = {
   id: string;
   text: string;
@@ -81,7 +96,7 @@ interface Course {
   average_rating: number;
   total_reviews: number;
   total_enrollments: number;
-  total_hours: string | null;
+  total_hours: number | null;
   is_best_seller: boolean;
   objectives: TextLists[];
   requirements: TextLists[];

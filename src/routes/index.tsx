@@ -15,6 +15,7 @@ import CourseBuilderPage from "../pages/courses/CourseBuilderPage";
 import ProfilePage from "../pages/userProfile/ProfilePage";
 import Layout from "../layout/dashboard/Layout";
 import HomePage from "../pages/home/HomePage";
+import { RequireAuth } from "./requireAuth";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -45,7 +46,11 @@ export default function AppRoutes() {
           <Route path="/catalog/:courseId" element={<CourseDetailPage />} />
           <Route
             path="/catalog/:courseId/player"
-            element={<CoursePlayerPage />}
+            element={
+              <RequireAuth>
+                <CoursePlayerPage />
+              </RequireAuth>
+            }
           />
           <Route path="/course-builder" element={<CourseBuilderPage />} />
           {/* Main */}

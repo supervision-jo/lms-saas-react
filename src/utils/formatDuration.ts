@@ -6,11 +6,19 @@ export function formatDuration(val: unknown): string {
     if (val >= 20) {
       const h = Math.floor(val / 60);
       const m = Math.round(val % 60);
-      return `${h}h ${m}m`;
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      } else {
+        return `${m}m`;
+      }
     } else {
       const h = Math.floor(val);
       const m = Math.round((val - h) * 60);
-      return `${h}h ${m}m`;
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      } else {
+        return `${m}m`;
+      }
     }
   }
 
@@ -21,7 +29,13 @@ export function formatDuration(val: unknown): string {
       const [hStr, mStr] = s.split(":");
       const h = parseInt(hStr, 10);
       const m = parseInt(mStr ?? "0", 10);
-      if (!Number.isNaN(h) && !Number.isNaN(m)) return `${h}h ${m}m`;
+      if (!Number.isNaN(h) && !Number.isNaN(m)) {
+        if (h > 0) {
+          return `${h}h ${m}m`;
+        } else {
+          return `${m}m`;
+        }
+      }
     }
 
     const hMatch = s.match(/(\d+)\s*h/i);
@@ -29,7 +43,11 @@ export function formatDuration(val: unknown): string {
     if (hMatch || mMatch) {
       const h = hMatch ? parseInt(hMatch[1], 10) : 0;
       const m = mMatch ? parseInt(mMatch[1], 10) : 0;
-      return `${h}h ${m}m`;
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      } else {
+        return `${m}m`;
+      }
     }
 
     const n = Number(s);
@@ -37,11 +55,19 @@ export function formatDuration(val: unknown): string {
       if (n >= 20) {
         const h = Math.floor(n / 60);
         const m = Math.round(n % 60);
-        return `${h}h ${m}m`;
+        if (h > 0) {
+          return `${h}h ${m}m`;
+        } else {
+          return `${m}m`;
+        }
       } else {
         const h = Math.floor(n);
         const m = Math.round((n - h) * 60);
-        return `${h}h ${m}m`;
+        if (h > 0) {
+          return `${h}h ${m}m`;
+        } else {
+          return `${m}m`;
+        }
       }
     }
   }

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -10,6 +10,7 @@ import {
   Download,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
+import { useLocation } from "react-router";
 
 interface CourseContentProps {
   modules: Module[];
@@ -28,15 +29,67 @@ const CourseContent: React.FC<CourseContentProps> = ({
 }) => {
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
 
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(
-    new Set(["1"])
-  );
+  const { pathname } = useLocation();
 
-  const toggleModule = (moduleId: string) => {
-    const newExpanded = new Set(expandedModules);
-    if (newExpanded.has(moduleId)) newExpanded.delete(moduleId);
-    else newExpanded.add(moduleId);
-    setExpandedModules(newExpanded);
+  // which modules are expanded (store ids as strings to avoid type mismatch)
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set()
+  );
+  const autoSelectedOnceRef = useRef(false);
+
+  // Ensure the module that owns currentLessonId is expanded.
+  // Also, on first load (no current lesson), expand the first module
+  // and auto-select the first playable lesson.
+  useEffect(() => {
+    if (pathname.includes("player")) {
+      if (!safeModules.length) return;
+
+      // If we already auto-selected once, we won't do it again.
+      const nextExpanded = new Set(expandedModules);
+
+      // 1) If there is a current lesson -> expand its module.
+      if (currentLessonId) {
+        const owner = safeModules.find((m) =>
+          (m.lessons ?? []).some(
+            (l) => String(l?.id) === String(currentLessonId)
+          )
+        );
+        if (owner) nextExpanded.add(String(owner.id));
+        setExpandedModules(nextExpanded);
+        return; // don't auto-select if currentLessonId is present
+      }
+
+      // 2) No current lesson: on the first render with modules present,
+      // expand the first module and auto-select the first playable lesson.
+      if (!autoSelectedOnceRef.current) {
+        const firstModule = safeModules[0];
+        if (firstModule) {
+          nextExpanded.add(String(firstModule.id));
+          setExpandedModules(nextExpanded);
+
+          const firstPlayable =
+            (firstModule.lessons ?? []).find(
+              (lesson) => isEnrolled || lesson?.free_preview
+            ) || (firstModule.lessons ?? [])[0];
+
+          if (firstPlayable?.id) {
+            onLessonSelect(firstPlayable.id);
+            autoSelectedOnceRef.current = true;
+          }
+        }
+      } else {
+        setExpandedModules(nextExpanded);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeModules, currentLessonId, isEnrolled]);
+
+  const toggleModule = (moduleId: string | number) => {
+    const key = String(moduleId);
+    const next = new Set(expandedModules);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setExpandedModules(next);
   };
 
   const handleLessonClick = (lesson: Lesson) => {
@@ -46,7 +99,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
     if (lesson?.content_type === "material" && lesson?.video_url) {
       const link = document.createElement("a");
       link.href = lesson?.video_url;
-      link.download = lesson?.title;
+      link.download = lesson?.title || "material";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -56,14 +109,26 @@ const CourseContent: React.FC<CourseContentProps> = ({
     }
   };
 
-  const getLessonIcon = (lesson: Lesson) => {
+  const getLessonIcon = (lesson: Lesson, isCurrentLesson: boolean) => {
     if (!isEnrolled && !lesson?.free_preview)
       return <Lock className="w-4 h-4 text-gray-500" />;
     switch (lesson?.content_type?.toLowerCase()) {
       case "video":
-        return <Play className="w-4 h-4 text-purple-600 fill-current" />;
+        return (
+          <Play
+            className={`w-4 h-4 ${
+              isCurrentLesson ? "text-white" : "text-purple-600"
+            } fill-current`}
+          />
+        );
       case "article":
-        return <FileText className="w-4 h-4 text-blue-600" />;
+        return (
+          <FileText
+            className={`w-4 h-4 ${
+              isCurrentLesson ? "text-white" : "text-blue-600"
+            }`}
+          />
+        );
       case "quiz":
         return (
           <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
@@ -75,7 +140,13 @@ const CourseContent: React.FC<CourseContentProps> = ({
       case "material":
         return <Download className="w-4 h-4 text-orange-600" />;
       default:
-        return <Play className="w-4 h-4 text-purple-600 fill-current" />;
+        return (
+          <Play
+            className={`w-4 h-4 ${
+              isCurrentLesson ? "text-white" : "text-purple-600"
+            } fill-current`}
+          />
+        );
     }
   };
 
@@ -103,13 +174,13 @@ const CourseContent: React.FC<CourseContentProps> = ({
         </p>
       </div>
 
-      {/* this is the scroller */}
       <div className="flex-1 overflow-y-auto bg-gray-50">
         {safeModules.map((module) => {
-          const isExpanded = expandedModules.has(module?.id);
+          const key = String(module?.id);
+          const isExpanded = expandedModules.has(key);
           return (
             <div
-              key={module?.id}
+              key={key}
               className="bg-white mb-2 mx-3 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden"
             >
               <button
@@ -136,8 +207,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
 
               {isExpanded && (
                 <div className="px-5 py-4 bg-gray-50">
-                  {module.lessons.map((lesson) => {
-                    const isCurrentLesson = lesson?.id === currentLessonId;
+                  {(module.lessons ?? []).map((lesson) => {
+                    const isCurrentLesson =
+                      String(lesson?.id) === String(currentLessonId);
                     const canAccess = isEnrolled || lesson?.free_preview;
 
                     return (
@@ -145,7 +217,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                         key={lesson?.id}
                         onClick={() => handleLessonClick(lesson)}
                         disabled={!canAccess}
-                        className={`w-full flex items-center justify-between py-3 px-4 rounded-lg mb-2 transition-all duration-200 text-left ${
+                        className={`w-full flex items-start flex-col gap-2 py-3 px-4 rounded-lg mb-2 transition-all duration-200 text-left ${
                           isCurrentLesson
                             ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
                             : canAccess
@@ -153,30 +225,32 @@ const CourseContent: React.FC<CourseContentProps> = ({
                             : "opacity-50 cursor-not-allowed bg-gray-100 border-0 outline-none focus:outline-none"
                         }`}
                       >
-                        <div className="flex items-center">
-                          {getLessonIcon(lesson)}
+                        <div className="flex items-center justify-start gap-3 w-full">
+                          <div>{getLessonIcon(lesson, isCurrentLesson)}</div>
                           <span
-                            className={`ml-3 text-sm text-left font-medium ${
+                            className={`text-sm font-medium block whitespace-break-spaces ${
                               isCurrentLesson ? "text-white" : "text-gray-700"
                             }`}
                           >
                             {lesson?.title}
                           </span>
+                        </div>
+                        <div className="flex items-center justify-between w-full">
+                          <div
+                            className={`flex items-center text-xs min-w-16 ${
+                              isCurrentLesson
+                                ? "text-purple-200"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            {formatDuration(lesson?.duration_hours)}
+                          </div>
                           {lesson?.free_preview && !isEnrolled && (
                             <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
                               Free
                             </span>
                           )}
-                        </div>
-                        <div
-                          className={`flex items-center text-xs min-w-16 ${
-                            isCurrentLesson
-                              ? "text-purple-200"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          <Clock className="w-3 h-3 mr-1" />
-                          {formatDuration(lesson?.duration_hours)}
                         </div>
                       </button>
                     );

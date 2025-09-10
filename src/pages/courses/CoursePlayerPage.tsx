@@ -12,14 +12,17 @@ import {
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import NotesSection from "../../components/course/course-player-sections/NotesSection";
 import QASection from "../../components/course/course-player-sections/QASection";
 import LessonContentPlayer from "../../components/course/course-player-sections/LessonContentPlayer";
 import { formatDuration } from "../../utils/formatDuration";
+import GroupsSection from "../../components/course/course-player-sections/GroupsSection";
+import ChatModal from "../../components/course/course-player-sections/ChatModal";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
+  const navigate = useNavigate();
   const [currentLessonId, setCurrentLessonId] = useState<string>("");
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
@@ -50,12 +53,26 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
+  const { data: enrollmentData } = useCustomQuery(
+    `${API_ENDPOINTS.studentEnrollements}${courseId}/`,
+    ["student-enrollements", courseId],
+    undefined,
+    !!courseId
+  );
+
   const courseData: Course = courseRes?.data;
 
   const modules: Module[] = useMemo(
     () => modulesData?.data?.data ?? [],
     [modulesData]
   );
+  const enrollStats: EnrolledCourseStats[] = useMemo(
+    () => enrollmentData?.data ?? [],
+    [enrollmentData]
+  );
+  const currentEnrollStat: EnrolledCourseStats | null = useMemo(() => {
+    return enrollStats?.find((s) => s.id === courseId) ?? null;
+  }, [courseId, enrollStats]);
 
   useEffect(() => {
     if (!modules?.length) return;
@@ -67,6 +84,7 @@ export default function CoursePlayerPage() {
       setShowExam(true);
       setShowNotes(false);
       setShowQA(false);
+      setShowGroups(false);
     } else {
       setShowExam(false);
     }
@@ -87,6 +105,7 @@ export default function CoursePlayerPage() {
       setShowExam(true);
       setShowNotes(false);
       setShowQA(false);
+      setShowGroups(false);
     } else {
       setShowExam(false);
       setCurrentLesson(selectedLesson as Lesson);
@@ -97,31 +116,65 @@ export default function CoursePlayerPage() {
     console.log("Lesson completed");
   };
 
+  // Handle groups and chats UI only wait for backend APIs
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [groupMessage, setGroupMessage] = useState("");
+  const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
+  const handleJoinGroup = (groupId: string) => {
+    console.log("Joining group:", groupId);
+    // Add user to group logic here
+  };
+
+  const handleShowChat = (group: any) => {
+    setActiveChatGroup(group);
+    setShowChatModal(true);
+  };
+
+  const handleCloseChatModal = () => {
+    setShowChatModal(false);
+    setActiveChatGroup(null);
+    setGroupMessage("");
+  };
+
+  const handleSendGroupMessage = (groupId: string) => {
+    if (!groupMessage.trim()) return;
+
+    console.log("Sending message to group:", groupId, groupMessage);
+    // Add message to group logic here
+    setGroupMessage("");
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
-        <div className="flex items-center justify-between flex-col sm:flex-row">
-          <div className="flex mb-2 sm:mb-0 items-center space-x-4 sm:justify-start justify-between sm:w-fit w-full">
+        <div className="flex items-center justify-between flex-col md:flex-row">
+          <div className="flex mb-2 md:mb-0 items-center space-x-4 md:justify-start justify-between md:w-fit w-full">
             <button
-              onClick={() => window.history.back()}
+              onClick={() => {
+                navigate(`/catalog/${courseId}`);
+              }}
               className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
             >
               <ChevronLeft className="w-5 h-5" />
-              <span className="ml-2 font-medium sm:inline-block hidden">
+              <span className="ml-2 font-medium lg:inline-block hidden">
                 Back to Course Details
               </span>
             </button>
-            <div>
-              <h1 className="font-semibold text-lg truncate max-w-md">
+            <div className="flex-">
+              <h1 className="font-semibold whitespace-normal text-lg truncate max-w-md">
                 {courseData?.title}
               </h1>
               <div className="flex items-center text-sm text-gray-400">
-                <span>Progress: 50%</span>
+                <span>
+                  Progress: {currentEnrollStat?.progress?.toFixed(0) ?? 0}%
+                </span>
                 <div className="w-20 h-2 bg-gray-700 rounded-full ml-2">
                   <div
                     className="h-full bg-purple-600 rounded-full transition-all duration-300"
-                    style={{ width: `50%` }}
+                    style={{
+                      width: `${currentEnrollStat?.progress?.toFixed(0) ?? 0}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -235,7 +288,7 @@ export default function CoursePlayerPage() {
                       setShowQA(false);
                     }}
                     className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      showQA
+                      showGroups
                         ? "border-purple-500 text-purple-400"
                         : "border-transparent text-gray-400 hover:text-gray-300"
                     }`}
@@ -274,7 +327,10 @@ export default function CoursePlayerPage() {
 
           {/* Groups */}
           {showGroups && !showExam && (
-            <div className="bg-gray-800 p-6 min-h-screen"></div>
+            <GroupsSection
+              handleJoinGroup={handleJoinGroup}
+              handleShowChat={handleShowChat}
+            />
           )}
         </div>
 
@@ -333,6 +389,15 @@ export default function CoursePlayerPage() {
           </div>
         </div>
       </div>
+      {showChatModal && activeChatGroup && (
+        <ChatModal
+          activeChatGroup={activeChatGroup}
+          groupMessage={groupMessage}
+          handleCloseChatModal={handleCloseChatModal}
+          handleSendGroupMessage={handleSendGroupMessage}
+          setGroupMessage={setGroupMessage}
+        />
+      )}
     </div>
   );
 }
