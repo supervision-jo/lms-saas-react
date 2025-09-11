@@ -143,7 +143,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const rafRef = useRef<number | null>(null);
   const lastVolumeRef = useRef(1);
 
-  /* NEW: remember a pre-ready play click so we can build the player with autoplay+mute */
   const wantAutoplayRef = useRef(false);
   const wantUnmuteAfterAutoplayRef = useRef(false);
 

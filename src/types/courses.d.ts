@@ -141,7 +141,11 @@ interface CourseReview {
   course_title: string;
   rating: number;
   tell_about_your_experience: string;
-  like_course: string[];
+  like_course_details: {
+    id: number;
+    name: string;
+    type: "positive" | "negative";
+  }[];
   recommend: boolean;
   anonymous: boolean;
   comment: string;

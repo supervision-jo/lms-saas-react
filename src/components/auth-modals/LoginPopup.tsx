@@ -1,16 +1,12 @@
 import toast from "react-hot-toast";
-import {
-  ACCESS_TOKEN_KEY,
-  API_ENDPOINTS,
-  USER_KEY,
-} from "../../utils/constants";
+import { API_ENDPOINTS } from "../../utils/constants";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useForm } from "react-hook-form";
 import useAuth from "../../store/useAuth";
-import { useNavigate } from "react-router";
 import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, X } from "lucide-react";
+import { storeTokens } from "../../services/auth";
 
 interface FormValues {
   email: string;
@@ -25,10 +21,8 @@ export default function LoginPopup({
   setShowSignupModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { setIsAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
@@ -57,15 +51,16 @@ export default function LoginPopup({
       if (res.status) {
         toast.success("Logged in successfully!");
 
-        localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
-        localStorage.setItem(
-          ACCESS_TOKEN_KEY,
-          JSON.stringify(res.data.tokens.access)
-        );
+        const tokens = res?.data?.tokens;
+        const user = res?.data?.user;
 
-        setIsAuthenticated();
+        await storeTokens({
+          access: tokens.access,
+          refresh: tokens.refresh,
+          user,
+          setIsAuthenticated,
+        });
         reset();
-        // navigate("/");
         onClose();
       }
     } catch (error: any) {
@@ -77,24 +72,7 @@ export default function LoginPopup({
   };
 
   const handleGoogleLogin = () => {
-    setIsLoading(true);
-
-    // Simulate Google login
-    setTimeout(() => {
-      const user = {
-        name: "John Doe",
-        email: "john.doe@gmail.com",
-        avatar:
-          "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-        joinDate: "August 2025",
-        location: "",
-        phone: "",
-        bio: "",
-      };
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-      navigate("/");
-      setIsLoading(false);
-    }, 2000);
+    return;
   };
 
   return (
@@ -248,7 +226,6 @@ export default function LoginPopup({
           {/* Google Login */}
           <button
             onClick={handleGoogleLogin}
-            disabled={isLoading}
             className="mt-6 w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">

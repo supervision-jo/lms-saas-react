@@ -1,15 +1,14 @@
-import { isAuthenticated as checkAuth } from "../services/auth";
 import { create } from "zustand";
+import { isAuthenticated as checkAuth } from "../services/auth";
 
 type Store = {
   isAuthenticated: boolean;
-  setIsAuthenticated: () => void;
+  setIsAuthenticated: (v: boolean) => void;
 };
 
 const useAuth = create<Store>()((set) => ({
   isAuthenticated: checkAuth(),
-  setIsAuthenticated: () =>
-    set((state) => ({ isAuthenticated: !state.isAuthenticated })),
+  setIsAuthenticated: (v: boolean) => set({ isAuthenticated: v }),
 }));
 
 export default useAuth;

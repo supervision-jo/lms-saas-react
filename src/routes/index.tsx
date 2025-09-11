@@ -16,6 +16,7 @@ import ProfilePage from "../pages/userProfile/ProfilePage";
 import Layout from "../layout/dashboard/Layout";
 import HomePage from "../pages/home/HomePage";
 import { RequireAuth } from "./requireAuth";
+import { RequireRole } from "./guards";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -56,8 +57,14 @@ export default function AppRoutes() {
           {/* Main */}
 
           {/* Courses */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/instructor" element={<InstructorPage />} />
+
+          <Route element={<RequireRole exclude={["instructor"]} />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
+
+          <Route element={<RequireRole exclude={["student"]} />}>
+            <Route path="/instructor" element={<InstructorPage />} />
+          </Route>
           {/* Courses */}
 
           {/* User */}

@@ -8,6 +8,7 @@ import {
   Users,
   X,
   ListVideo,
+  Clock,
 } from "lucide-react";
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
@@ -19,6 +20,8 @@ import LessonContentPlayer from "../../components/course/course-player-sections/
 import { formatDuration } from "../../utils/formatDuration";
 import GroupsSection from "../../components/course/course-player-sections/GroupsSection";
 import ChatModal from "../../components/course/course-player-sections/ChatModal";
+// import { useCustomPost } from "../../hooks/useMutation";
+// import toast from "react-hot-toast";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
@@ -30,9 +33,6 @@ export default function CoursePlayerPage() {
   const [notes, setNotes] = useState("");
   const [noteTitle, setNoteTitle] = useState("");
   const [notesCount, setNotesCount] = useState<number>(0);
-  const [newQuestion, setNewQuestion] = useState("");
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
   const [showExam, setShowExam] = useState(false);
   const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
     undefined
@@ -60,7 +60,21 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
+  const { data: questionsData, isLoading: isQuestionsLoading } = useCustomQuery(
+    `${API_ENDPOINTS.questions}?lesson=${currentLessonId}`,
+    ["questions", currentLessonId],
+    undefined,
+    !!currentLessonId
+  );
+
+  const questions: Question[] = questionsData?.data ?? [];
+
   const courseData: Course = courseRes?.data;
+
+  // const { mutateAsync: createProgress } = useCustomPost(
+  //   API_ENDPOINTS.lessonProgress,
+  //   ["course", courseData?.id]
+  // );
 
   const modules: Module[] = useMemo(
     () => modulesData?.data?.data ?? [],
@@ -92,8 +106,6 @@ export default function CoursePlayerPage() {
 
   const handleLessonSelect = (lessonId: string) => {
     setCurrentLessonId(lessonId);
-    setReplyingTo(null);
-    setReplyText("");
 
     // Close drawer on mobile after selecting
     setContentOpen(false);
@@ -112,8 +124,20 @@ export default function CoursePlayerPage() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     console.log("Lesson completed");
+    // try {
+    //   const res = await createProgress({
+    //     lesson: currentLessonId,
+    //     watched: true,
+    //   });
+
+    //   if (res?.status) {
+    //     toast.success("Awesome! Lesson completed.");
+    //   }
+    // } catch (error: any) {
+    //   toast.error(error?.message ?? "Something went wrong.");
+    // }
   };
 
   // Handle groups and chats UI only wait for backend APIs
@@ -234,9 +258,10 @@ export default function CoursePlayerPage() {
           {/* Lesson Info */}
           <div className="bg-gray-800 p-6 border-b border-gray-700">
             <div className="max-w-5xl mx-auto">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
                 <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
-                <span className="text-gray-400">
+                <span className="text-gray-400 flex items-center justify-start">
+                  <Clock className="w-4 h-4 mr-1" />
                   {formatDuration(currentLesson?.duration_hours)}
                 </span>
               </div>
@@ -279,7 +304,7 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <span>💬</span>
-                    <span>Q&A (2)</span>
+                    <span>Q&A ({questions?.length})</span>
                   </button>
                   <button
                     onClick={() => {
@@ -316,12 +341,9 @@ export default function CoursePlayerPage() {
           {/* Q&A */}
           {showQA && !showExam && (
             <QASection
-              newQuestion={newQuestion}
-              replyText={replyText}
-              replyingTo={replyingTo}
-              setNewQuestion={setNewQuestion}
-              setReplyText={setReplyText}
-              setReplyingTo={setReplyingTo}
+              lesson={currentLessonId}
+              questions={questions}
+              isLoading={isQuestionsLoading}
             />
           )}
 

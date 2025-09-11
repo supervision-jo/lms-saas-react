@@ -24,11 +24,11 @@ export default function MobileNav({
       <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
         {mainNavigationItems
           .concat([{ id: "profile", label: "Profile Settings", icon: Home }])
-          .map((i) => {
+          .map((i, idx) => {
             const path = i.id ? `/${i.id}` : "/";
             return (
               <NavLink
-                key={i.id || "home"}
+                key={idx + 4000}
                 to={path}
                 end={path === "/"}
                 className={({ isActive }) =>
@@ -46,10 +46,10 @@ export default function MobileNav({
 
         {!currentUser && (
           <>
-            {authNavigationItems.map((i) => {
+            {authNavigationItems.map((i, idx) => {
               return (
                 <button
-                  key={i.id}
+                  key={idx + 5000}
                   onClick={() => {
                     navigate(i.id);
                     setIsMenuOpen(false);

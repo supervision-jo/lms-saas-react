@@ -7,6 +7,8 @@ import { useCustomPatch, useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { readUserFromStorage } from "../../services/auth";
+import ReviewReasonsSkeleton from "../resource-stats/ReviewReasonsLoading";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CourseRatingProps {
   courseTitle: string;
@@ -17,10 +19,16 @@ interface DataToSend {
   course: string;
   rating: number;
   tell_about_your_experience: string;
-  like_course: string[];
+  like_course: number[];
   recommend: boolean;
   anonymous: boolean;
   comment: string;
+}
+
+interface Reason {
+  id: number;
+  name: string;
+  type: "positive" | "negative";
 }
 
 type DataToSendWithId = DataToSend & { id?: number | string };
@@ -29,12 +37,21 @@ export default function CourseRatingModal({
   courseTitle,
   onClose,
 }: CourseRatingProps) {
+  const queryClient = useQueryClient();
   const { courseId } = useParams();
   const currentUser = readUserFromStorage();
   // fetch existing review(s)
   const { data: reviewData } = useCustomQuery(
     `${API_ENDPOINTS.courseStudentReview}?course=${courseId}`,
     ["student-review", courseId, currentUser?.id],
+    undefined,
+    !!courseId
+  );
+
+  // fetch reviews reasons
+  const { data: reasonsData, isLoading } = useCustomQuery(
+    API_ENDPOINTS.reviewReasons,
+    ["review-reasons"],
     undefined,
     !!courseId
   );
@@ -69,8 +86,8 @@ export default function CourseRatingModal({
   const [review, setReview] = useState<string>(
     lastReview?.tell_about_your_experience ?? ""
   );
-  const [selectedReasons, setSelectedReasons] = useState<string[]>(
-    (lastReview?.like_course ?? []).map((r) => r.toLowerCase())
+  const [selectedReasons, setSelectedReasons] = useState<number[]>(
+    lastReview?.like_course_details.map((r) => r.id) ?? []
   );
   const [wouldRecommend, setWouldRecommend] = useState<boolean>(
     lastReview?.recommend ?? true
@@ -79,56 +96,31 @@ export default function CourseRatingModal({
     lastReview?.anonymous ?? false
   );
 
-  // keep state in sync if/when the fetch finishes
-  useEffect(() => {
-    if (!lastReview) return;
-    setRating(lastReview.rating ?? 0);
-    setReview(lastReview.tell_about_your_experience ?? "");
-    setSelectedReasons(
-      (lastReview.like_course ?? []).map((r) => r.toLowerCase())
-    );
-    setAnonymous(lastReview.anonymous ?? false);
-    setWouldRecommend(lastReview.recommend ?? true);
-  }, [lastReview]);
-
   const headerTitle = isEdit ? "Update Your Review" : "Rate This Course";
   const primaryBtnLabel = isEdit ? "Update Review" : "Submit Review";
   const loadingLabel = isEdit ? "Updating..." : "Submitting...";
 
   const ratingLabels = ["", "Terrible", "Poor", "Average", "Good", "Excellent"];
 
-  const reasonOptions = [
-    "Clear explanations",
-    "Practical examples",
-    "Good pacing",
-    "Engaging content",
-    "Helpful exercises",
-    "Great instructor",
-    "Well organized",
-    "Up-to-date content",
-    "Good production quality",
-    "Valuable resources",
-    "Interactive elements",
-    "Real-world applications",
-  ];
+  const reasons: Reason[] = useMemo(
+    () => reasonsData?.data ?? [],
+    [reasonsData?.data]
+  );
 
-  const negativeReasons = [
-    "Confusing explanations",
-    "Too fast paced",
-    "Too slow paced",
-    "Outdated content",
-    "Poor audio/video quality",
-    "Lack of examples",
-    "Disorganized structure",
-    "Not enough practice",
-    "Boring presentation",
-    "Missing key topics",
-  ];
+  const reasonOptions = useMemo(() => {
+    const pr = reasons?.filter((r) => r.type === "positive");
+    return pr;
+  }, [reasons]);
+
+  const negativeReasons = useMemo(() => {
+    const nr = reasons.filter((r) => r.type === "negative");
+    return nr;
+  }, [reasons]);
 
   const currentReasons = rating >= 4 ? reasonOptions : negativeReasons;
 
-  const toggleReason = (reason: string) => {
-    const key = reason.toLowerCase();
+  const toggleReason = (reason: number) => {
+    const key = reason;
     setSelectedReasons((prev) =>
       prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]
     );
@@ -149,7 +141,7 @@ export default function CourseRatingModal({
       course: String(courseId),
       rating,
       tell_about_your_experience: review.trim(),
-      like_course: selectedReasons, // lowercased already
+      like_course: selectedReasons,
       recommend: wouldRecommend,
       anonymous,
       comment: review.trim(),
@@ -169,6 +161,9 @@ export default function CourseRatingModal({
         const res = await createReview(basePayload);
         if (res?.status) {
           toast.success("Your review has been sent.");
+          queryClient.invalidateQueries({
+            queryKey: ["course", courseId],
+          });
         } else {
           toast.success("Submitted.");
         }
@@ -181,6 +176,16 @@ export default function CourseRatingModal({
       handleErrorAlerts(payloadErr.message ?? "Something went wrong!");
     }
   };
+
+  // keep state in sync if/when the fetch finishes
+  useEffect(() => {
+    if (!lastReview) return;
+    setRating(lastReview.rating ?? 0);
+    setReview(lastReview.tell_about_your_experience ?? "");
+    setSelectedReasons(lastReview.like_course_details?.map((r) => r.id) ?? []);
+    setAnonymous(lastReview.anonymous ?? false);
+    setWouldRecommend(lastReview.recommend ?? true);
+  }, [lastReview]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -242,25 +247,29 @@ export default function CourseRatingModal({
                 What did you {rating >= 4 ? "like" : "dislike"} about this
                 course?
               </h4>
-              <div className="grid grid-cols-2 gap-3">
-                {currentReasons.map((reason) => {
-                  const key = reason.toLowerCase();
-                  const active = selectedReasons.includes(key);
-                  return (
-                    <button
-                      key={reason}
-                      onClick={() => toggleReason(reason)}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        active
-                          ? "border-purple-500 bg-purple-50 text-purple-700"
-                          : "border-gray-200 hover:border-purple-300 text-gray-700"
-                      }`}
-                    >
-                      {reason}
-                    </button>
-                  );
-                })}
-              </div>
+              {isLoading ? (
+                <ReviewReasonsSkeleton count={currentReasons?.length ?? 8} />
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {currentReasons.map((reason) => {
+                    const key = reason?.id;
+                    const active = selectedReasons.includes(key);
+                    return (
+                      <button
+                        key={reason?.name}
+                        onClick={() => toggleReason(reason?.id)}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          active
+                            ? "border-purple-500 bg-purple-50 text-purple-700"
+                            : "border-gray-200 hover:border-purple-300 text-gray-700"
+                        }`}
+                      >
+                        {reason?.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

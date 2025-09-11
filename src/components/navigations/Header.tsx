@@ -72,11 +72,11 @@ const Header: React.FC<HeaderProps> = ({
             {/* Navigation */}
             <nav className="hidden lg:block ml-10">
               <div className="flex items-center space-x-8">
-                {mainNavigationItems.map((i) => {
+                {mainNavigationItems.map((i, idx) => {
                   const path = i.id ? `/${i.id}` : "/";
                   return (
                     <NavLink
-                      key={i.id || "home"}
+                      key={idx + 1000}
                       to={path}
                       end={path === "/"}
                       className={({ isActive }) =>
@@ -161,9 +161,9 @@ const Header: React.FC<HeaderProps> = ({
                 {/* User Dropdown Menu */}
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    {userNavigationItems.map((i) => {
+                    {userNavigationItems.map((i, idx) => {
                       return (
-                        <div key={i.id}>
+                        <div key={idx + 2000}>
                           {i.id === "logout" && <hr className="my-2" />}
                           <button
                             onClick={() => {
@@ -190,10 +190,10 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                {authNavigationItems.map((i) => {
+                {authNavigationItems.map((i, idx) => {
                   return (
                     <button
-                      key={i.id}
+                      key={idx + 3000}
                       onClick={() => navigate(i.id)}
                       className={`${
                         i.id === "login"

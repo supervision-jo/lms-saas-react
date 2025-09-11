@@ -1,6 +1,10 @@
 export const ACCESS_TOKEN_KEY = "lms-access-token";
+export const REFRESH_TOKEN_KEY = "lms-refresh-token";
+export const ACCESS_TOKEN_EXPIRES_AT_KEY = "lms-access-token-exp";
+export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const USER_KEY = "lms-user";
 export const BASE_URL = "https://lms-saas-jv3u7.ondigitalocean.app/api/";
+
 export const API_ENDPOINTS = {
   courses: "course/courses/",
   categories: "course/categories/",
@@ -12,11 +16,17 @@ export const API_ENDPOINTS = {
   studentCertificates: "users/get-certificates/",
   courseReviews: "enrollments/reviews/",
   updateReview: "enrollments/update-review/",
+  reviewReasons: "enrollments/course-review-likes/",
   courseStudentReview: "enrollments/get-reviews-course-student/",
   studentStats: "users/get-info-achivements/",
   createReview: "enrollments/create-review/",
   createEnrollment: "enrollments/create-enroll/",
+  lessonProgress: "enrollments/create-lesson-progress/",
   lessonNotes: "enrollments/lesson-notes/",
+  questions: "enrollments/question/",
+  createQuestion: "enrollments/create-question/",
+  updateQuestion: "enrollments/update-question/",
+  answers: "enrollments/answer/",
   signup: "users/register/",
   login: "users/login/",
   refreshToken: "users/refresh-token/",

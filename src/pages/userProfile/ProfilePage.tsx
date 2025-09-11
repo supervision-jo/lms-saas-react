@@ -159,6 +159,14 @@ const ProfilePage: React.FC = () => {
     e.currentTarget.value = "";
   };
 
+  const TABS = [
+    { id: "profile", label: "Profile Settings" },
+    { id: "achievements", label: "Achievements" },
+    { id: "certificates", label: "Certificates", studentOnly: true },
+  ];
+
+  const visibleTabs = TABS.filter((t) => !(t.studentOnly && !isStudent));
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -253,11 +261,7 @@ const ProfilePage: React.FC = () => {
         <div className="mb-8">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
-              {[
-                { id: "profile", label: "Profile Settings" },
-                { id: "achievements", label: "Achievements" },
-                { id: "certificates", label: "Certificates" },
-              ].map((tab) => (
+              {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -364,7 +368,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === "certificates" && (
+        {isStudent && activeTab === "certificates" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
               Certificates
