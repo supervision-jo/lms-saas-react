@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Star,
   Clock,
@@ -51,17 +51,24 @@ const CourseDetailPage: React.FC = () => {
     undefined,
     !!courseId
   );
-
   const course: Course = courseData?.data?.data;
-  const { data: modules } = useCustomQuery(
+
+  const { data: modulesResp } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
     undefined,
     !!courseId
   );
+  const modulesData: Module[] = useMemo(
+    () => modulesResp?.data?.data ?? [],
+    [modulesResp]
+  );
+
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
+  const cates: Category[] = catesData?.data?.data ?? [];
+  const currentCategory = cates?.find((c) => c.id === course?.sub_category);
 
   const { data: instructorData } = useCustomQuery(
     `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
@@ -69,6 +76,7 @@ const CourseDetailPage: React.FC = () => {
     undefined,
     !!course?.id && !!course?.instructor?.id
   );
+  const instructor: CourseInstructor = instructorData?.data?.[0];
 
   const enrolledCoursesData = useCustomQuery(
     API_ENDPOINTS.enrolledCourses,
@@ -76,17 +84,18 @@ const CourseDetailPage: React.FC = () => {
     undefined,
     !!isAuthenticated
   );
-
   const enrolledCourses: EnrolledCourse[] =
     enrolledCoursesData?.data?.data ?? [];
 
   const computedEnrolled = enrolledCourses.some(
     (c) => String(c?.course?.id) === String(course?.id ?? courseId)
   );
-
   const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
-
   const isEnrolled = enrolledOptimistic || computedEnrolled;
+
+  useEffect(() => {
+    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
+  }, [computedEnrolled, enrolledOptimistic]);
 
   const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
     "enrolledCourses",
@@ -94,20 +103,8 @@ const CourseDetailPage: React.FC = () => {
     courseId as string,
   ]);
 
-  const modulesData: Module[] = modules?.data?.data ?? [];
-
-  const cates: Category[] = catesData?.data?.data ?? [];
-
-  const currentCategory = cates?.find((c) => c.id === course?.sub_category);
-
-  const instructor: CourseInstructor = instructorData?.data[0];
-
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
-  }, [computedEnrolled, enrolledOptimistic]);
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -133,9 +130,41 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  /** Find first lesson user can actually open (free preview if not enrolled). */
+  const firstPlayableLessonId = useMemo(() => {
+    for (const m of modulesData ?? []) {
+      const lessons = m?.lessons ?? [];
+      const playable =
+        lessons.find((l) => isEnrolled || l?.free_preview) || lessons[0];
+      if (playable?.id) return String(playable.id);
+    }
+    return null;
+  }, [modulesData, isEnrolled]);
+
+  /** Navigate to player, passing lesson and optional assessment via query. */
+  const goToPlayer = (opts?: {
+    lessonId?: string | number;
+    assessment?: Exam;
+  }) => {
+    const params = new URLSearchParams();
+    if (opts?.lessonId) params.set("lesson", String(opts.lessonId));
+    if (opts?.assessment) {
+      params.set("assessment", String(opts.assessment.id));
+      if (opts.assessment.type)
+        params.set("atype", String(opts.assessment.type));
+    }
+    const qs = params.toString();
+    navigate(`/catalog/${course?.id}/player${qs ? `?${qs}` : ""}`);
+  };
+
+  /** CourseContent lesson click -> open player at that lesson */
   const handleLessonSelect = (lessonId: string) => {
-    console.log("Selected lesson:", lessonId);
-    navigate(`/catalog/${course?.id}/player`);
+    goToPlayer({ lessonId });
+  };
+
+  /** CourseContent assessment click -> open player with assessment context */
+  const handleOpenAssessment = (lessonId: string, a: Exam) => {
+    goToPlayer({ lessonId, assessment: a });
   };
 
   return (
@@ -146,8 +175,6 @@ const CourseDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <nav className="text-sm mb-4">
-                {/* <span className="text-purple-400">Development</span>
-                <span className="mx-2">›</span> */}
                 <span className="text-purple-400">
                   {currentCategory?.name ?? "Development"}
                 </span>
@@ -214,6 +241,7 @@ const CourseDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Right card with hero thumbnail and "Play" */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-lg overflow-hidden sticky top-4">
                 <div className="relative">
@@ -228,9 +256,16 @@ const CourseDetailPage: React.FC = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                     <button
                       onClick={() => {
-                        navigate(`/catalog/${course?.id}/player`);
+                        // Start at first playable lesson to mirror player UX
+                        if (firstPlayableLessonId) {
+                          goToPlayer({ lessonId: firstPlayableLessonId });
+                        } else {
+                          goToPlayer(); // fallback
+                        }
                       }}
                       className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center"
+                      title="Start / Preview"
+                      aria-label="Start / Preview"
                     >
                       <Play className="w-6 h-6 text-white ml-1" />
                     </button>
@@ -251,9 +286,7 @@ const CourseDetailPage: React.FC = () => {
                         )}
                       </div>
                     ) : (
-                      <span
-                        className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
-                      >
+                      <span className="px-4 py-1 rounded-lg font-semibold bg-green-100 text-green-800">
                         Free
                       </span>
                     )}
@@ -278,7 +311,11 @@ const CourseDetailPage: React.FC = () => {
                       </div>
                       <button
                         onClick={() => {
-                          navigate(`/catalog/${course?.id}/player`);
+                          if (firstPlayableLessonId) {
+                            goToPlayer({ lessonId: firstPlayableLessonId });
+                          } else {
+                            goToPlayer();
+                          }
                         }}
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold mb-2 hover:bg-purple-700 transition-colors"
                       >
@@ -319,11 +356,12 @@ const CourseDetailPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            {/* /Right card */}
           </div>
         </div>
       </div>
 
-      {/* Course Content */}
+      {/* Course Content + Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -394,7 +432,7 @@ const CourseDetailPage: React.FC = () => {
                   </h3>
                   <div className="prose max-w-none text-gray-700">
                     {course?.description
-                      .split("\n\n")
+                      ?.split("\n\n")
                       .map((paragraph, index) => (
                         <p key={index + 2000} className="mb-4">
                           {paragraph}
@@ -413,6 +451,8 @@ const CourseDetailPage: React.FC = () => {
                     modules={modulesData}
                     onLessonSelect={handleLessonSelect}
                     isEnrolled={isEnrolled}
+                    // navigate to player with assessment when clicked
+                    onOpenAssessment={handleOpenAssessment}
                   />
                 </div>
               )}
@@ -493,15 +533,18 @@ const CourseDetailPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Sidebar Course Content mirrors curriculum behavior */}
           <div className="hidden lg:block lg:col-span-1">
             <CourseContent
               modules={modulesData}
               onLessonSelect={handleLessonSelect}
               isEnrolled={isEnrolled}
+              onOpenAssessment={handleOpenAssessment}
             />
           </div>
         </div>
       </div>
+
       {showRatingModal && (
         <CourseRatingModal
           courseTitle={course?.title}

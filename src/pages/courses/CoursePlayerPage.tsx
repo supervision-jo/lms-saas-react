@@ -13,7 +13,7 @@ import {
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import NotesSection from "../../components/course/course-player-sections/NotesSection";
 import QASection from "../../components/course/course-player-sections/QASection";
 import LessonContentPlayer from "../../components/course/course-player-sections/LessonContentPlayer";
@@ -26,12 +26,21 @@ import toast from "react-hot-toast";
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { search } = useLocation();
+  const lessonFromQS = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    return sp.get("lesson") ?? "";
+  }, [search]);
 
-  const [currentLessonId, setCurrentLessonId] = useState<string>("");
+  // --- Query string parsing (lesson & optional assessment) ---
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const assessmentIdFromQS = searchParams.get("assessment"); // exam/quiz id
+  const assessmentTypeFromQS = searchParams.get("atype"); // "exam" | "quiz" | etc.
+
+  const [currentLessonId, setCurrentLessonId] = useState<string>(lessonFromQS);
   const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
     undefined
   );
-
   // side panels
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
@@ -67,6 +76,14 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
+  // If an assessment id is present in QS, try to fetch it (best effort)
+  const { data: examFromQSRes } = useCustomQuery(
+    assessmentIdFromQS ? `${API_ENDPOINTS.exams}${assessmentIdFromQS}/` : "",
+    ["exam", assessmentIdFromQS ?? ""],
+    undefined,
+    !!assessmentIdFromQS
+  );
+
   const { data: questionsData, isLoading: isQuestionsLoading } = useCustomQuery(
     `${API_ENDPOINTS.questions}?lesson=${currentLessonId}`,
     ["questions", currentLessonId],
@@ -81,29 +98,90 @@ export default function CoursePlayerPage() {
     () => modulesData?.data?.data ?? [],
     [modulesData]
   );
+
   const enrollStats: EnrolledCourseStats[] = useMemo(
     () => enrollmentData?.data ?? [],
     [enrollmentData]
   );
+
   const currentEnrollStat: EnrolledCourseStats | null = useMemo(() => {
-    return enrollStats?.find((s) => s.id === courseId) ?? null;
+    return enrollStats?.find((s) => String(s.id) === String(courseId)) ?? null;
   }, [courseId, enrollStats]);
 
+  // --- Initial lesson selection: prefer QS, else first lesson ---
   useEffect(() => {
     if (!modules?.length) return;
-    const first = modules[0]?.lessons?.[0];
+
+    const allLessons = modules.flatMap((m) => m?.lessons ?? []);
+
+    if (lessonFromQS) {
+      const found = allLessons.find(
+        (l) => String(l?.id) === String(lessonFromQS)
+      );
+      if (found) {
+        setCurrentLessonId(String(found.id));
+        setCurrentLesson(found);
+        return; // don't override with first
+      }
+    }
+
+    // fallback to first if still nothing valid
+    const first = allLessons[0];
     if (!first) return;
-    setCurrentLessonId((prev) => (prev ? prev : first.id));
-    setCurrentLesson(first);
-  }, [modules]);
+    setCurrentLessonId((prev) => (prev ? prev : String(first.id)));
+    setCurrentLesson((prev) => prev ?? first);
+  }, [modules, lessonFromQS]);
+
+  // Keep currentLesson in sync whenever currentLessonId changes (covers QS changes)
+  useEffect(() => {
+    if (!currentLessonId || !modules?.length) return;
+    const allLessons = modules.flatMap((m) => m?.lessons ?? []);
+    const selected = allLessons.find(
+      (l) => String(l?.id) === String(currentLessonId)
+    );
+    if (selected) setCurrentLesson(selected);
+  }, [currentLessonId, modules]);
+
+  // If an assessment is present in QS, open it once the page mounts
+  useEffect(() => {
+    if (!assessmentIdFromQS) return;
+    // Prefer fetched exam; otherwise create a minimal placeholder so UI opens
+    const fetched = examFromQSRes?.data as Exam | undefined;
+    if (fetched) {
+      setAssessment(fetched);
+    } else {
+      setAssessment(
+        (prev) =>
+          prev ??
+          ({
+            id: assessmentIdFromQS,
+            type: assessmentTypeFromQS,
+          } as unknown as Exam)
+      );
+    }
+  }, [assessmentIdFromQS, assessmentTypeFromQS, examFromQSRes]);
 
   const handleLessonSelect = (lessonId: string) => {
-    setAssessment(null); // close any assessment when switching lesson
+    setAssessment(null);
     setCurrentLessonId(lessonId);
     setContentOpen(false);
 
+    const params = new URLSearchParams(search);
+    params.set("lesson", String(lessonId));
+    params.delete("assessment");
+    params.delete("atype");
+    navigate(
+      {
+        pathname: `/catalog/${courseId}/player`,
+        search: `?${params.toString()}`,
+      },
+      { replace: true }
+    );
+
     const allLessons = modules?.flatMap((m) => m?.lessons ?? []);
-    const selectedLesson = allLessons?.find((l) => l?.id === lessonId);
+    const selectedLesson = allLessons?.find(
+      (l) => String(l?.id) === String(lessonId)
+    );
     setCurrentLesson(selectedLesson as Lesson);
   };
 
@@ -111,13 +189,13 @@ export default function CoursePlayerPage() {
     API_ENDPOINTS.lessonProgress,
     ["course", courseData?.id]
   );
+
   const handleComplete = async () => {
     try {
       const res = await createProgress({
         lesson: currentLessonId,
         watched: true,
       });
-
       if (res?.status) {
         toast.success("Awesome! Lesson completed.");
       }
@@ -163,7 +241,7 @@ export default function CoursePlayerPage() {
                 Back to Course Details
               </span>
             </button>
-            <div className="flex-">
+            <div className="flex-1">
               <h1 className="font-semibold whitespace-normal text-lg truncate max-w-md">
                 {courseData?.title}
               </h1>
@@ -346,7 +424,7 @@ export default function CoursePlayerPage() {
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
                 onOpenAssessment={(lessonId, a) => {
-                  setCurrentLessonId(lessonId);
+                  setCurrentLessonId(String(lessonId));
                   setAssessment(a);
                 }}
               />
@@ -392,7 +470,7 @@ export default function CoursePlayerPage() {
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
                 onOpenAssessment={(lessonId, a) => {
-                  setCurrentLessonId(lessonId);
+                  setCurrentLessonId(String(lessonId));
                   setAssessment(a);
                   setContentOpen(false);
                 }}

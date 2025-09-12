@@ -21,7 +21,7 @@ interface CourseContentProps {
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
-  onOpenAssessment: (lessonId: string, assessment: Exam) => void; // ⬅ added
+  onOpenAssessment?: (lessonId: string, assessment: Exam) => void; // ⬅ added
 }
 
 function AssessmentList({
@@ -309,7 +309,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                         <AssessmentList
                           lesson={lesson}
                           isEnrolled={isEnrolled}
-                          onOpen={(a) => onOpenAssessment(lesson.id, a)}
+                          onOpen={(a) => onOpenAssessment?.(lesson.id, a)}
                         />
                       </div>
                     );
