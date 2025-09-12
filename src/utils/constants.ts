@@ -7,7 +7,12 @@ export const BASE_URL = "https://lms-saas-jv3u7.ondigitalocean.app/api/";
 
 export const API_ENDPOINTS = {
   courses: "course/courses/",
+  createCourse: "course/create-course/",
+  createSection: "course/create-section/",
+  createExam: "course/create-exam/",
+  exams: "course/git-quizs/",
   categories: "course/categories/",
+  subCategories: "course/get-sub-categories/",
   featuredCourses: "course/best-sellers/",
   modules: "course/get-sections/",
   instructor: "course/instructor/",
@@ -19,6 +24,9 @@ export const API_ENDPOINTS = {
   reviewReasons: "enrollments/course-review-likes/",
   courseStudentReview: "enrollments/get-reviews-course-student/",
   studentStats: "users/get-info-achivements/",
+  instructorStats: "users/get-instructor-achivements/",
+  instructorCourseStats: "course/course-instructor-stats/",
+  instructorCourseReviews: "enrollments/get-reviews-course-instructor/",
   createReview: "enrollments/create-review/",
   createEnrollment: "enrollments/create-enroll/",
   lessonProgress: "enrollments/create-lesson-progress/",

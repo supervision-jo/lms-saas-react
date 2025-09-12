@@ -1,4 +1,13 @@
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
+
 export default function InstructorDashboardSidebar() {
+  const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
+    "instructor-stats",
+  ]);
+
+  const stats: InstructorStats = data?.data;
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">
@@ -23,19 +32,25 @@ export default function InstructorDashboardSidebar() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-gray-600">New Students</span>
-            <span className="font-semibold text-gray-900">+234</span>
+            <span className="font-semibold text-gray-900">
+              +{stats?.new_students ?? 0}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Revenue</span>
-            <span className="font-semibold text-green-600">+$6,200</span>
+            <span className="font-semibold text-green-600">
+              +${stats?.revenue_this_month ?? 0}
+            </span>
           </div>
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <span className="text-gray-600">Course Views</span>
-            <span className="font-semibold text-gray-900">+12,450</span>
-          </div>
+            <span className="font-semibold text-gray-900">+{stats?.}</span>
+          </div> */}
           <div className="flex items-center justify-between">
             <span className="text-gray-600">New Reviews</span>
-            <span className="font-semibold text-gray-900">+45</span>
+            <span className="font-semibold text-gray-900">
+              +{stats?.new_reviews}
+            </span>
           </div>
         </div>
       </div>

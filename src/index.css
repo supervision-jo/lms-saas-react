@@ -149,3 +149,52 @@ textarea:focus {
     display: none !important;
   }
 }
+
+@layer utilities {
+  :root { --brand-purple: #9333ea; }
+
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;   /* your inline gradient will paint here */
+    outline: none;
+  }
+
+  /* Let the inline gradient show through */
+  .slider::-webkit-slider-runnable-track {
+    background: transparent !important;   /* was gray; remove it */
+  }
+  .slider::-moz-range-track {
+    background: transparent;              /* let gradient / progress show */
+  }
+
+  /* Keep the purple thumb */
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--brand-purple);
+    box-shadow: 0 0 0 3px rgba(147,51,234,.35);
+    cursor: pointer;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    -ms-border-radius: 50%;
+    -o-border-radius: 50%;
+}
+  .slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--brand-purple);
+    box-shadow: 0 0 0 3px rgba(147,51,234,.35);
+    cursor: pointer;
+  }
+
+  /* Firefox needs explicit filled color */
+  .slider::-moz-range-progress {
+    height: 8px; border-radius: 50%;
+    background: var(--brand-purple);
+  }
+}

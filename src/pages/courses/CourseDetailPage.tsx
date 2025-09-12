@@ -462,6 +462,7 @@ const CourseDetailPage: React.FC = () => {
                             )
                           )}
                         </div>
+                        ({instructor?.total_reviews ?? 0})
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>

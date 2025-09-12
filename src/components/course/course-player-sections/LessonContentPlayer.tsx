@@ -1,16 +1,15 @@
 import { FileText, ChevronRight, Download } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
-import { SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import { formatDuration } from "../../../utils/formatDuration";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface LessonContentProps {
   modules: Module[];
   currentLessonId: string;
   handleComplete: any;
-  showExam: boolean;
-  setShowExam: React.Dispatch<SetStateAction<boolean>>;
   onLessonSelect: (lessonId: string) => void;
+  assessment: Exam | null; // ⬅ added
+  setAssessment: React.Dispatch<React.SetStateAction<Exam | null>>; // ⬅ added
 }
 
 const isMockUrl = (u?: string) => !!u && /(^|\/\/)example\.com/i.test(u);
@@ -28,9 +27,9 @@ export default function LessonContentPlayer({
   modules,
   currentLessonId,
   handleComplete,
-  setShowExam,
-  showExam,
   onLessonSelect,
+  assessment,
+  setAssessment,
 }: LessonContentProps) {
   const allLessons = useMemo(
     () => modules?.flatMap((m) => m?.lessons ?? []) ?? [],
@@ -70,7 +69,6 @@ export default function LessonContentPlayer({
   const proceedNext = () => {
     cancelAutoNext();
     if (nextLessonId) {
-      // schedule after current render -> avoids "update parent while rendering child" warning
       setTimeout(() => onLessonSelect(nextLessonId), 0);
     }
   };
@@ -78,7 +76,6 @@ export default function LessonContentPlayer({
   const beginAutoNext = () => {
     if (currentLessonData?.content_type?.toLowerCase() !== "video") return;
     setShowAutoNext(true);
-    // kick the CSS transition in the next frame for smooth animation
     requestAnimationFrame(() => setAnimateRing(true));
     timeoutRef.current = window.setTimeout(proceedNext, 5000);
   };
@@ -191,163 +188,17 @@ export default function LessonContentPlayer({
                   </div>
                 </div>
               );
-            } else if (
-              currentLessonData?.content_type?.toLowerCase() === "quiz"
-            ) {
+            } else if (assessment) {
               return (
-                // (Quiz block kept exactly as-is)
-                <div className="bg-white rounded-lg p-8 shadow-lg">
-                  <div className="max-w-4xl mx-auto">
-                    <div className="flex items-center mb-6">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                        <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">
-                            ?
-                          </span>
-                        </div>
-                      </div>
-                      <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
-                          {currentLessonData.title}
-                        </h1>
-                        <p className="text-gray-600 mt-1">
-                          Quick assessment •{" "}
-                          {formatDuration(currentLessonData?.duration_hours)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                        <h3 className="text-xl font-bold text-green-800 mb-3">
-                          Question 1 of 3
-                        </h3>
-                        <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
-                          What does JSX stand for?
-                        </p>
-                        <div className="space-y-2">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q1"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              JavaScript XML
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q1"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              JavaScript Extension
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q1"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              Java Syntax Extension
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-xl font-bold text-gray-800 mb-3">
-                          Question 2 of 3
-                        </h3>
-                        <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
-                          React components must return a single parent element.
-                        </p>
-                        <div className="space-y-2">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q2"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              True
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q2"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              False
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-xl font-bold text-gray-800 mb-3">
-                          Question 3 of 3
-                        </h3>
-                        <p className="text-lg font-medium text-gray-800 mb-6 leading-relaxed">
-                          Which company created React?
-                        </p>
-                        <div className="space-y-2">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q3"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              Google
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q3"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              Facebook (Meta)
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name="q3"
-                              className="h-5 w-5 text-green-600"
-                            />
-                            <span className="ml-4 text-base font-medium text-gray-700">
-                              Microsoft
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-4">
-                        <div className="text-base font-medium text-gray-600">
-                          Progress: 0/3 questions answered
-                        </div>
-                        <button className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold text-base">
-                          Submit Quiz
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ExamSection
+                  exam={assessment}
+                  onClose={() => setAssessment(null)}
+                />
               );
             } else if (
               currentLessonData?.content_type?.toLowerCase() === "material"
             ) {
               return (
-                // (Material block kept exactly as-is)
                 <div className="bg-white rounded-lg p-8 shadow-lg">
                   <div className="max-w-4xl mx-auto text-center">
                     <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -419,8 +270,6 @@ export default function LessonContentPlayer({
                   </div>
                 </div>
               );
-            } else if (showExam) {
-              return <ExamSection setShowExam={setShowExam} />;
             } else {
               const rawUrl = currentLessonData?.video_url as string | undefined;
               const safeUrl = isPlayableUrl(rawUrl) ? rawUrl! : "";
@@ -434,7 +283,7 @@ export default function LessonContentPlayer({
                   <VideoPlayer
                     key={currentLessonId}
                     privacyEnhanced
-                    videoUrl={safeUrl}
+                    src={safeUrl}
                     poster={poster}
                     title={currentLessonData?.title}
                     onComplete={onVideoComplete}

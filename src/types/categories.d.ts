@@ -6,3 +6,9 @@ interface Category {
   color: string;
   total_courses: number;
 }
+
+interface SubCategory {
+  id: string;
+  name: string;
+  description: string;
+}

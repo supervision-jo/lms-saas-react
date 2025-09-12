@@ -152,3 +152,24 @@ interface CourseReview {
   created_at: string;
   updated_at: string;
 }
+
+interface Exam {
+  id: string;
+  title: string;
+  description: string;
+  type: "quiz" | "exam";
+  lesson: string;
+  time_limit: number;
+  passing_score: number;
+  questions: {
+    id: string;
+    text: string;
+    question_type: string;
+    explanation: string;
+    choices: {
+      id: string;
+      text: string;
+      is_correct: boolean;
+    }[];
+  }[];
+}

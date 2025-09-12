@@ -1,4 +1,6 @@
 import { Star, Users } from "lucide-react";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
 type Analytics = {
   monthlyRevenue: number[];
@@ -16,29 +18,35 @@ type Analytics = {
   }[];
 };
 
-const analyticsData = {
-  monthlyRevenue: [3200, 3800, 4200, 4800, 5200, 5800, 6200],
-  studentGrowth: [1200, 1450, 1680, 1920, 2150, 2380, 2650],
-  coursePerformance: [
-    { name: "React Course", students: 5420, revenue: 18450, rating: 4.7 },
-    {
-      name: "JavaScript Course",
-      students: 3200,
-      revenue: 12800,
-      rating: 4.6,
-    },
-    { name: "Node.js Course", students: 2100, revenue: 8400, rating: 4.5 },
-  ],
-  topCountries: [
-    { country: "United States", students: 3200, percentage: 35 },
-    { country: "India", students: 2100, percentage: 23 },
-    { country: "United Kingdom", students: 1800, percentage: 20 },
-    { country: "Canada", students: 1200, percentage: 13 },
-    { country: "Australia", students: 850, percentage: 9 },
-  ],
-};
 export default function AnalyticsSection() {
+  const { data } = useCustomQuery(API_ENDPOINTS.instructorCourseStats, [
+    "instructor-courses",
+  ]);
+
+  const instructorCourses: InstructorCourses[] = data?.data ?? [];
+
+  const analyticsData = {
+    monthlyRevenue: [3200, 3800, 4200, 4800, 5200, 5800, 6200],
+    studentGrowth: [1200, 1450, 1680, 1920, 2150, 2380, 2650],
+    coursePerformance: instructorCourses?.map((c) => {
+      return {
+        name: c?.title ?? "",
+        students: c?.total_students ?? 0,
+        revenue: c?.revenue ?? 0,
+        rating: c?.average_rating ?? 0,
+      };
+    }),
+    topCountries: [
+      { country: "United States", students: 3200, percentage: 35 },
+      { country: "India", students: 2100, percentage: 23 },
+      { country: "United Kingdom", students: 1800, percentage: 20 },
+      { country: "Canada", students: 1200, percentage: 13 },
+      { country: "Australia", students: 850, percentage: 9 },
+    ],
+  };
+
   const analytics: Analytics = analyticsData ?? {};
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">

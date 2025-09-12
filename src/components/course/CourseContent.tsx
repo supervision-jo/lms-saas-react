@@ -8,9 +8,12 @@ import {
   FileText,
   Award,
   Download,
+  HelpCircle,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
 interface CourseContentProps {
   modules: Module[];
@@ -18,6 +21,63 @@ interface CourseContentProps {
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
+  onOpenAssessment: (lessonId: string, assessment: Exam) => void; // ⬅ added
+}
+
+function AssessmentList({
+  lesson,
+  isEnrolled,
+  onOpen,
+}: {
+  lesson: Lesson;
+  isEnrolled: boolean;
+  onOpen: (assessment: Exam) => void;
+}) {
+  const { data } = useCustomQuery(
+    `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
+    ["exams", String(lesson.id)]
+  );
+  const assessments: Exam[] = data?.data ?? [];
+
+  if (!assessments?.length) return null;
+
+  const canAccess = isEnrolled || lesson.free_preview;
+
+  return (
+    <div className="mt-2 space-y-1">
+      {assessments.map((a) => {
+        const Icon = a.type === "exam" ? Award : HelpCircle;
+        const accent = a.type === "exam" ? "text-red-600" : "text-green-600";
+
+        return (
+          <button
+            key={a.id}
+            disabled={!canAccess}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(a);
+            }}
+            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left  transition-all duration-200 ${
+              canAccess
+                ? "hover:bg-white hover:shadow-md bg-white border-0 outline-none focus:outline-none"
+                : "opacity-50 cursor-not-allowed bg-gray-100"
+            }`}
+            title={a.type === "exam" ? "Open Exam" : "Open Quiz"}
+          >
+            <div className="flex items-center gap-2">
+              <Icon className={`w-4 h-4 ${accent}`} />
+              <span className="text-sm font-medium text-gray-700">
+                {a.title || (a.type === "exam" ? "Exam" : "Quiz")}
+              </span>
+            </div>
+            <div className="text-xs text-gray-500">
+              {a.time_limit}m • pass {a.passing_score}%
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
@@ -26,28 +86,22 @@ const CourseContent: React.FC<CourseContentProps> = ({
   onLessonSelect,
   isEnrolled,
   className,
+  onOpenAssessment,
 }) => {
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
-
   const { pathname } = useLocation();
 
-  // which modules are expanded (store ids as strings to avoid type mismatch)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(
     new Set()
   );
   const autoSelectedOnceRef = useRef(false);
 
-  // Ensure the module that owns currentLessonId is expanded.
-  // Also, on first load (no current lesson), expand the first module
-  // and auto-select the first playable lesson.
   useEffect(() => {
     if (pathname.includes("player")) {
       if (!safeModules.length) return;
 
-      // If we already auto-selected once, we won't do it again.
       const nextExpanded = new Set(expandedModules);
 
-      // 1) If there is a current lesson -> expand its module.
       if (currentLessonId) {
         const owner = safeModules.find((m) =>
           (m.lessons ?? []).some(
@@ -56,11 +110,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
         );
         if (owner) nextExpanded.add(String(owner.id));
         setExpandedModules(nextExpanded);
-        return; // don't auto-select if currentLessonId is present
+        return;
       }
 
-      // 2) No current lesson: on the first render with modules present,
-      // expand the first module and auto-select the first playable lesson.
       if (!autoSelectedOnceRef.current) {
         const firstModule = safeModules[0];
         if (firstModule) {
@@ -213,46 +265,53 @@ const CourseContent: React.FC<CourseContentProps> = ({
                     const canAccess = isEnrolled || lesson?.free_preview;
 
                     return (
-                      <button
-                        key={lesson?.id}
-                        onClick={() => handleLessonClick(lesson)}
-                        disabled={!canAccess}
-                        className={`w-full flex items-start flex-col gap-2 py-3 px-4 rounded-lg mb-2 transition-all duration-200 text-left ${
-                          isCurrentLesson
-                            ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
-                            : canAccess
-                            ? "hover:bg-white hover:shadow-md bg-white border-0 outline-none focus:outline-none"
-                            : "opacity-50 cursor-not-allowed bg-gray-100 border-0 outline-none focus:outline-none"
-                        }`}
-                      >
-                        <div className="flex items-center justify-start gap-3 w-full">
-                          <div>{getLessonIcon(lesson, isCurrentLesson)}</div>
-                          <span
-                            className={`text-sm font-medium block whitespace-break-spaces ${
-                              isCurrentLesson ? "text-white" : "text-gray-700"
-                            }`}
-                          >
-                            {lesson?.title}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between w-full">
-                          <div
-                            className={`flex items-center text-xs min-w-16 ${
-                              isCurrentLesson
-                                ? "text-purple-200"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            <Clock className="w-3 h-3 mr-1" />
-                            {formatDuration(lesson?.duration_hours)}
-                          </div>
-                          {lesson?.free_preview && !isEnrolled && (
-                            <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
-                              Free
+                      <div key={lesson?.id} className="mb-2">
+                        <button
+                          onClick={() => handleLessonClick(lesson)}
+                          disabled={!canAccess}
+                          className={`w-full flex items-start flex-col gap-2 py-3 px-4 rounded-lg transition-all duration-200 text-left ${
+                            isCurrentLesson
+                              ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
+                              : canAccess
+                              ? "hover:bg-white hover:shadow-md bg-white border-0 outline-none focus:outline-none"
+                              : "opacity-50 cursor-not-allowed bg-gray-100 border-0 outline-none focus:outline-none"
+                          }`}
+                        >
+                          <div className="flex items-center justify-start gap-3 w-full">
+                            <div>{getLessonIcon(lesson, isCurrentLesson)}</div>
+                            <span
+                              className={`text-sm font-medium block whitespace-break-spaces ${
+                                isCurrentLesson ? "text-white" : "text-gray-700"
+                              }`}
+                            >
+                              {lesson?.title}
                             </span>
-                          )}
-                        </div>
-                      </button>
+                          </div>
+                          <div className="flex items-center justify-between w-full">
+                            <div
+                              className={`flex items-center text-xs min-w-16 ${
+                                isCurrentLesson
+                                  ? "text-purple-200"
+                                  : "text-gray-600"
+                              }`}
+                            >
+                              <Clock className="w-3 h-3 mr-1" />
+                              {formatDuration(lesson?.duration_hours)}
+                            </div>
+                            {lesson?.free_preview && !isEnrolled && (
+                              <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
+                                Free
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                        {/* attached assessments shown UNDER the lesson */}
+                        <AssessmentList
+                          lesson={lesson}
+                          isEnrolled={isEnrolled}
+                          onOpen={(a) => onOpenAssessment(lesson.id, a)}
+                        />
+                      </div>
                     );
                   })}
                 </div>

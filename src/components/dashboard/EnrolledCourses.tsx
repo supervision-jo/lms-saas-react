@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { formatDuration } from "../../utils/formatDuration";
 
 export default function EnrolledCourses({
   item,
@@ -41,7 +42,7 @@ export default function EnrolledCourses({
     (c) => c.id === item?.course?.sub_category
   );
 
-  const instructor: any = instructorData?.data;
+  const instructor: any = instructorData?.data?.[0];
 
   return (
     <div
@@ -81,7 +82,7 @@ export default function EnrolledCourses({
                     className="w-6 h-6 rounded-full mr-2"
                   />
                 ) : (
-                  <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-purple-600 mr-2 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
                       {instructor?.instructor?.first_name
                         ?.charAt(0)
@@ -101,15 +102,19 @@ export default function EnrolledCourses({
                   </span>
                 )}
                 <Clock className="w-4 h-4 mr-1" />
-                <span className="mr-4">{item?.course?.duration}</span>
+                <span className="mr-4">
+                  {formatDuration(currentEnrollStat?.total_hours)}
+                </span>
                 {Array.from({ length: 5 }).map((_, i) =>
-                  i < item?.course?.rating ? (
+                  i < (currentEnrollStat?.average_rating ?? 0) ? (
                     <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
                   ) : (
                     <Star className="text-gray-300 w-4 h-4 mr-1" />
                   )
                 )}
-                <span className="mr-4">({item?.course?.rating})</span>
+                <span className="mr-4">
+                  ({currentEnrollStat?.average_rating ?? 0})
+                </span>
                 <span className="text-gray-400">
                   Last accessed{" "}
                   {formatDateTimeSimple(

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -10,267 +10,370 @@ import {
   ChevronUp,
 } from "lucide-react";
 
-interface AnswerOption {
-  id: string;
+/** ===== Shapes used by the parent after normalization ===== */
+type Choice = { text: string; is_correct: boolean };
+type QuestionDraft = {
   text: string;
-  isCorrect: boolean;
-}
-
-interface Question {
-  id: string;
-  question: string;
-  options: AnswerOption[];
+  question_type: "mcq";
   explanation?: string;
-  points: number;
-  timeLimit?: number;
-}
-
-interface Quiz {
-  id: string;
+  choices: Choice[];
+};
+export type AssessmentDraft = {
   title: string;
   description?: string;
-  questions: Question[];
-  totalPoints: number;
-  totalTimeLimit?: number;
-}
+  time_limit_mins: number; // minutes
+  passing_score: number; // 0..100
+  type?: "quiz" | "exam"; // parent may provide, not required here
+  questions: QuestionDraft[];
+};
 
+/** ===== Props ===== */
 interface QuizBuilderProps {
-  onSave: (quiz: Quiz) => void;
-  onPreview: (quiz: Quiz) => void;
-  initialQuiz?: Quiz;
+  onSave: (draft: AssessmentDraft) => void;
+  onPreview: (draft: AssessmentDraft) => void;
+  /**
+   * May come in the new AssessmentDraft-like shape (preferred) or
+   * the legacy quiz shape you had before. We gracefully adapt.
+   */
+  initialQuiz?: any;
 }
 
+/** ===== Internal editor state (UI friendly) ===== */
+type UiOption = { id: string; text: string; is_correct: boolean };
+type UiQuestion = {
+  id: string;
+  text: string;
+  explanation?: string;
+  points: number; // UI-only (not sent to API)
+  timeLimitSeconds?: number; // UI optional per-question time; not sent
+  options: UiOption[];
+};
+
+type UiQuiz = {
+  title: string;
+  description?: string;
+  time_limit_mins: number;
+  passing_score: number;
+  type?: "quiz" | "exam";
+  questions: UiQuestion[];
+};
+
+/** ===== Helpers ===== */
+const uid = () => Math.random().toString(36).slice(2);
+
+function fromInitialToUi(initial?: any): UiQuiz {
+  // Defaults
+  const base: UiQuiz = {
+    title: "",
+    description: "",
+    time_limit_mins: 10,
+    passing_score: 70,
+    type: initial?.type === "exam" ? "exam" : "quiz",
+    questions: [
+      {
+        id: uid(),
+        text: "",
+        explanation: "",
+        points: 1,
+        timeLimitSeconds: undefined,
+        options: [
+          { id: uid(), text: "", is_correct: false },
+          { id: uid(), text: "", is_correct: false },
+        ],
+      },
+    ],
+  };
+
+  if (!initial) return base;
+
+  // If initial already looks like AssessmentDraft
+  if (
+    typeof initial?.title === "string" &&
+    Array.isArray(initial?.questions) &&
+    (typeof initial?.time_limit_mins === "number" ||
+      initial?.time_limit_mins == null)
+  ) {
+    return {
+      title: initial.title ?? base.title,
+      description: initial.description ?? base.description,
+      time_limit_mins:
+        typeof initial.time_limit_mins === "number"
+          ? Math.max(1, Math.floor(initial.time_limit_mins))
+          : base.time_limit_mins,
+      passing_score:
+        typeof initial.passing_score === "number"
+          ? Math.max(0, Math.min(100, Math.floor(initial.passing_score)))
+          : base.passing_score,
+      type: initial.type === "exam" ? "exam" : "quiz",
+      questions:
+        initial.questions.length > 0
+          ? initial.questions.map((q: any) => ({
+              id: uid(),
+              text: String(q.text ?? ""),
+              explanation: q.explanation ?? "",
+              points: 1,
+              timeLimitSeconds: undefined,
+              options:
+                Array.isArray(q.choices) && q.choices.length > 0
+                  ? q.choices.map((c: any) => ({
+                      id: uid(),
+                      text: String(c.text ?? ""),
+                      is_correct: !!c.is_correct,
+                    }))
+                  : [
+                      { id: uid(), text: "", is_correct: false },
+                      { id: uid(), text: "", is_correct: false },
+                    ],
+            }))
+          : base.questions,
+    };
+  }
+
+  // Legacy shape fallback (your old Quiz type)
+  // { title, description, questions:[{ question, options:[{text,isCorrect}], explanation, points, timeLimit }], totalTimeLimit, ... }
+  const fromLegacy: UiQuiz = {
+    title: initial?.title ?? base.title,
+    description: initial?.description ?? base.description,
+    time_limit_mins: initial?.totalTimeLimit
+      ? Math.max(1, Math.floor(Number(initial.totalTimeLimit) / 60))
+      : base.time_limit_mins,
+    passing_score: 70,
+    type: "quiz",
+    questions:
+      Array.isArray(initial?.questions) && initial.questions.length
+        ? initial.questions.map((q: any) => ({
+            id: uid(),
+            text: String(q.question ?? ""),
+            explanation: q.explanation ?? "",
+            points: Number.isFinite(q.points)
+              ? Math.max(1, Number(q.points))
+              : 1,
+            timeLimitSeconds: q.timeLimit ? Number(q.timeLimit) : undefined,
+            options:
+              Array.isArray(q.options) && q.options.length
+                ? q.options.map((o: any) => ({
+                    id: uid(),
+                    text: String(o.text ?? ""),
+                    is_correct: !!(o.isCorrect ?? o.is_correct),
+                  }))
+                : [
+                    { id: uid(), text: "", is_correct: false },
+                    { id: uid(), text: "", is_correct: false },
+                  ],
+          }))
+        : base.questions,
+  };
+
+  return fromLegacy;
+}
+
+function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
+  return {
+    title: ui.title.trim(),
+    description: ui.description?.trim() || "",
+    time_limit_mins: Math.max(1, Math.floor(Number(ui.time_limit_mins || 1))),
+    passing_score: Math.max(
+      0,
+      Math.min(100, Math.floor(Number(ui.passing_score || 0)))
+    ),
+    type: ui.type ?? "quiz",
+    questions: ui.questions.map((q) => ({
+      text: q.text.trim(),
+      question_type: "mcq",
+      explanation: q.explanation?.trim() || "",
+      choices: q.options.map((o) => ({
+        text: o.text.trim(),
+        is_correct: !!o.is_correct,
+      })),
+    })),
+  };
+}
+
+/** ===== Component ===== */
 const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onSave,
   onPreview,
   initialQuiz,
 }) => {
-  const [quiz, setQuiz] = useState<Quiz>(
-    initialQuiz || {
-      id: Date.now().toString(),
-      title: "",
-      description: "",
-      questions: [
-        {
-          id: Date.now().toString(),
-          question: "",
-          options: [
-            { id: "1", text: "", isCorrect: false },
-            { id: "2", text: "", isCorrect: false },
-          ],
-          explanation: "",
-          points: 1,
-          timeLimit: undefined,
-        },
-      ],
-      totalPoints: 1,
-      totalTimeLimit: undefined,
-    }
-  );
-
+  const [quiz, setQuiz] = useState<UiQuiz>(() => fromInitialToUi(initialQuiz));
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
-    new Set([quiz.questions[0]?.id])
+    () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
   );
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const totalPoints = useMemo(
+    () => quiz.questions.reduce((sum, q) => sum + (q.points || 0), 0),
+    [quiz.questions]
+  );
+
+  /** ---- question ops ---- */
   const addQuestion = () => {
-    const newQuestion: Question = {
-      id: Date.now().toString(),
-      question: "",
-      options: [
-        { id: Date.now().toString() + "_1", text: "", isCorrect: false },
-        { id: Date.now().toString() + "_2", text: "", isCorrect: false },
-      ],
+    const q: UiQuestion = {
+      id: uid(),
+      text: "",
       explanation: "",
       points: 1,
-      timeLimit: undefined,
+      timeLimitSeconds: undefined,
+      options: [
+        { id: uid(), text: "", is_correct: false },
+        { id: uid(), text: "", is_correct: false },
+      ],
     };
-
-    const updatedQuiz = {
-      ...quiz,
-      questions: [...quiz.questions, newQuestion],
-      totalPoints: quiz.totalPoints + 1,
-    };
-
-    setQuiz(updatedQuiz);
-    setExpandedQuestions(new Set([...expandedQuestions, newQuestion.id]));
+    setQuiz((prev) => ({ ...prev, questions: [...prev.questions, q] }));
+    setExpandedQuestions((s) => new Set([...s, q.id]));
   };
 
-  const removeQuestion = (questionId: string) => {
+  const removeQuestion = (qid: string) => {
     if (quiz.questions.length <= 1) {
       alert("A quiz must have at least 1 question");
       return;
     }
-
-    const questionToRemove = quiz.questions.find((q) => q.id === questionId);
-    const updatedQuiz = {
-      ...quiz,
-      questions: quiz.questions.filter((q) => q.id !== questionId),
-      totalPoints: quiz.totalPoints - (questionToRemove?.points || 0),
-    };
-
-    setQuiz(updatedQuiz);
-
-    const newExpanded = new Set(expandedQuestions);
-    newExpanded.delete(questionId);
-    setExpandedQuestions(newExpanded);
-  };
-
-  const updateQuestion = (questionId: string, updates: Partial<Question>) => {
-    const updatedQuestions = quiz.questions.map((q) => {
-      if (q.id === questionId) {
-        const updatedQuestion = { ...q, ...updates };
-        return updatedQuestion;
-      }
-      return q;
-    });
-
-    // Recalculate total points
-    const totalPoints = updatedQuestions.reduce((sum, q) => sum + q.points, 0);
-
-    setQuiz({
-      ...quiz,
-      questions: updatedQuestions,
-      totalPoints,
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((q) => q.id !== qid),
+    }));
+    setExpandedQuestions((s) => {
+      const n = new Set(s);
+      n.delete(qid);
+      return n;
     });
   };
 
-  const addOption = (questionId: string) => {
-    const newOption: AnswerOption = {
-      id: Date.now().toString(),
-      text: "",
-      isCorrect: false,
-    };
-
-    updateQuestion(questionId, {
-      options: [
-        ...(quiz.questions.find((q) => q.id === questionId)?.options || []),
-        newOption,
-      ],
-    });
+  const updateQuestion = (qid: string, patch: Partial<UiQuestion>) => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === qid ? { ...q, ...patch } : q
+      ),
+    }));
   };
 
-  const removeOption = (questionId: string, optionId: string) => {
-    const question = quiz.questions.find((q) => q.id === questionId);
-    if (!question || question.options.length <= 2) {
+  /** ---- option ops ---- */
+  const addOption = (qid: string) => {
+    const q = quiz.questions.find((x) => x.id === qid);
+    if (!q) return;
+    const opt: UiOption = { id: uid(), text: "", is_correct: false };
+    updateQuestion(qid, { options: [...q.options, opt] });
+  };
+
+  const removeOption = (qid: string, oid: string) => {
+    const q = quiz.questions.find((x) => x.id === qid);
+    if (!q) return;
+    if (q.options.length <= 2) {
       alert("A question must have at least 2 options");
       return;
     }
+    updateQuestion(qid, { options: q.options.filter((o) => o.id !== oid) });
+  };
 
-    updateQuestion(questionId, {
-      options: question.options.filter((option) => option.id !== optionId),
+  const updateOption = (qid: string, oid: string, text: string) => {
+    const q = quiz.questions.find((x) => x.id === qid);
+    if (!q) return;
+    updateQuestion(qid, {
+      options: q.options.map((o) => (o.id === oid ? { ...o, text } : o)),
     });
   };
 
-  const updateOption = (questionId: string, optionId: string, text: string) => {
-    const question = quiz.questions.find((q) => q.id === questionId);
-    if (!question) return;
-
-    updateQuestion(questionId, {
-      options: question.options.map((option) =>
-        option.id === optionId ? { ...option, text } : option
+  const toggleCorrect = (qid: string, oid: string) => {
+    const q = quiz.questions.find((x) => x.id === qid);
+    if (!q) return;
+    updateQuestion(qid, {
+      options: q.options.map((o) =>
+        o.id === oid ? { ...o, is_correct: !o.is_correct } : o
       ),
     });
   };
 
-  const toggleCorrectAnswer = (questionId: string, optionId: string) => {
-    const question = quiz.questions.find((q) => q.id === questionId);
-    if (!question) return;
-
-    updateQuestion(questionId, {
-      options: question.options.map((option) =>
-        option.id === optionId
-          ? { ...option, isCorrect: !option.isCorrect }
-          : option
-      ),
+  /** ---- ui helpers ---- */
+  const toggleExpanded = (qid: string) => {
+    setExpandedQuestions((s) => {
+      const n = new Set(s);
+      if (n.has(qid)) n.delete(qid);
+      else n.add(qid);
+      return n;
     });
   };
 
-  const toggleQuestionExpanded = (questionId: string) => {
-    const newExpanded = new Set(expandedQuestions);
-    if (newExpanded.has(questionId)) {
-      newExpanded.delete(questionId);
-    } else {
-      newExpanded.add(questionId);
-    }
-    setExpandedQuestions(newExpanded);
-  };
+  /** ---- validation ---- */
+  const validate = (): boolean => {
+    const next: Record<string, string> = {};
+    if (!quiz.title.trim()) next["title"] = "Title is required";
 
-  const validateQuiz = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!quiz.title.trim()) {
-      newErrors.title = "Quiz title is required";
-    }
-
-    quiz.questions.forEach((question, index) => {
-      if (!question.question.trim()) {
-        newErrors[`question_${question.id}`] = `Question ${
-          index + 1
-        } text is required`;
-      }
-
-      if (question.options.some((option) => !option.text.trim())) {
-        newErrors[`options_${question.id}`] = `All options in question ${
-          index + 1
+    quiz.questions.forEach((q, idx) => {
+      if (!q.text.trim()) next[`q_${q.id}`] = `Question ${idx + 1} is required`;
+      if (q.options.some((o) => !o.text.trim()))
+        next[`opts_${q.id}`] = `All options in question ${
+          idx + 1
         } must have text`;
-      }
-
-      if (!question.options.some((option) => option.isCorrect)) {
-        newErrors[`correct_${question.id}`] = `Question ${
-          index + 1
+      if (!q.options.some((o) => o.is_correct))
+        next[`corr_${q.id}`] = `Question ${
+          idx + 1
         } must have at least one correct answer`;
-      }
-
-      if (question.points < 1) {
-        newErrors[`points_${question.id}`] = `Question ${
-          index + 1
-        } points must be at least 1`;
-      }
+      if (!Number.isFinite(q.points) || q.points < 1)
+        next[`pts_${q.id}`] = `Question ${idx + 1} points must be ≥ 1`;
     });
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // minutes + passing score sanity
+    if (!Number.isFinite(quiz.time_limit_mins) || quiz.time_limit_mins < 1) {
+      next["time"] = "Time limit must be at least 1 minute";
+    }
+    if (
+      !Number.isFinite(quiz.passing_score) ||
+      quiz.passing_score < 0 ||
+      quiz.passing_score > 100
+    ) {
+      next["pass"] = "Passing score must be between 0 and 100";
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
+  /** ---- actions ---- */
   const handleSave = () => {
-    if (validateQuiz()) {
-      onSave(quiz);
-    }
+    if (!validate()) return;
+    onSave(toAssessmentDraft(quiz));
   };
-
   const handlePreview = () => {
-    if (validateQuiz()) {
-      onPreview(quiz);
-    }
+    if (!validate()) return;
+    onPreview(toAssessmentDraft(quiz));
   };
 
+  /** ---- render ---- */
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8 max-w-6xl mx-auto max-h-[90vh] overflow-y-auto">
+    <div className="bg-white rounded-xl md:p-8 p-4 max-w-6xl mx-auto">
+      {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz Builder</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {quiz.type === "exam" ? "Exam Builder" : "Quiz Builder"}
+        </h2>
         <p className="text-gray-600">
-          Create engaging quizzes with multiple questions and answer options
+          Create engaging {quiz.type === "exam" ? "exams" : "quizzes"} with
+          multiple questions and answer options.
         </p>
       </div>
 
       <div className="space-y-8">
-        {/* Quiz Info */}
+        {/* Quiz info */}
         <div className="bg-gray-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Quiz Information
+            {quiz.type === "exam" ? "Exam Information" : "Quiz Information"}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quiz Title *
+                Title *
               </label>
               <input
                 type="text"
                 value={quiz.title}
-                onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
-                placeholder="Enter quiz title"
+                onChange={(e) =>
+                  setQuiz((p) => ({ ...p, title: e.target.value }))
+                }
+                placeholder={`Enter ${
+                  quiz.type === "exam" ? "exam" : "quiz"
+                } title`}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.title ? "border-red-300" : "border-gray-300"
                 }`}
@@ -282,47 +385,82 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Time Limit (minutes)
+                Passing Score (%)
               </label>
               <input
                 type="number"
-                min="1"
-                max="180"
-                value={quiz.totalTimeLimit || ""}
+                min={0}
+                max={100}
+                value={quiz.passing_score}
                 onChange={(e) =>
-                  setQuiz({
-                    ...quiz,
-                    totalTimeLimit: e.target.value
-                      ? parseInt(e.target.value) * 60
-                      : undefined,
-                  })
+                  setQuiz((p) => ({
+                    ...p,
+                    passing_score: Math.max(
+                      0,
+                      Math.min(100, Number(e.target.value || 0))
+                    ),
+                  }))
                 }
-                placeholder="Optional"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.pass ? "border-red-300" : "border-gray-300"
+                }`}
               />
+              {errors.pass && (
+                <p className="mt-1 text-sm text-red-600">{errors.pass}</p>
+              )}
             </div>
           </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description (Optional)
-            </label>
-            <textarea
-              value={quiz.description || ""}
-              onChange={(e) =>
-                setQuiz({ ...quiz, description: e.target.value })
-              }
-              placeholder="Brief description of the quiz"
-              rows={2}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Time Limit (minutes) *
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={quiz.time_limit_mins}
+                onChange={(e) =>
+                  setQuiz((p) => ({
+                    ...p,
+                    time_limit_mins: Math.max(
+                      1,
+                      Math.floor(Number(e.target.value || 1))
+                    ),
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  errors.time ? "border-red-300" : "border-gray-300"
+                }`}
+              />
+              {errors.time && (
+                <p className="mt-1 text-sm text-red-600">{errors.time}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description (optional)
+              </label>
+              <textarea
+                rows={3}
+                value={quiz.description || ""}
+                onChange={(e) =>
+                  setQuiz((p) => ({ ...p, description: e.target.value }))
+                }
+                placeholder={`Brief description of the ${
+                  quiz.type === "exam" ? "exam" : "quiz"
+                }`}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              />
+            </div>
           </div>
         </div>
 
         {/* Questions */}
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
+          <div className="flex items-center justify-between sm:flex-row flex-col-reverse gap-2 sm:gap-0 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 sm:self-center self-start">
               Questions ({quiz.questions.length})
             </h3>
             <button
@@ -335,45 +473,43 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           </div>
 
           <div className="space-y-4">
-            {quiz.questions.map((question, questionIndex) => {
-              const isExpanded = expandedQuestions.has(question.id);
-
+            {quiz.questions.map((q, idx) => {
+              const expanded = expandedQuestions.has(q.id);
               return (
                 <div
-                  key={question.id}
+                  key={q.id}
                   className="border border-gray-200 rounded-lg overflow-hidden"
                 >
-                  {/* Question Header */}
+                  {/* header */}
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <button
-                        onClick={() => toggleQuestionExpanded(question.id)}
+                        onClick={() => toggleExpanded(q.id)}
                         className="flex items-center space-x-3 flex-1 text-left"
                       >
                         <GripVertical className="w-4 h-4 text-gray-400" />
-                        {isExpanded ? (
+                        {expanded ? (
                           <ChevronUp className="w-5 h-5 text-gray-500" />
                         ) : (
                           <ChevronDown className="w-5 h-5 text-gray-500" />
                         )}
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">
-                            Question {questionIndex + 1}
-                            {question.question &&
-                              `: ${question.question.substring(0, 50)}${
-                                question.question.length > 50 ? "..." : ""
+                            Question {idx + 1}
+                            {q.text &&
+                              `: ${q.text.substring(0, 50)}${
+                                q.text.length > 50 ? "…" : ""
                               }`}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {question.options.length} options •{" "}
-                            {question.points} point
-                            {question.points !== 1 ? "s" : ""}
+                            {q.options.length} options • {q.points} point
+                            {q.points !== 1 ? "s" : ""}
                           </p>
                         </div>
                       </button>
 
                       <button
-                        onClick={() => removeQuestion(question.id)}
+                        onClick={() => removeQuestion(q.id)}
                         disabled={quiz.questions.length <= 1}
                         className={`p-2 rounded-lg transition-colors ${
                           quiz.questions.length <= 1
@@ -391,45 +527,43 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                     </div>
                   </div>
 
-                  {/* Question Content */}
-                  {isExpanded && (
-                    <div className="p-6 space-y-6">
-                      {/* Question Text */}
+                  {/* body */}
+                  {expanded && (
+                    <div className="sm:p-6 p-2 space-y-6">
+                      {/* text */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Question Text *
                         </label>
                         <textarea
-                          value={question.question}
+                          value={q.text}
                           onChange={(e) =>
-                            updateQuestion(question.id, {
-                              question: e.target.value,
-                            })
+                            updateQuestion(q.id, { text: e.target.value })
                           }
-                          placeholder="Enter your question here..."
+                          placeholder="Enter your question here…"
                           rows={3}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
-                            errors[`question_${question.id}`]
+                            errors[`q_${q.id}`]
                               ? "border-red-300"
                               : "border-gray-300"
                           }`}
                         />
-                        {errors[`question_${question.id}`] && (
+                        {errors[`q_${q.id}`] && (
                           <p className="mt-1 text-sm text-red-600">
-                            {errors[`question_${question.id}`]}
+                            {errors[`q_${q.id}`]}
                           </p>
                         )}
                       </div>
 
-                      {/* Answer Options */}
+                      {/* options */}
                       <div>
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex sm:items-center items-start sm:flex-row flex-col-reverse gap-2 sm:gap-0 justify-between mb-4">
                           <label className="block text-sm font-medium text-gray-700">
                             Answer Options *
                           </label>
                           <button
-                            onClick={() => addOption(question.id)}
-                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center"
+                            onClick={() => addOption(q.id)}
+                            className="self-center bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center"
                           >
                             <Plus className="w-3 h-3 mr-1" />
                             Add Option
@@ -437,31 +571,29 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                         </div>
 
                         <div className="space-y-3">
-                          {question.options.map((option, optionIndex) => (
+                          {q.options.map((o, oi) => (
                             <div
-                              key={option.id}
-                              className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg"
+                              key={o.id}
+                              className="flex items-start gap-3 sm:flex-row flex-col p-3 border border-gray-200 rounded-lg"
                             >
                               <div className="flex items-center mt-1">
                                 <span className="text-sm font-medium text-gray-500 mr-3">
-                                  {String.fromCharCode(65 + optionIndex)}.
+                                  {String.fromCharCode(65 + oi)}.
                                 </span>
                                 <button
-                                  onClick={() =>
-                                    toggleCorrectAnswer(question.id, option.id)
-                                  }
+                                  onClick={() => toggleCorrect(q.id, o.id)}
                                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                    option.isCorrect
+                                    o.is_correct
                                       ? "bg-green-500 border-green-500 text-white"
                                       : "border-gray-300 hover:border-green-400"
                                   }`}
                                   title={
-                                    option.isCorrect
+                                    o.is_correct
                                       ? "Correct answer"
                                       : "Mark as correct"
                                   }
                                 >
-                                  {option.isCorrect && (
+                                  {o.is_correct && (
                                     <Check className="w-3 h-3" />
                                   )}
                                 </button>
@@ -470,33 +602,27 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                               <div className="flex-1">
                                 <input
                                   type="text"
-                                  value={option.text}
+                                  value={o.text}
                                   onChange={(e) =>
-                                    updateOption(
-                                      question.id,
-                                      option.id,
-                                      e.target.value
-                                    )
+                                    updateOption(q.id, o.id, e.target.value)
                                   }
                                   placeholder={`Option ${String.fromCharCode(
-                                    65 + optionIndex
+                                    65 + oi
                                   )}`}
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                               </div>
 
                               <button
-                                onClick={() =>
-                                  removeOption(question.id, option.id)
-                                }
-                                disabled={question.options.length <= 2}
+                                onClick={() => removeOption(q.id, o.id)}
+                                disabled={q.options.length <= 2}
                                 className={`p-1 rounded transition-colors ${
-                                  question.options.length <= 2
+                                  q.options.length <= 2
                                     ? "text-gray-300 cursor-not-allowed"
                                     : "text-red-500 hover:bg-red-50"
                                 }`}
                                 title={
-                                  question.options.length <= 2
+                                  q.options.length <= 2
                                     ? "Minimum 2 options required"
                                     : "Remove option"
                                 }
@@ -507,19 +633,19 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                           ))}
                         </div>
 
-                        {errors[`options_${question.id}`] && (
+                        {errors[`opts_${q.id}`] && (
                           <p className="mt-2 text-sm text-red-600">
-                            {errors[`options_${question.id}`]}
+                            {errors[`opts_${q.id}`]}
                           </p>
                         )}
-                        {errors[`correct_${question.id}`] && (
+                        {errors[`corr_${q.id}`] && (
                           <p className="mt-2 text-sm text-red-600">
-                            {errors[`correct_${question.id}`]}
+                            {errors[`corr_${q.id}`]}
                           </p>
                         )}
                       </div>
 
-                      {/* Question Settings */}
+                      {/* settings */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -527,40 +653,43 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                           </label>
                           <input
                             type="number"
-                            min="1"
-                            max="100"
-                            value={question.points}
+                            min={1}
+                            max={100}
+                            value={q.points}
                             onChange={(e) =>
-                              updateQuestion(question.id, {
-                                points: parseInt(e.target.value) || 1,
+                              updateQuestion(q.id, {
+                                points: Math.max(
+                                  1,
+                                  Number(e.target.value || 1)
+                                ),
                               })
                             }
                             className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                              errors[`points_${question.id}`]
+                              errors[`pts_${q.id}`]
                                 ? "border-red-300"
                                 : "border-gray-300"
                             }`}
                           />
-                          {errors[`points_${question.id}`] && (
+                          {errors[`pts_${q.id}`] && (
                             <p className="mt-1 text-sm text-red-600">
-                              {errors[`points_${question.id}`]}
+                              {errors[`pts_${q.id}`]}
                             </p>
                           )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Time Limit (seconds)
+                            Per-question Time (seconds, optional)
                           </label>
                           <input
                             type="number"
-                            min="10"
-                            max="600"
-                            value={question.timeLimit || ""}
+                            min={10}
+                            max={1800}
+                            value={q.timeLimitSeconds ?? ""}
                             onChange={(e) =>
-                              updateQuestion(question.id, {
-                                timeLimit: e.target.value
-                                  ? parseInt(e.target.value)
+                              updateQuestion(q.id, {
+                                timeLimitSeconds: e.target.value
+                                  ? Math.max(10, Number(e.target.value))
                                   : undefined,
                               })
                             }
@@ -570,19 +699,19 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                         </div>
                       </div>
 
-                      {/* Explanation */}
+                      {/* explanation */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Explanation (Optional)
+                          Explanation (optional)
                         </label>
                         <textarea
-                          value={question.explanation || ""}
+                          value={q.explanation || ""}
                           onChange={(e) =>
-                            updateQuestion(question.id, {
+                            updateQuestion(q.id, {
                               explanation: e.target.value,
                             })
                           }
-                          placeholder="Provide an explanation for the correct answer..."
+                          placeholder="Provide an explanation for the correct answer…"
                           rows={2}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                         />
@@ -595,10 +724,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           </div>
         </div>
 
-        {/* Quiz Summary */}
+        {/* Summary */}
         <div className="bg-blue-50 rounded-lg p-6">
-          <h4 className="font-semibold text-blue-900 mb-3">Quiz Summary</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <h4 className="font-semibold text-blue-900 mb-3">
+            {quiz.type === "exam" ? "Exam Summary" : "Quiz Summary"}
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-blue-700">Questions:</span>
               <span className="font-semibold text-blue-900 ml-2">
@@ -608,7 +739,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             <div>
               <span className="text-blue-700">Total Points:</span>
               <span className="font-semibold text-blue-900 ml-2">
-                {quiz.totalPoints}
+                {totalPoints}
               </span>
             </div>
             <div>
@@ -618,38 +749,36 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-blue-700">Est. Time:</span>
+              <span className="text-blue-700">Time Limit:</span>
               <span className="font-semibold text-blue-900 ml-2">
-                {quiz.totalTimeLimit
-                  ? `${Math.floor(quiz.totalTimeLimit / 60)}m`
-                  : "No limit"}
+                {quiz.time_limit_mins}m
               </span>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div className="flex items-center sm:flex-row flex-col gap-4 justify-between pt-6 border-t border-gray-200">
           <div className="text-sm text-gray-600">
             {quiz.questions.length} question
-            {quiz.questions.length !== 1 ? "s" : ""} • {quiz.totalPoints} total
-            point{quiz.totalPoints !== 1 ? "s" : ""}
+            {quiz.questions.length !== 1 ? "s" : ""} • {totalPoints} total point
+            {totalPoints !== 1 ? "s" : ""}
           </div>
 
-          <div className="flex space-x-4">
+          <div className="sm:w-fit w-full flex gap-4 items-center sm:flex-row flex-col">
             <button
               onClick={handlePreview}
-              className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center"
+              className="bg-gray-600 text-white px-6 py-3 w-full rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <Eye className="w-4 h-4 mr-2" />
-              Preview Quiz
+              Preview
             </button>
             <button
               onClick={handleSave}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+              className="bg-purple-600 text-white px-6 py-3 w-full rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
             >
               <Save className="w-4 h-4 mr-2" />
-              Save Quiz
+              Save
             </button>
           </div>
         </div>

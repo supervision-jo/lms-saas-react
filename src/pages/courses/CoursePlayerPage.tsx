@@ -20,23 +20,30 @@ import LessonContentPlayer from "../../components/course/course-player-sections/
 import { formatDuration } from "../../utils/formatDuration";
 import GroupsSection from "../../components/course/course-player-sections/GroupsSection";
 import ChatModal from "../../components/course/course-player-sections/ChatModal";
-// import { useCustomPost } from "../../hooks/useMutation";
-// import toast from "react-hot-toast";
+import { useCustomPost } from "../../hooks/useMutation";
+import toast from "react-hot-toast";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+
   const [currentLessonId, setCurrentLessonId] = useState<string>("");
+  const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
+    undefined
+  );
+
+  // side panels
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
   const [notes, setNotes] = useState("");
   const [noteTitle, setNoteTitle] = useState("");
   const [notesCount, setNotesCount] = useState<number>(0);
-  const [showExam, setShowExam] = useState(false);
-  const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
-    undefined
-  );
+
+  // assessment modal/state
+  const [assessment, setAssessment] = useState<Exam | null>(null);
+
+  // mobile drawer
   const [contentOpen, setContentOpen] = useState(false);
 
   const { data: courseRes } = useCustomQuery(
@@ -68,13 +75,7 @@ export default function CoursePlayerPage() {
   );
 
   const questions: Question[] = questionsData?.data ?? [];
-
   const courseData: Course = courseRes?.data;
-
-  // const { mutateAsync: createProgress } = useCustomPost(
-  //   API_ENDPOINTS.lessonProgress,
-  //   ["course", courseData?.id]
-  // );
 
   const modules: Module[] = useMemo(
     () => modulesData?.data?.data ?? [],
@@ -94,77 +95,56 @@ export default function CoursePlayerPage() {
     if (!first) return;
     setCurrentLessonId((prev) => (prev ? prev : first.id));
     setCurrentLesson(first);
-    if (first?.content_type?.toLowerCase() === "exam") {
-      setShowExam(true);
-      setShowNotes(false);
-      setShowQA(false);
-      setShowGroups(false);
-    } else {
-      setShowExam(false);
-    }
   }, [modules]);
 
   const handleLessonSelect = (lessonId: string) => {
+    setAssessment(null); // close any assessment when switching lesson
     setCurrentLessonId(lessonId);
-
-    // Close drawer on mobile after selecting
     setContentOpen(false);
 
     const allLessons = modules?.flatMap((m) => m?.lessons ?? []);
     const selectedLesson = allLessons?.find((l) => l?.id === lessonId);
+    setCurrentLesson(selectedLesson as Lesson);
+  };
 
-    if (selectedLesson?.content_type?.toLowerCase() === "exam") {
-      setShowExam(true);
-      setShowNotes(false);
-      setShowQA(false);
-      setShowGroups(false);
-    } else {
-      setShowExam(false);
-      setCurrentLesson(selectedLesson as Lesson);
+  const { mutateAsync: createProgress } = useCustomPost(
+    API_ENDPOINTS.lessonProgress,
+    ["course", courseData?.id]
+  );
+  const handleComplete = async () => {
+    try {
+      const res = await createProgress({
+        lesson: currentLessonId,
+        watched: true,
+      });
+
+      if (res?.status) {
+        toast.success("Awesome! Lesson completed.");
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Something went wrong.");
     }
   };
 
-  const handleComplete = async () => {
-    console.log("Lesson completed");
-    // try {
-    //   const res = await createProgress({
-    //     lesson: currentLessonId,
-    //     watched: true,
-    //   });
-
-    //   if (res?.status) {
-    //     toast.success("Awesome! Lesson completed.");
-    //   }
-    // } catch (error: any) {
-    //   toast.error(error?.message ?? "Something went wrong.");
-    // }
-  };
-
-  // Handle groups and chats UI only wait for backend APIs
+  // Groups/chat UI stubs
   const [showChatModal, setShowChatModal] = useState(false);
   const [groupMessage, setGroupMessage] = useState("");
   const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
   const handleJoinGroup = (groupId: string) => {
     console.log("Joining group:", groupId);
-    // Add user to group logic here
   };
-
   const handleShowChat = (group: any) => {
     setActiveChatGroup(group);
     setShowChatModal(true);
   };
-
   const handleCloseChatModal = () => {
     setShowChatModal(false);
     setActiveChatGroup(null);
     setGroupMessage("");
   };
-
   const handleSendGroupMessage = (groupId: string) => {
     if (!groupMessage.trim()) return;
-
     console.log("Sending message to group:", groupId, groupMessage);
-    // Add message to group logic here
     setGroupMessage("");
   };
 
@@ -175,9 +155,7 @@ export default function CoursePlayerPage() {
         <div className="flex items-center justify-between flex-col md:flex-row">
           <div className="flex mb-2 md:mb-0 items-center space-x-4 md:justify-start justify-between md:w-fit w-full">
             <button
-              onClick={() => {
-                navigate(`/catalog/${courseId}`);
-              }}
+              onClick={() => navigate(`/catalog/${courseId}`)}
               className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -207,7 +185,7 @@ export default function CoursePlayerPage() {
 
           <div className="flex items-center space-x-2 sm:justify-start justify-center sm:w-fit w-full">
             <button
-              onClick={() => setShowNotes(!showNotes)}
+              onClick={() => setShowNotes((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
                 showNotes ? "bg-purple-600" : "hover:bg-gray-700"
               }`}
@@ -215,7 +193,7 @@ export default function CoursePlayerPage() {
               <BookOpen className="w-5 h-5" />
             </button>
             <button
-              onClick={() => setShowQA(!showQA)}
+              onClick={() => setShowQA((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
                 showQA ? "bg-purple-600" : "hover:bg-gray-700"
               }`}
@@ -229,7 +207,7 @@ export default function CoursePlayerPage() {
               <Award className="w-5 h-5" />
             </button>
 
-            {/* Mobile-only trigger to open the drawer */}
+            {/* Mobile syllabus trigger */}
             <button
               onClick={() => setContentOpen(true)}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors md:hidden"
@@ -245,34 +223,36 @@ export default function CoursePlayerPage() {
       <div className="md:flex min-h-screen">
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Lesson Player */}
+          {/* Lesson / Assessment Player */}
           <LessonContentPlayer
-            showExam={showExam}
-            setShowExam={setShowExam}
             modules={modules}
             currentLessonId={currentLessonId}
             handleComplete={handleComplete}
             onLessonSelect={handleLessonSelect}
+            assessment={assessment}
+            setAssessment={setAssessment}
           />
 
           {/* Lesson Info */}
-          <div className="bg-gray-800 p-6 border-b border-gray-700">
-            <div className="max-w-5xl mx-auto">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
-                <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
-                <span className="text-gray-400 flex items-center justify-start">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {formatDuration(currentLesson?.duration_hours)}
-                </span>
+          {currentLesson && (
+            <div className="bg-gray-800 p-6 border-b border-gray-700">
+              <div className="max-w-5xl mx-auto">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
+                  <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
+                  <span className="text-gray-400 flex items-center justify-start">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {formatDuration(currentLesson?.duration_hours)}
+                  </span>
+                </div>
+                <p className="text-gray-300 leading-relaxed">
+                  {currentLesson?.description}
+                </p>
               </div>
-              <p className="text-gray-300 leading-relaxed">
-                {currentLesson?.description}
-              </p>
             </div>
-          </div>
+          )}
 
-          {/* Tabs */}
-          {!showExam && (
+          {/* Tabs (hidden while an assessment is open) */}
+          {!assessment && (
             <div className="bg-gray-800 border-b border-gray-700">
               <div className="max-w-5xl mx-auto px-6">
                 <div className="grid sm:grid-cols-3 grid-cols-1 items-center justify-items-center whitespace-nowrap">
@@ -327,7 +307,7 @@ export default function CoursePlayerPage() {
           )}
 
           {/* Notes */}
-          {showNotes && !showExam && (
+          {showNotes && !assessment && (
             <NotesSection
               currentLessonId={currentLessonId}
               notes={notes}
@@ -339,7 +319,7 @@ export default function CoursePlayerPage() {
           )}
 
           {/* Q&A */}
-          {showQA && !showExam && (
+          {showQA && !assessment && (
             <QASection
               lesson={currentLessonId}
               questions={questions}
@@ -348,7 +328,7 @@ export default function CoursePlayerPage() {
           )}
 
           {/* Groups */}
-          {showGroups && !showExam && (
+          {showGroups && !assessment && (
             <GroupsSection
               handleJoinGroup={handleJoinGroup}
               handleShowChat={handleShowChat}
@@ -357,14 +337,22 @@ export default function CoursePlayerPage() {
         </div>
 
         {/* Desktop Sidebar */}
-        <div className="hidden md:block w-80 bg-white text-gray-900 border-l border-gray-700 overflow-y-auto min-h-screen">
-          <CourseContent
-            modules={modules}
-            currentLessonId={currentLessonId}
-            onLessonSelect={handleLessonSelect}
-            isEnrolled={true}
-          />
-        </div>
+        <aside className="hidden md:block md:w-80 md:shrink-0">
+          <div className="sticky top-0 h-screen w-80 bg-white text-gray-900 border-l border-gray-200">
+            <div className="h-full overflow-y-auto">
+              <CourseContent
+                modules={modules}
+                currentLessonId={currentLessonId}
+                onLessonSelect={handleLessonSelect}
+                isEnrolled={true}
+                onOpenAssessment={(lessonId, a) => {
+                  setCurrentLessonId(lessonId);
+                  setAssessment(a);
+                }}
+              />
+            </div>
+          </div>
+        </aside>
 
         {/* Mobile Drawer */}
         <div
@@ -373,15 +361,12 @@ export default function CoursePlayerPage() {
           }`}
           aria-hidden={!contentOpen}
         >
-          {/* Backdrop */}
           <div
             className={`absolute inset-0 bg-black/50 transition-opacity ${
               contentOpen ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => setContentOpen(false)}
           />
-
-          {/* Panel */}
           <div
             className={`absolute right-0 top-0 h-full w-80 bg-white text-gray-900 border-l border-gray-200
               transform transition-transform ${
@@ -406,11 +391,17 @@ export default function CoursePlayerPage() {
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
+                onOpenAssessment={(lessonId, a) => {
+                  setCurrentLessonId(lessonId);
+                  setAssessment(a);
+                  setContentOpen(false);
+                }}
               />
             </div>
           </div>
         </div>
       </div>
+
       {showChatModal && activeChatGroup && (
         <ChatModal
           activeChatGroup={activeChatGroup}

@@ -1,319 +1,199 @@
-import { useState } from "react";
-
-export interface ExamData {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  passingScore: number;
-  questions: (
-    | {
-        id: string;
-        question: string;
-        type: "multiple-choice";
-        options: string[];
-        correctAnswer: string;
-      }
-    | {
-        id: string;
-        question: string;
-        type: "true-false";
-        correctAnswer: string;
-        options?: undefined;
-      }
-    | {
-        id: string;
-        question: string;
-        type: "short-answer";
-        correctAnswer: string;
-        options?: undefined;
-      }
-  )[];
-}
-
-const examData: ExamData = {
-  id: "1",
-  title: "Module 1 Final Exam",
-  description: "Test your knowledge of React fundamentals",
-  timeLimit: 30,
-  passingScore: 70,
-  questions: [
-    {
-      id: "1",
-      question: "What is React?",
-      type: "multiple-choice" as const,
-      options: [
-        "A JavaScript library for building user interfaces",
-        "A database management system",
-        "A web server framework",
-        "A CSS preprocessor",
-      ],
-      correctAnswer: "A JavaScript library for building user interfaces",
-    },
-    {
-      id: "2",
-      question: "JSX stands for JavaScript XML.",
-      type: "true-false" as const,
-      correctAnswer: "true",
-    },
-    {
-      id: "3",
-      question:
-        "Which hook is used for managing state in functional components?",
-      type: "multiple-choice" as const,
-      options: ["useEffect", "useState", "useContext", "useReducer"],
-      correctAnswer: "useState",
-    },
-    {
-      id: "4",
-      question: "What is the main benefit of using React components?",
-      type: "short-answer" as const,
-      correctAnswer: "Reusability and modularity",
-    },
-    {
-      id: "5",
-      question: "React components must return a single parent element.",
-      type: "true-false" as const,
-      correctAnswer: "false",
-    },
-  ],
-};
+import { useMemo, useState } from "react";
 
 interface ExamSectionProps {
-  setShowExam: React.Dispatch<React.SetStateAction<boolean>>;
+  exam: Exam; // API Exam shape you provided
+  onClose: () => void;
 }
 
-export default function ExamSection({ setShowExam }: ExamSectionProps) {
-  const [examAnswers, setExamAnswers] = useState<{ [key: string]: string }>({});
-  const [examSubmitted, setExamSubmitted] = useState(false);
-  const [examScore, setExamScore] = useState<number | null>(null);
+export default function ExamSection({ exam, onClose }: ExamSectionProps) {
+  // answers keyed by question id -> set of choice ids (support multi-correct)
+  const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmitExam = () => {
-    let correct = 0;
-    examData.questions.forEach((question) => {
-      if (examAnswers[question.id] === question.correctAnswer) {
-        correct++;
+  const toggleAnswer = (qId: string, choiceId: string, isMulti: boolean) => {
+    if (submitted) return;
+    setAnswers((prev) => {
+      const curr = new Set(prev[qId] ?? []);
+      if (isMulti) {
+        if (curr.has(choiceId)) curr.delete(choiceId);
+        else curr.add(choiceId);
+        return { ...prev, [qId]: curr };
       }
+      const n = new Set<string>();
+      n.add(choiceId);
+      return { ...prev, [qId]: n };
     });
-    const score = Math.round((correct / examData.questions.length) * 100);
-    setExamScore(score);
-    setExamSubmitted(true);
   };
 
-  const handleExamAnswer = (questionId: string, answer: string) => {
-    setExamAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
-  };
+  const { totalScore, maxScore } = useMemo(() => {
+    if (!submitted) return { totalScore: 0, maxScore: exam.questions.length };
+    let correctCount = 0;
+    for (const q of exam.questions) {
+      const correctIds = new Set(
+        (q.choices ?? []).filter((c) => c.is_correct).map((c) => c.id)
+      );
+      const picked = answers[q.id] ?? new Set<string>();
+      if (
+        picked.size === correctIds.size &&
+        [...picked].every((p) => correctIds.has(p))
+      ) {
+        correctCount += 1;
+      }
+    }
+    return { totalScore: correctCount, maxScore: exam.questions.length };
+  }, [submitted, answers, exam.questions]);
 
-  const resetExam = () => {
-    setExamAnswers({});
-    setExamSubmitted(false);
-    setExamScore(null);
-  };
+  const percent = Math.round((totalScore / Math.max(1, maxScore)) * 100);
+  const passed = percent >= exam.passing_score;
+
   return (
-    <div className="bg-gray-800 p-6">
-      <div className="max-w-4xl mx-auto">
-        {!examSubmitted ? (
-          <div className="bg-gray-900 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  {examData.title}
-                </h3>
-                <p className="text-gray-300">{examData.description}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-white font-semibold">
-                  Time Limit: {examData.timeLimit} minutes
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Passing Score: {examData.passingScore}%
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {examData.questions.map((question: any, index: number) => (
-                <div
-                  key={question.id}
-                  className="bg-gray-800 rounded-lg p-4 border border-gray-700"
-                >
-                  <h4 className="text-white font-medium mb-4">
-                    {index + 1}. {question.question}
-                  </h4>
-
-                  {question.type === "multiple-choice" && (
-                    <div className="space-y-2">
-                      {question.options?.map(
-                        (option: any, optionIndex: number) => (
-                          <label
-                            key={optionIndex}
-                            className="flex items-center cursor-pointer"
-                          >
-                            <input
-                              type="radio"
-                              name={`question-${question.id}`}
-                              value={option}
-                              checked={examAnswers[question.id] === option}
-                              onChange={(e) =>
-                                handleExamAnswer(question.id, e.target.value)
-                              }
-                              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="ml-3 text-gray-300">{option}</span>
-                          </label>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {question.type === "true-false" && (
-                    <div className="space-y-2">
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`question-${question.id}`}
-                          value="true"
-                          checked={examAnswers[question.id] === "true"}
-                          onChange={(e) =>
-                            handleExamAnswer(question.id, e.target.value)
-                          }
-                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="ml-3 text-gray-300">True</span>
-                      </label>
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`question-${question.id}`}
-                          value="false"
-                          checked={examAnswers[question.id] === "false"}
-                          onChange={(e) =>
-                            handleExamAnswer(question.id, e.target.value)
-                          }
-                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="ml-3 text-gray-300">False</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {question.type === "short-answer" && (
-                    <textarea
-                      value={examAnswers[question.id] || ""}
-                      onChange={(e) =>
-                        handleExamAnswer(question.id, e.target.value)
-                      }
-                      placeholder="Type your answer here..."
-                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      rows={3}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex items-center justify-between">
-              <div className="text-gray-400">
-                Questions answered: {Object.keys(examAnswers).length} /{" "}
-                {examData.questions.length}
-              </div>
-              <button
-                onClick={handleSubmitExam}
-                disabled={
-                  Object.keys(examAnswers).length !== examData.questions.length
-                }
-                className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Submit Exam
-              </button>
-            </div>
+    <div className="bg-white rounded-lg p-6 shadow-lg">
+      {/* Header */}
+      <div className="flex md:items-center md:flex-row flex-col items-start gap-4 md:justify-between mb-6">
+        <div>
+          <h3 className="md:text-2xl text-lg font-bold text-gray-900">
+            {exam.title} {exam.type === "quiz" ? "(Quiz)" : "(Exam)"}
+          </h3>
+          {exam.description && (
+            <p className="text-gray-600 md:text-base text-sm">
+              {exam.description}
+            </p>
+          )}
+        </div>
+        <div className="md:text-right">
+          <div className="text-gray-900 font-semibold">
+            Time Limit: {exam.time_limit} min
           </div>
-        ) : (
-          <div className="bg-gray-900 rounded-lg p-8 text-center">
+          <div className="text-gray-500 text-sm">
+            Passing Score: {exam.passing_score}%
+          </div>
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div className="space-y-6">
+        {exam.questions.map((q, idx) => {
+          const correctCount = (q.choices ?? []).filter(
+            (c) => c.is_correct
+          ).length;
+          const multi = correctCount > 1;
+          const selected = answers[q.id] ?? new Set<string>();
+          const isCorrectNow =
+            submitted &&
+            selected.size === correctCount &&
+            [...selected].every(
+              (id) => (q.choices ?? []).find((c) => c.id === id)?.is_correct
+            );
+
+          return (
             <div
-              className={`text-6xl mb-4 ${
-                examScore! >= examData.passingScore
-                  ? "text-green-500"
-                  : "text-red-500"
+              key={q.id}
+              className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <h4 className="text-gray-900 font-semibold">
+                  {idx + 1}. {q.text}
+                </h4>
+                {submitted && (
+                  <span
+                    className={`text-sm font-semibold ${
+                      isCorrectNow ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {isCorrectNow ? "Correct" : "Incorrect"}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {(q.choices ?? []).map((c, ci) => {
+                  const checked = selected.has(c.id);
+                  const showAs =
+                    submitted && c.is_correct
+                      ? "border-green-500 bg-green-50"
+                      : submitted && checked && !c.is_correct
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-200 bg-white";
+                  return (
+                    <label
+                      key={c.id}
+                      className={`flex items-center p-3 rounded border ${showAs} cursor-pointer`}
+                    >
+                      <input
+                        type={multi ? "checkbox" : "radio"}
+                        name={`q-${q.id}`}
+                        value={c.id}
+                        checked={checked}
+                        disabled={submitted}
+                        onChange={() => toggleAnswer(q.id, c.id, multi)}
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 mr-3"
+                      />
+                      <span className="text-gray-800">
+                        <span className="text-sm font-medium text-gray-500 mr-2">
+                          {String.fromCharCode(65 + ci)}.
+                        </span>
+                        {c.text}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {submitted && q.explanation && (
+                <div className="mt-3 bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                  <strong>Explanation: </strong>
+                  {q.explanation}
+                </div>
+              )}
+              {multi && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Multiple answers may be correct.
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 flex items-center justify-between">
+        {!submitted ? (
+          <>
+            <div className="text-gray-500 text-sm">
+              Answer all questions to submit.
+            </div>
+            <button
+              onClick={() => setSubmitted(true)}
+              disabled={Object.keys(answers).length !== exam.questions.length}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            >
+              Submit {exam.type === "quiz" ? "Quiz" : "Exam"}
+            </button>
+          </>
+        ) : (
+          <div className="flex flex-col items-start justify-start gap-4 w-full">
+            <div
+              className={`md:text-lg text-sm font-semibold ${
+                passed ? "text-green-700" : "text-red-700"
               }`}
             >
-              {examScore! >= examData.passingScore ? "🎉" : "😞"}
+              Score: {totalScore}/{maxScore} ({percent}%) —{" "}
+              {passed ? "Passed" : "Failed"} (pass {exam.passing_score}%)
             </div>
-            <h3 className="text-3xl font-bold text-white mb-2">
-              {examScore! >= examData.passingScore
-                ? "Congratulations!"
-                : "Try Again"}
-            </h3>
-            <p className="text-xl text-gray-300 mb-6">
-              Your Score:{" "}
-              <span
-                className={`font-bold ${
-                  examScore! >= examData.passingScore
-                    ? "text-green-400"
-                    : "text-red-400"
-                }`}
+            <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
+              <button
+                onClick={() => {
+                  setSubmitted(false);
+                }}
+                className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50"
               >
-                {examScore}%
-              </span>
-            </p>
-            <p className="text-gray-400 mb-8">
-              {examScore! >= examData.passingScore
-                ? `You passed! You need ${examData.passingScore}% to pass.`
-                : `You need ${examData.passingScore}% to pass. You can retake this exam.`}
-            </p>
-
-            <div className="space-y-4">
-              <div className="bg-gray-800 rounded-lg p-4">
-                <h4 className="text-white font-semibold mb-3">
-                  Results Breakdown:
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-green-400 font-bold text-lg">
-                      {
-                        examData.questions.filter(
-                          (q: any) => examAnswers[q.id] === q.correctAnswer
-                        ).length
-                      }
-                    </div>
-                    <div className="text-gray-400">Correct</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-red-400 font-bold text-lg">
-                      {
-                        examData.questions.filter(
-                          (q: any) => examAnswers[q.id] !== q.correctAnswer
-                        ).length
-                      }
-                    </div>
-                    <div className="text-gray-400">Incorrect</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-blue-400 font-bold text-lg">
-                      {examData.questions.length}
-                    </div>
-                    <div className="text-gray-400">Total</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-center space-x-4">
-                <button
-                  onClick={resetExam}
-                  className="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  Retake Exam
-                </button>
-                <button
-                  onClick={() => setShowExam(false)}
-                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Continue Learning
-                </button>
-              </div>
+                Review Again
+              </button>
+              <button
+                onClick={onClose}
+                className="bg-gray-800 text-white px-6 py-2 sm:w-52 w-full rounded-lg hover:bg-gray-900 transition-colors"
+              >
+                Continue Learning
+              </button>
             </div>
           </div>
         )}

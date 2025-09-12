@@ -10,6 +10,24 @@ import {
   BASE_URL,
 } from "../utils/constants";
 import axios from "axios";
+import { getCookie, setCookie, deleteCookie } from "./cookies";
+
+// ---- Small event bus to notify app when tokens refresh (for React Query invalidation)
+type Listener = () => void;
+const tokenRefreshListeners = new Set<Listener>();
+export function onTokensRefreshed(fn: Listener): () => void {
+  tokenRefreshListeners.add(fn);
+  return () => tokenRefreshListeners.delete(fn);
+}
+function notifyTokensRefreshed() {
+  tokenRefreshListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (e: any) {
+      console.error(e);
+    }
+  });
+}
 
 // ---- Utilities
 function decodeJwtExp(token: string): number | null {
@@ -25,32 +43,18 @@ function decodeJwtExp(token: string): number | null {
   }
 }
 
-// ---- Getters
+// ---- Getters (now from cookies)
 export function getAccessToken(): string | null {
-  try {
-    const raw = localStorage.getItem(ACCESS_TOKEN_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return getCookie(ACCESS_TOKEN_KEY);
 }
-
 export function getRefreshToken(): string | null {
-  try {
-    const raw = localStorage.getItem(REFRESH_TOKEN_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return getCookie(REFRESH_TOKEN_KEY);
 }
-
 export function getAccessExp(): number | null {
   const raw = localStorage.getItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
   return raw ? Number(raw) : null;
 }
-
 export function isAccessExpired(leewayMs = 30_000): boolean {
-  // leeway: refresh slightly before actual expiry
   const exp = getAccessExp();
   if (!exp) return true;
   return Date.now() + leewayMs >= exp;
@@ -70,11 +74,14 @@ export async function storeTokens(params: {
     decodeJwtExp(access) ??
     Date.now() + (typeof TOKEN_TTL_MS === "number" ? TOKEN_TTL_MS : 0);
 
-  localStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(access));
-  localStorage.setItem(REFRESH_TOKEN_KEY, JSON.stringify(refresh));
+  // 1 day cookie for both tokens
+  setCookie(ACCESS_TOKEN_KEY, access, { days: 1 });
+  setCookie(REFRESH_TOKEN_KEY, refresh, { days: 1 });
   localStorage.setItem(ACCESS_TOKEN_EXPIRES_AT_KEY, String(exp));
 
+  // user stays in localStorage
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+
   if (setIsAuthenticated) setIsAuthenticated(true);
   if (navigate) navigate("/");
 }
@@ -83,8 +90,8 @@ export async function removeTokens(
   navigate?: NavigateFunction,
   setIsAuthenticated?: (v: boolean) => void
 ): Promise<void> {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  deleteCookie(ACCESS_TOKEN_KEY);
+  deleteCookie(REFRESH_TOKEN_KEY);
   localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
   localStorage.removeItem(USER_KEY);
 
@@ -92,7 +99,7 @@ export async function removeTokens(
   if (navigate) navigate("/login", { replace: true });
 }
 
-// ---- Refresh (dedup concurrent calls)
+// ---- Refresh (de-dup concurrent calls)
 let refreshingPromise: Promise<string | null> | null = null;
 
 export async function refreshAccessToken(): Promise<string | null> {
@@ -103,19 +110,23 @@ export async function refreshAccessToken(): Promise<string | null> {
     refreshingPromise = axios
       .post(BASE_URL + API_ENDPOINTS.refreshToken, { refresh })
       .then((res) => {
-        // your API may return {tokens:{access,...}} or {access: "..."}
-        const newAccess =
-          res.data?.data?.tokens?.access ??
-          res.data?.tokens?.access ??
-          res.data?.access ??
-          null;
+        // handle shapes:
+        // {data:{access,refresh}} or {access,refresh} or nested tokens
+        const root = res.data?.data ?? res.data ?? {};
+        const newAccess = root?.tokens?.access ?? root?.access ?? null;
+        const newRefresh = root?.tokens?.refresh ?? root?.refresh ?? null;
 
         if (!newAccess) throw new Error("No access token in refresh response");
 
         const exp = decodeJwtExp(newAccess) ?? Date.now() + 5 * 60_000; // fallback 5min
 
-        localStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(newAccess));
+        // Replace both cookies (1 day)
+        setCookie(ACCESS_TOKEN_KEY, newAccess, { days: 1 });
+        if (newRefresh) setCookie(REFRESH_TOKEN_KEY, newRefresh, { days: 1 });
         localStorage.setItem(ACCESS_TOKEN_EXPIRES_AT_KEY, String(exp));
+
+        // Let the app know tokens changed (invalidate queries, etc.)
+        notifyTokensRefreshed();
 
         return newAccess as string;
       })

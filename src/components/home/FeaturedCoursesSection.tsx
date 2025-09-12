@@ -8,10 +8,10 @@ export default function FeaturedCoursesSection() {
   const navigate = useNavigate();
 
   const { data: featuredCoursesData } = useCustomQuery(
-    API_ENDPOINTS.featuredCourses,
+    `${API_ENDPOINTS.courses}?is_best_seller=true`,
     ["featured-courses"]
   );
-  const courses: Partial<Course>[] = featuredCoursesData?.data;
+  const courses: Course[] = featuredCoursesData?.data;
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,7 +75,7 @@ export default function FeaturedCoursesSection() {
                 <div className="flex items-center mb-4">
                   <div className="flex items-center">
                     <span className="text-yellow-500 font-bold mr-1">
-                      {course?.average_rating ?? 0}
+                      {course?.average_rating?.toFixed(1) ?? 0}
                     </span>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
