@@ -392,7 +392,7 @@ const CourseDetailPage: React.FC = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md sm:p-6 p-2">
               {activeTab === "overview" && (
                 <div>
                   {course?.objectives && course?.objectives?.length > 0 && (
@@ -451,26 +451,25 @@ const CourseDetailPage: React.FC = () => {
                     modules={modulesData}
                     onLessonSelect={handleLessonSelect}
                     isEnrolled={isEnrolled}
-                    // navigate to player with assessment when clicked
                     onOpenAssessment={handleOpenAssessment}
                   />
                 </div>
               )}
 
               {activeTab === "instructor" && (
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                <div className="w-full flex-col items-start flex">
+                  <h3 className="sm:text-2xl text-lg font-bold text-gray-900 mb-6">
                     Instructor
                   </h3>
-                  <div className="flex items-start mb-6">
+                  <div className="sm:flex-row flex-col w-full flex items-start mb-6">
                     {instructor?.instructor?.profile_image ? (
                       <img
                         src={instructor?.instructor?.profile_image}
                         alt={instructor?.instructor?.first_name}
-                        className="w-16 h-16 rounded-full mr-4"
+                        className="w-16 self-center sm:self-start h-16 rounded-full mr-4"
                       />
                     ) : (
-                      <div className="w-16 h-16 bg-purple-600 mr-4 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-purple-600 mr-4 self-center sm:self-start rounded-full flex items-center justify-center">
                         <span className="text-white text-sm font-medium">
                           {course?.instructor?.first_name
                             ?.charAt(0)
@@ -478,15 +477,15 @@ const CourseDetailPage: React.FC = () => {
                         </span>
                       </div>
                     )}
-                    <div>
-                      <h4 className="text-xl font-bold text-gray-900">
+                    <div className="flex items-start w-full flex-col">
+                      <h4 className="text-xl font-bold text-gray-900 sm:self-start self-center">
                         {instructor?.instructor?.first_name}{" "}
                         {instructor?.instructor?.last_name}
                       </h4>
-                      <p className="text-gray-600 mb-2">
+                      <p className="text-gray-600 mb-2 whitespace-normal">
                         {instructor?.instructor?.bio}
                       </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex sm:flex-row w-full flex-col sm:items-center items-start gap-4 text-sm text-gray-500">
                         <div className="flex items-center">
                           {Array.from({ length: 5 }).map((_, i) =>
                             i < +instructor?.average_rating?.toFixed(0) ? (
@@ -501,8 +500,8 @@ const CourseDetailPage: React.FC = () => {
                               />
                             )
                           )}
+                          ({instructor?.total_reviews ?? 0})
                         </div>
-                        ({instructor?.total_reviews ?? 0})
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
                           <span>

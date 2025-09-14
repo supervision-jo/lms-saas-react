@@ -74,22 +74,36 @@ const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-8">
                 {mainNavigationItems.map((i, idx) => {
                   const path = i.id ? `/${i.id}` : "/";
-                  return (
-                    <NavLink
-                      key={idx + 1000}
-                      to={path}
-                      end={path === "/"}
-                      className={({ isActive }) =>
-                        `transition-colors ${
-                          isActive
-                            ? "text-purple-600 font-semibold"
-                            : "text-gray-700 hover:text-purple-600"
-                        }`
-                      }
-                    >
-                      {i.label}
-                    </NavLink>
-                  );
+                  if (
+                    currentUser === undefined &&
+                    (i.id === "dashboard" || i.id === "instructor")
+                  ) {
+                    return;
+                  } else if (
+                    currentUser?.is_instructor &&
+                    i.id === "dashboard"
+                  ) {
+                    return;
+                  } else if (currentUser?.is_student && i.id === "instructor") {
+                    return;
+                  } else {
+                    return (
+                      <NavLink
+                        key={idx + 1000}
+                        to={path}
+                        end={path === "/"}
+                        className={({ isActive }) =>
+                          `transition-colors ${
+                            isActive
+                              ? "text-purple-600 font-semibold"
+                              : "text-gray-700 hover:text-purple-600"
+                          }`
+                        }
+                      >
+                        {i.label}
+                      </NavLink>
+                    );
+                  }
                 })}
               </div>
             </nav>
@@ -162,28 +176,37 @@ const Header: React.FC<HeaderProps> = ({
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     {userNavigationItems.map((i, idx) => {
-                      return (
-                        <div key={idx + 2000}>
-                          {i.id === "logout" && <hr className="my-2" />}
-                          <button
-                            onClick={() => {
-                              if (i.id === "logout") {
-                                if (onLogout) onLogout();
-                              } else {
-                                navigate(i.id);
-                              }
-                              setIsUserMenuOpen(false);
-                            }}
-                            className={`block w-full text-left px-4 py-2 text-sm ${
-                              i.id === "logout"
-                                ? "text-red-600 hover:bg-red-50"
-                                : "text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            {i.label}
-                          </button>
-                        </div>
-                      );
+                      if (currentUser.is_instructor && i.id === "dashboard") {
+                        return;
+                      } else if (
+                        currentUser.is_student &&
+                        i.id === "instructor"
+                      ) {
+                        return;
+                      } else {
+                        return (
+                          <div key={idx + 2000}>
+                            {i.id === "logout" && <hr className="my-2" />}
+                            <button
+                              onClick={() => {
+                                if (i.id === "logout") {
+                                  if (onLogout) onLogout();
+                                } else {
+                                  navigate(i.id);
+                                }
+                                setIsUserMenuOpen(false);
+                              }}
+                              className={`block w-full text-left px-4 py-2 text-sm ${
+                                i.id === "logout"
+                                  ? "text-red-600 hover:bg-red-50"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {i.label}
+                            </button>
+                          </div>
+                        );
+                      }
                     })}
                   </div>
                 )}

@@ -1,12 +1,13 @@
 interface InstructorCourses {
+  id: string;
   title: string;
   picture: string;
   total_students: number;
   average_rating: number;
   total_reviews: number;
   revenue: number | null;
-  status: string;
-  lastUpdated: string;
+  is_published: string;
+  updated_at: string;
   completion: number;
 
   instructor: {

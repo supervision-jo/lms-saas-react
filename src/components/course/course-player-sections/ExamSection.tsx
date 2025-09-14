@@ -1,11 +1,18 @@
 import { useMemo, useState } from "react";
 
 interface ExamSectionProps {
-  exam: Exam; // API Exam shape you provided
-  onClose: () => void;
+  exam: Exam; // API Exam
+  onClose: () => void; // called when learner clicks "Continue Learning"
 }
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
+  // normalize
+  const questions = useMemo(() => {
+    return Array.isArray(exam?.questions) ? exam.questions : [];
+  }, [exam.questions]);
+  const passing =
+    typeof exam?.passing_score === "number" ? exam.passing_score : 0;
+
   // answers keyed by question id -> set of choice ids (support multi-correct)
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -26,11 +33,12 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   };
 
   const { totalScore, maxScore } = useMemo(() => {
-    if (!submitted) return { totalScore: 0, maxScore: exam.questions.length };
+    if (!submitted) return { totalScore: 0, maxScore: questions.length };
     let correctCount = 0;
-    for (const q of exam.questions) {
+    for (const q of questions) {
+      const choices = Array.isArray(q.choices) ? q.choices : [];
       const correctIds = new Set(
-        (q.choices ?? []).filter((c) => c.is_correct).map((c) => c.id)
+        choices.filter((c) => c.is_correct).map((c) => c.id)
       );
       const picked = answers[q.id] ?? new Set<string>();
       if (
@@ -40,11 +48,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         correctCount += 1;
       }
     }
-    return { totalScore: correctCount, maxScore: exam.questions.length };
-  }, [submitted, answers, exam.questions]);
+    return { totalScore: correctCount, maxScore: questions.length };
+  }, [submitted, answers, questions]);
 
   const percent = Math.round((totalScore / Math.max(1, maxScore)) * 100);
-  const passed = percent >= exam.passing_score;
+  const passed = percent >= passing;
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-lg">
@@ -62,27 +70,24 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         </div>
         <div className="md:text-right">
           <div className="text-gray-900 font-semibold">
-            Time Limit: {exam.time_limit} min
+            Time Limit: {exam.time_limit ?? 0} min
           </div>
-          <div className="text-gray-500 text-sm">
-            Passing Score: {exam.passing_score}%
-          </div>
+          <div className="text-gray-500 text-sm">Passing Score: {passing}%</div>
         </div>
       </div>
 
       {/* Questions */}
       <div className="space-y-6">
-        {exam.questions.map((q, idx) => {
-          const correctCount = (q.choices ?? []).filter(
-            (c) => c.is_correct
-          ).length;
+        {questions.map((q, idx) => {
+          const choices = Array.isArray(q.choices) ? q.choices : [];
+          const correctCount = choices.filter((c) => c.is_correct).length;
           const multi = correctCount > 1;
           const selected = answers[q.id] ?? new Set<string>();
           const isCorrectNow =
             submitted &&
             selected.size === correctCount &&
             [...selected].every(
-              (id) => (q.choices ?? []).find((c) => c.id === id)?.is_correct
+              (id) => choices.find((c) => c.id === id)?.is_correct
             );
 
           return (
@@ -105,7 +110,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 )}
               </div>
               <div className="space-y-2">
-                {(q.choices ?? []).map((c, ci) => {
+                {choices.map((c, ci) => {
                   const checked = selected.has(c.id);
                   const showAs =
                     submitted && c.is_correct
@@ -163,7 +168,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
             </div>
             <button
               onClick={() => setSubmitted(true)}
-              disabled={Object.keys(answers).length !== exam.questions.length}
+              disabled={Object.keys(answers).length !== questions.length}
               className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
               Submit {exam.type === "quiz" ? "Quiz" : "Exam"}
@@ -177,13 +182,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               }`}
             >
               Score: {totalScore}/{maxScore} ({percent}%) —{" "}
-              {passed ? "Passed" : "Failed"} (pass {exam.passing_score}%)
+              {passed ? "Passed" : "Failed"} (pass {passing}%)
             </div>
             <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
               <button
-                onClick={() => {
-                  setSubmitted(false);
-                }}
+                onClick={() => setSubmitted(false)}
                 className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Review Again

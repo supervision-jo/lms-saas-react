@@ -188,20 +188,20 @@ export default function CourseRatingModal({
   }, [lastReview]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center sm:p-4 p-2 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="sm:p-6 p-2 border-b border-gray-200">
+          <div className="flex sm:flex-row flex-col-reverse sm:items-center items-start justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="sm:text-2xl text-lg font-bold text-gray-900">
                 {headerTitle}
               </h2>
               <p className="text-gray-600 mt-1">{courseTitle}</p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-2 sm:self-center self-end text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -211,10 +211,10 @@ export default function CourseRatingModal({
         <div className="p-6 space-y-6">
           {/* Star Rating */}
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="sm:text-lg font-semibold text-gray-900 mb-4">
               How would you rate this course?
             </h3>
-            <div className="flex items-center justify-center space-x-2 mb-2">
+            <div className="flex items-center justify-center gap-2 mb-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -224,7 +224,7 @@ export default function CourseRatingModal({
                   className="transition-transform hover:scale-110"
                 >
                   <Star
-                    className={`w-10 h-10 ${
+                    className={`sm:w-10 sm:h-10 ${
                       star <= (hoveredRating || rating)
                         ? "text-yellow-400 fill-current"
                         : "text-gray-300"
@@ -234,7 +234,7 @@ export default function CourseRatingModal({
               ))}
             </div>
             {rating > 0 && (
-              <p className="text-lg font-medium text-gray-700">
+              <p className="sm:text-lg font-medium text-gray-700">
                 {ratingLabels[rating]} ({rating} star{rating !== 1 ? "s" : ""})
               </p>
             )}
@@ -243,7 +243,7 @@ export default function CourseRatingModal({
           {/* Reasons */}
           {rating > 0 && (
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+              <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
                 What did you {rating >= 4 ? "like" : "dislike"} about this
                 course?
               </h4>
@@ -258,7 +258,7 @@ export default function CourseRatingModal({
                       <button
                         key={reason?.name}
                         onClick={() => toggleReason(reason?.id)}
-                        className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        className={`sm:p-3 p-1 rounded-lg sm:border-2 border sm:text-sm text-xs sm:font-medium transition-all ${
                           active
                             ? "border-purple-500 bg-purple-50 text-purple-700"
                             : "border-gray-200 hover:border-purple-300 text-gray-700"
@@ -276,7 +276,7 @@ export default function CourseRatingModal({
           {/* Written Review */}
           {rating > 0 && (
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+              <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
                 Tell others about your experience (optional)
               </h4>
               <textarea
@@ -284,7 +284,7 @@ export default function CourseRatingModal({
                 onChange={(e) => setReview(e.target.value)}
                 placeholder="Share your thoughts about the course content, instructor, and overall experience..."
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none placeholder:text-xs sm:placeholder:text-base"
                 maxLength={500}
               />
               <div className="flex justify-between items-center mt-2">
@@ -298,10 +298,10 @@ export default function CourseRatingModal({
           {/* Recommendation */}
           {rating > 0 && (
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+              <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
                 Would you recommend this course to others?
               </h4>
-              <div className="flex space-x-4">
+              <div className="flex gap-4 sm:flex-row flex-col">
                 <button
                   onClick={() => setWouldRecommend(true)}
                   className={`flex items-center px-6 py-3 rounded-lg border-2 font-medium transition-all ${
@@ -352,7 +352,7 @@ export default function CourseRatingModal({
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
+          <div className="flex sm:flex-row flex-col-reverse gap-4 sm:gap-0 items-center justify-between">
             <button
               onClick={onClose}
               className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"

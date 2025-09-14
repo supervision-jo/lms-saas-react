@@ -1,11 +1,11 @@
 import { Edit, Eye, Star, Trash2, Users } from "lucide-react";
-// import { useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import React from "react";
 
 export default function CoursesSection() {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const { data } = useCustomQuery(API_ENDPOINTS.instructorCourseStats, [
     "instructor-courses",
@@ -13,9 +13,9 @@ export default function CoursesSection() {
 
   const instructorCourses: InstructorCourses[] = data?.data ?? [];
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <div className="bg-white rounded-xl shadow-sm sm:p-6 p-2">
       <h3 className="text-lg font-semibold text-gray-900 mb-6">My Courses</h3>
-      <div className="space-y-4">
+      <div className="space-y-4 sm:grid-cols-2 sm:grid md:block sm:space-x-4 md:space-x-0">
         {instructorCourses.map((course) => (
           <React.Fragment key={course?.title}>
             {/* Above md screen course card */}
@@ -58,12 +58,12 @@ export default function CoursesSection() {
                         </span>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            course.status === "published"
+                            course?.is_published
                               ? "bg-green-100 text-green-800"
                               : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
-                          {course?.status ?? "Draft"}
+                          {course?.is_published ? "Published" : "Draft"}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -75,14 +75,16 @@ export default function CoursesSection() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        // onClick={() => navigate(`/catalog/${course.id}`)}
+                        onClick={() => navigate(`/catalog/${course?.id}`)}
                         className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                         title="View Course"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        // onClick={() => navigate("/course-builder")}
+                        // onClick={() =>
+                        //   navigate(`/course-builder?courseId=${course?.id}`)
+                        // }
                         className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
                         title="Edit Course"
                       >
@@ -110,18 +112,18 @@ export default function CoursesSection() {
                     "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                   }
                   alt={course?.title}
-                  className="object-cover w-full h-60"
+                  className="object-cover w-full md:h-60 h-52"
                 />
               </div>
 
-              <div className="p-6">
+              <div className="md:p-6 p-2">
                 <div>
-                  <div className="flex flex-col items-start justify-start w-full gap-4">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                  <div className="flex flex-col items-start justify-start w-full md:gap-4 gap-2">
+                    <h3 className="md:text-lg font-bold text-gray-900 line-clamp-2">
                       {course?.title}
                     </h3>
 
-                    <div className="flex sm:items-center items-start justify-start gap-4 w-full sm:flex-row flex-col">
+                    <div className="flex md:items-center items-start justify-start gap-4 w-full md:flex-row flex-col">
                       <div className="flex items-center">
                         <span className="text-yellow-500 font-bold mr-1">
                           {course?.average_rating ?? 0}
@@ -138,7 +140,7 @@ export default function CoursesSection() {
                       </div>
                     </div>
 
-                    <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 text-sm text-gray-600 w-full">
+                    <div className="flex md:items-center items-start md:flex-row flex-col gap-4 text-sm text-gray-600 w-full">
                       <span className="mr-4">
                         Revenue: {course?.revenue ?? 0}
                       </span>
@@ -147,12 +149,12 @@ export default function CoursesSection() {
                       </span>
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
-                          course.status === "published"
+                          course?.is_published
                             ? "bg-green-100 text-green-800"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {course?.status ?? ""}
+                        {course?.is_published ? "Published" : "Draft"}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -163,14 +165,16 @@ export default function CoursesSection() {
                     </div>
                     <div className="flex items-center gap-4 w-full justify-center">
                       <button
-                        // onClick={() => navigate(`/catalog/${course.id}`)}
+                        onClick={() => navigate(`/catalog/${course?.id}`)}
                         className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                         title="View Course"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        // onClick={() => navigate("/course-builder")}
+                        // onClick={() => {
+                        //   navigate(`/course-builder?courseId=${course?.id}`);
+                        // }}
                         className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
                         title="Edit Course"
                       >

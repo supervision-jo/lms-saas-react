@@ -15,23 +15,39 @@ import { useLocation } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function findNextLessonId(
+  modules: Module[] = [],
+  currentLessonId?: string | null
+) {
+  if (!currentLessonId) return null;
+  const all = modules.flatMap((m) => m?.lessons ?? []);
+  const idx = all.findIndex((l) => String(l?.id) === String(currentLessonId));
+  if (idx === -1 || idx + 1 >= all.length) return null;
+  return String(all[idx + 1]?.id ?? "");
+}
+
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;
+  /** highlight the quiz/exam row itself */
+  currentAssessmentId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
-  onOpenAssessment?: (lessonId: string, assessment: Exam) => void; // ⬅ added
+  onOpenAssessment?: (lessonId: string, assessment: Exam) => void;
 }
 
 function AssessmentList({
   lesson,
   isEnrolled,
   onOpen,
+  currentAssessmentId,
 }: {
   lesson: Lesson;
   isEnrolled: boolean;
   onOpen: (assessment: Exam) => void;
+  currentAssessmentId?: string;
 }) {
   const { data } = useCustomQuery(
     `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
@@ -48,6 +64,8 @@ function AssessmentList({
       {assessments.map((a) => {
         const Icon = a.type === "exam" ? Award : HelpCircle;
         const accent = a.type === "exam" ? "text-red-600" : "text-green-600";
+        const isActive =
+          currentAssessmentId && String(currentAssessmentId) === String(a.id);
 
         return (
           <button
@@ -57,20 +75,30 @@ function AssessmentList({
               e.stopPropagation();
               onOpen(a);
             }}
-            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left  transition-all duration-200 ${
-              canAccess
-                ? "hover:bg-white hover:shadow-md bg-white border-0 outline-none focus:outline-none"
-                : "opacity-50 cursor-not-allowed bg-gray-100"
+            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left transition-all duration-200 ${
+              !canAccess
+                ? "opacity-50 cursor-not-allowed bg-gray-100"
+                : isActive
+                ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
+                : "hover:bg-white hover:shadow-md bg-white"
             }`}
             title={a.type === "exam" ? "Open Exam" : "Open Quiz"}
           >
             <div className="flex items-center gap-2">
-              <Icon className={`w-4 h-4 ${accent}`} />
-              <span className="text-sm font-medium text-gray-700">
+              <Icon className={`w-4 h-4 ${isActive ? "text-white" : accent}`} />
+              <span
+                className={`text-sm font-medium ${
+                  isActive ? "text-white" : "text-gray-700"
+                }`}
+              >
                 {a.title || (a.type === "exam" ? "Exam" : "Quiz")}
               </span>
             </div>
-            <div className="text-xs text-gray-500">
+            <div
+              className={`text-xs ${
+                isActive ? "text-purple-200" : "text-gray-500"
+              }`}
+            >
               {a.time_limit}m • pass {a.passing_score}%
             </div>
           </button>
@@ -83,6 +111,7 @@ function AssessmentList({
 const CourseContent: React.FC<CourseContentProps> = ({
   modules,
   currentLessonId,
+  currentAssessmentId,
   onLessonSelect,
   isEnrolled,
   className,
@@ -97,41 +126,38 @@ const CourseContent: React.FC<CourseContentProps> = ({
   const autoSelectedOnceRef = useRef(false);
 
   useEffect(() => {
-    if (pathname.includes("player")) {
-      if (!safeModules.length) return;
+    if (!pathname.includes("player")) return;
+    if (!safeModules.length) return;
 
-      const nextExpanded = new Set(expandedModules);
+    const nextExpanded = new Set(expandedModules);
 
-      if (currentLessonId) {
-        const owner = safeModules.find((m) =>
-          (m.lessons ?? []).some(
-            (l) => String(l?.id) === String(currentLessonId)
-          )
-        );
-        if (owner) nextExpanded.add(String(owner.id));
+    if (currentLessonId) {
+      const owner = safeModules.find((m) =>
+        (m.lessons ?? []).some((l) => String(l?.id) === String(currentLessonId))
+      );
+      if (owner) nextExpanded.add(String(owner.id));
+      setExpandedModules(nextExpanded);
+      return;
+    }
+
+    if (!autoSelectedOnceRef.current) {
+      const firstModule = safeModules[0];
+      if (firstModule) {
+        nextExpanded.add(String(firstModule.id));
         setExpandedModules(nextExpanded);
-        return;
-      }
 
-      if (!autoSelectedOnceRef.current) {
-        const firstModule = safeModules[0];
-        if (firstModule) {
-          nextExpanded.add(String(firstModule.id));
-          setExpandedModules(nextExpanded);
+        const firstPlayable =
+          (firstModule.lessons ?? []).find(
+            (lesson) => isEnrolled || lesson?.free_preview
+          ) || (firstModule.lessons ?? [])[0];
 
-          const firstPlayable =
-            (firstModule.lessons ?? []).find(
-              (lesson) => isEnrolled || lesson?.free_preview
-            ) || (firstModule.lessons ?? [])[0];
-
-          if (firstPlayable?.id) {
-            onLessonSelect(firstPlayable.id);
-            autoSelectedOnceRef.current = true;
-          }
+        if (firstPlayable?.id) {
+          onLessonSelect(String(firstPlayable.id));
+          autoSelectedOnceRef.current = true;
         }
-      } else {
-        setExpandedModules(nextExpanded);
       }
+    } else {
+      setExpandedModules(nextExpanded);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeModules, currentLessonId, isEnrolled]);
@@ -148,16 +174,16 @@ const CourseContent: React.FC<CourseContentProps> = ({
     const canAccess = isEnrolled || lesson?.free_preview;
     if (!canAccess) return;
 
-    if (lesson?.content_type === "material" && lesson?.video_url) {
+    if (lesson?.content_type === "material" && lesson?.url) {
       const link = document.createElement("a");
-      link.href = lesson?.video_url;
+      link.href = lesson?.url;
       link.download = lesson?.title || "material";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       alert("Download started!");
     } else {
-      onLessonSelect(lesson?.id);
+      onLessonSelect(String(lesson?.id));
     }
   };
 
@@ -181,14 +207,6 @@ const CourseContent: React.FC<CourseContentProps> = ({
             }`}
           />
         );
-      case "quiz":
-        return (
-          <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs font-bold">?</span>
-          </div>
-        );
-      case "exam":
-        return <Award className="w-4 h-4 text-red-600 fill-current" />;
       case "material":
         return <Download className="w-4 h-4 text-orange-600" />;
       default:
@@ -217,7 +235,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
         className ?? ""
       }`}
     >
-      <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+      <div className="sm:p-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <h3 className="text-xl font-bold">Course Content</h3>
         <p className="text-purple-100 mt-1 text-sm">
           {safeModules.length} modules •{" "}
@@ -233,11 +251,11 @@ const CourseContent: React.FC<CourseContentProps> = ({
           return (
             <div
               key={key}
-              className="bg-white mb-2 mx-3 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+              className="bg-white mb-2 sm:mx-3 mx-1.5 mt-3 rounded-lg shadow-sm border border-gray-200 overflow-hidden"
             >
               <button
                 onClick={() => toggleModule(module?.id)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
+                className="w-full sm:px-5 px-2 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
               >
                 <div className="flex items-center">
                   {isExpanded ? (
@@ -258,10 +276,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
               </button>
 
               {isExpanded && (
-                <div className="px-5 py-4 bg-gray-50">
+                <div className="sm:px-5 px-2 py-4 bg-gray-50">
                   {(module.lessons ?? []).map((lesson) => {
-                    const isCurrentLesson =
+                    const isLessonActive =
                       String(lesson?.id) === String(currentLessonId);
+
+                    const isCurrentLesson =
+                      isLessonActive && !currentAssessmentId;
+
                     const canAccess = isEnrolled || lesson?.free_preview;
 
                     return (
@@ -269,12 +291,12 @@ const CourseContent: React.FC<CourseContentProps> = ({
                         <button
                           onClick={() => handleLessonClick(lesson)}
                           disabled={!canAccess}
-                          className={`w-full flex items-start flex-col gap-2 py-3 px-4 rounded-lg transition-all duration-200 text-left ${
+                          className={`w-full flex items-start flex-col gap-2 py-3 sm:px-4 px-2 rounded-lg transition-all duration-200 text-left ${
                             isCurrentLesson
                               ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
                               : canAccess
-                              ? "hover:bg-white hover:shadow-md bg-white border-0 outline-none focus:outline-none"
-                              : "opacity-50 cursor-not-allowed bg-gray-100 border-0 outline-none focus:outline-none"
+                              ? "hover:bg-white hover:shadow-md bg-white"
+                              : "opacity-50 cursor-not-allowed bg-gray-100"
                           }`}
                         >
                           <div className="flex items-center justify-start gap-3 w-full">
@@ -305,11 +327,15 @@ const CourseContent: React.FC<CourseContentProps> = ({
                             )}
                           </div>
                         </button>
-                        {/* attached assessments shown UNDER the lesson */}
+
+                        {/* attached assessments: highlight when currentAssessmentId matches */}
                         <AssessmentList
                           lesson={lesson}
                           isEnrolled={isEnrolled}
-                          onOpen={(a) => onOpenAssessment?.(lesson.id, a)}
+                          currentAssessmentId={currentAssessmentId}
+                          onOpen={(a) =>
+                            onOpenAssessment?.(String(lesson.id), a)
+                          }
                         />
                       </div>
                     );

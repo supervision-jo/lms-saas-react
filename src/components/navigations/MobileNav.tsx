@@ -26,22 +26,33 @@ export default function MobileNav({
           .concat([{ id: "profile", label: "Profile Settings", icon: Home }])
           .map((i, idx) => {
             const path = i.id ? `/${i.id}` : "/";
-            return (
-              <NavLink
-                key={idx + 4000}
-                to={path}
-                end={path === "/"}
-                className={({ isActive }) =>
-                  `block w-full text-left px-3 py-2 transition-colors ${
-                    isActive
-                      ? "text-purple-600 font-semibold"
-                      : "text-gray-700 hover:text-purple-600"
-                  }`
-                }
-              >
-                {i.label}
-              </NavLink>
-            );
+            if (
+              currentUser === undefined &&
+              (i.id === "dashboard" || i.id === "instructor")
+            ) {
+              return;
+            } else if (currentUser.is_instructor && i.id === "dashboard") {
+              return;
+            } else if (currentUser.is_student && i.id === "instructor") {
+              return;
+            } else {
+              return (
+                <NavLink
+                  key={idx + 4000}
+                  to={path}
+                  end={path === "/"}
+                  className={({ isActive }) =>
+                    `block w-full text-left px-3 py-2 transition-colors ${
+                      isActive
+                        ? "text-purple-600 font-semibold"
+                        : "text-gray-700 hover:text-purple-600"
+                    }`
+                  }
+                >
+                  {i.label}
+                </NavLink>
+              );
+            }
           })}
 
         {!currentUser && (

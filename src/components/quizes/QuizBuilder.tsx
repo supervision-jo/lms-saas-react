@@ -35,6 +35,7 @@ interface QuizBuilderProps {
    * May come in the new AssessmentDraft-like shape (preferred) or
    * the legacy quiz shape you had before. We gracefully adapt.
    */
+  onClose: (s: boolean) => void;
   initialQuiz?: any;
 }
 
@@ -194,6 +195,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onSave,
   onPreview,
   initialQuiz,
+  onClose,
 }) => {
   const [quiz, setQuiz] = useState<UiQuiz>(() => fromInitialToUi(initialQuiz));
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
@@ -779,6 +781,16 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             >
               <Save className="w-4 h-4 mr-2" />
               Save
+            </button>
+
+            <button
+              onClick={() => {
+                onClose(false);
+              }}
+              className="bg-transparent text-gray-600 px-6 py-3 w-full rounded-lg border border-gray-200 transition-colors flex items-center justify-center"
+            >
+              {/* <X className="w-4 h-4 mr-2" /> */}
+              Cancel
             </button>
           </div>
         </div>

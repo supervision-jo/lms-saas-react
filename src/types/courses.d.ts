@@ -108,10 +108,12 @@ interface Lesson {
   title: string;
   duration_hours: number;
   description: string;
-  video_url: string | null;
+  url: string | null;
   free_preview: boolean;
   content_type: "video" | "article" | "quiz" | "exam" | "material";
   order: number;
+  file: any;
+  description_html: any;
 }
 
 interface Module {

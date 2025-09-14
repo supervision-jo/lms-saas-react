@@ -10,7 +10,9 @@ import {
   ListVideo,
   Clock,
 } from "lucide-react";
-import CourseContent from "../../components/course/CourseContent";
+import CourseContent, {
+  findNextLessonId,
+} from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useLocation, useNavigate, useParams } from "react-router";
@@ -26,21 +28,34 @@ import toast from "react-hot-toast";
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { search } = useLocation();
-  const lessonFromQS = useMemo(() => {
-    const sp = new URLSearchParams(search);
-    return sp.get("lesson") ?? "";
-  }, [search]);
+  const location = useLocation() as unknown as Location & {
+    state?: { assessment?: Exam };
+  };
+  const { state } = location;
+  const search = location.search;
 
-  // --- Query string parsing (lesson & optional assessment) ---
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const assessmentIdFromQS = searchParams.get("assessment"); // exam/quiz id
-  const assessmentTypeFromQS = searchParams.get("atype"); // "exam" | "quiz" | etc.
+  // read lesson id from query
+  const lessonFromQS = useMemo(
+    () => new URLSearchParams(search).get("lesson") ?? "",
+    [search]
+  );
+  const assessmentIdFromQS = useMemo(
+    () => new URLSearchParams(search).get("assessment"),
+    [search]
+  );
+  const assessmentTypeFromQS = useMemo(
+    () => new URLSearchParams(search).get("atype"),
+    [search]
+  );
 
   const [currentLessonId, setCurrentLessonId] = useState<string>(lessonFromQS);
   const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
     undefined
   );
+  const [currentAssessmentId, setCurrentAssessmentId] = useState<
+    string | undefined
+  >(undefined);
+
   // side panels
   const [showNotes, setShowNotes] = useState(true);
   const [showQA, setShowQA] = useState(false);
@@ -55,6 +70,7 @@ export default function CoursePlayerPage() {
   // mobile drawer
   const [contentOpen, setContentOpen] = useState(false);
 
+  // course + modules
   const { data: courseRes } = useCustomQuery(
     `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
@@ -76,14 +92,18 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
-  // If an assessment id is present in QS, try to fetch it (best effort)
-  const { data: examFromQSRes } = useCustomQuery(
-    assessmentIdFromQS ? `${API_ENDPOINTS.exams}${assessmentIdFromQS}/` : "",
-    ["exam", assessmentIdFromQS ?? ""],
+  // Exams: ALWAYS fetch by lesson (your API expects ?lesson=)
+  const shouldFetchLessonExams = !!currentLessonId && !state?.assessment;
+  const { data: examsForLessonRes } = useCustomQuery(
+    shouldFetchLessonExams
+      ? `${API_ENDPOINTS.exams}?lesson=${currentLessonId}`
+      : "",
+    ["exams-by-lesson", currentLessonId],
     undefined,
-    !!assessmentIdFromQS
+    shouldFetchLessonExams
   );
 
+  // Questions for Q&A tab (independent)
   const { data: questionsData, isLoading: isQuestionsLoading } = useCustomQuery(
     `${API_ENDPOINTS.questions}?lesson=${currentLessonId}`,
     ["questions", currentLessonId],
@@ -108,7 +128,7 @@ export default function CoursePlayerPage() {
     return enrollStats?.find((s) => String(s.id) === String(courseId)) ?? null;
   }, [courseId, enrollStats]);
 
-  // --- Initial lesson selection: prefer QS, else first lesson ---
+  // Initial lesson selection: prefer QS, else first
   useEffect(() => {
     if (!modules?.length) return;
 
@@ -121,18 +141,17 @@ export default function CoursePlayerPage() {
       if (found) {
         setCurrentLessonId(String(found.id));
         setCurrentLesson(found);
-        return; // don't override with first
+        return;
       }
     }
 
-    // fallback to first if still nothing valid
     const first = allLessons[0];
     if (!first) return;
     setCurrentLessonId((prev) => (prev ? prev : String(first.id)));
     setCurrentLesson((prev) => prev ?? first);
   }, [modules, lessonFromQS]);
 
-  // Keep currentLesson in sync whenever currentLessonId changes (covers QS changes)
+  // keep currentLesson synced
   useEffect(() => {
     if (!currentLessonId || !modules?.length) return;
     const allLessons = modules.flatMap((m) => m?.lessons ?? []);
@@ -142,29 +161,60 @@ export default function CoursePlayerPage() {
     if (selected) setCurrentLesson(selected);
   }, [currentLessonId, modules]);
 
-  // If an assessment is present in QS, open it once the page mounts
+  // Decide which exam to show (prefer state; else from list; else placeholder)
   useEffect(() => {
-    if (!assessmentIdFromQS) return;
-    // Prefer fetched exam; otherwise create a minimal placeholder so UI opens
-    const fetched = examFromQSRes?.data as Exam | undefined;
-    if (fetched) {
-      setAssessment(fetched);
-    } else {
-      setAssessment(
-        (prev) =>
-          prev ??
-          ({
-            id: assessmentIdFromQS,
-            type: assessmentTypeFromQS,
-          } as unknown as Exam)
-      );
+    // 1) If a full exam was passed via navigation state, use it
+    if (state?.assessment) {
+      setAssessment(state.assessment);
+      setCurrentAssessmentId(String(state.assessment.id));
+      return;
     }
-  }, [assessmentIdFromQS, assessmentTypeFromQS, examFromQSRes]);
+
+    // 2) If assessment id is in QS, try to pick it from the fetched list
+    if (assessmentIdFromQS) {
+      const list: Exam[] = examsForLessonRes?.data ?? [];
+      if (list.length) {
+        const chosen =
+          list.find((e) => String(e.id) === String(assessmentIdFromQS)) ||
+          list[0];
+        setAssessment(chosen);
+        setCurrentAssessmentId(String(chosen.id));
+      } else {
+        // while waiting / or empty list — keep a minimal placeholder
+        setAssessment(
+          (prev) =>
+            prev ??
+            ({
+              id: assessmentIdFromQS,
+              type: assessmentTypeFromQS,
+              title: "Loading…",
+              description: "",
+              lesson: currentLessonId,
+              time_limit: 0,
+              passing_score: 0,
+              questions: [],
+            } as unknown as Exam)
+        );
+        setCurrentAssessmentId(String(assessmentIdFromQS));
+      }
+    } else {
+      // no exam in QS → clear
+      setAssessment(null);
+      setCurrentAssessmentId(undefined);
+    }
+  }, [
+    state,
+    assessmentIdFromQS,
+    assessmentTypeFromQS,
+    examsForLessonRes,
+    currentLessonId,
+  ]);
 
   const handleLessonSelect = (lessonId: string) => {
     setAssessment(null);
     setCurrentLessonId(lessonId);
     setContentOpen(false);
+    setCurrentAssessmentId(undefined);
 
     const params = new URLSearchParams(search);
     params.set("lesson", String(lessonId));
@@ -190,15 +240,55 @@ export default function CoursePlayerPage() {
     ["course", courseData?.id]
   );
 
+  const handleAssessmentSubmit = () => {
+    // close assessment & clear highlight
+    setAssessment(null);
+    setCurrentAssessmentId(undefined);
+
+    // advance to next lesson
+    const nextId = findNextLessonId(modules, currentLessonId);
+    const newLessonId = nextId ?? currentLessonId;
+    setCurrentLessonId(String(newLessonId));
+
+    const params = new URLSearchParams(search);
+    params.set("lesson", String(newLessonId));
+    params.delete("assessment");
+    params.delete("atype");
+    navigate(
+      {
+        pathname: `/catalog/${courseId}/player`,
+        search: `?${params.toString()}`,
+      },
+      { replace: true }
+    );
+  };
+
+  const handleOpenAssessment = (lessonId: string, a: Exam) => {
+    setCurrentLessonId(String(lessonId));
+    setAssessment(a);
+    setContentOpen(false);
+    setCurrentAssessmentId(String(a.id)); // IMPORTANT: a.id, not old state
+
+    const params = new URLSearchParams(search);
+    params.set("lesson", String(lessonId));
+    params.set("assessment", String(a.id));
+    if (a.type) params.set("atype", String(a.type));
+    navigate(
+      {
+        pathname: `/catalog/${courseId}/player`,
+        search: `?${params.toString()}`,
+      },
+      { replace: true }
+    );
+  };
+
   const handleComplete = async () => {
     try {
       const res = await createProgress({
         lesson: currentLessonId,
         watched: true,
       });
-      if (res?.status) {
-        toast.success("Awesome! Lesson completed.");
-      }
+      if (res?.status) toast.success("Awesome! Lesson completed.");
     } catch (error: any) {
       toast.error(error?.message ?? "Something went wrong.");
     }
@@ -209,7 +299,7 @@ export default function CoursePlayerPage() {
   const [groupMessage, setGroupMessage] = useState("");
   const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
   const handleJoinGroup = (groupId: string) => {
-    console.log("Joining group:", groupId);
+    console.log(groupId);
   };
   const handleShowChat = (group: any) => {
     setActiveChatGroup(group);
@@ -222,8 +312,8 @@ export default function CoursePlayerPage() {
   };
   const handleSendGroupMessage = (groupId: string) => {
     if (!groupMessage.trim()) return;
-    console.log("Sending message to group:", groupId, groupMessage);
     setGroupMessage("");
+    console.log(groupId);
   };
 
   return (
@@ -243,7 +333,7 @@ export default function CoursePlayerPage() {
             </button>
             <div className="flex-1">
               <h1 className="font-semibold whitespace-normal text-lg truncate max-w-md">
-                {courseData?.title}
+                {courseRes?.data?.title}
               </h1>
               <div className="flex items-center text-sm text-gray-400">
                 <span>
@@ -301,7 +391,6 @@ export default function CoursePlayerPage() {
       <div className="md:flex min-h-screen">
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Lesson / Assessment Player */}
           <LessonContentPlayer
             modules={modules}
             currentLessonId={currentLessonId}
@@ -309,6 +398,7 @@ export default function CoursePlayerPage() {
             onLessonSelect={handleLessonSelect}
             assessment={assessment}
             setAssessment={setAssessment}
+            onAssessmentSubmit={handleAssessmentSubmit}
           />
 
           {/* Lesson Info */}
@@ -420,13 +510,11 @@ export default function CoursePlayerPage() {
             <div className="h-full overflow-y-auto">
               <CourseContent
                 modules={modules}
+                currentAssessmentId={currentAssessmentId}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
-                onOpenAssessment={(lessonId, a) => {
-                  setCurrentLessonId(String(lessonId));
-                  setAssessment(a);
-                }}
+                onOpenAssessment={handleOpenAssessment}
               />
             </div>
           </div>
@@ -446,7 +534,7 @@ export default function CoursePlayerPage() {
             onClick={() => setContentOpen(false)}
           />
           <div
-            className={`absolute right-0 top-0 h-full w-80 bg-white text-gray-900 border-l border-gray-200
+            className={`absolute right-0 top-0 h-full w-64 bg-white text-gray-900 border-l border-gray-200
               transform transition-transform ${
                 contentOpen ? "translate-x-0" : "translate-x-full"
               } flex flex-col min-h-0`}
@@ -466,14 +554,11 @@ export default function CoursePlayerPage() {
             <div className="h-[calc(100%-48px)] overflow-y-auto">
               <CourseContent
                 modules={modules}
+                currentAssessmentId={currentAssessmentId}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
-                onOpenAssessment={(lessonId, a) => {
-                  setCurrentLessonId(String(lessonId));
-                  setAssessment(a);
-                  setContentOpen(false);
-                }}
+                onOpenAssessment={handleOpenAssessment}
               />
             </div>
           </div>

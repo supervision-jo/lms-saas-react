@@ -94,7 +94,7 @@ export default function LessonNotes({
     <div className="bg-gray-800 p-6 border-b border-gray-700">
       <div className="max-w-5xl mx-auto">
         <div className="bg-gray-900 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex sm:items-center items-start sm:gap-0 gap-4 justify-between mb-4 sm:flex-row flex-col">
             <h3 className="text-lg font-semibold text-white">Lesson Notes</h3>
             <button
               disabled={!notes || !title}

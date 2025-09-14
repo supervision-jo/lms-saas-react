@@ -1,602 +1,524 @@
+// CreateSectionsForm.tsx
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Award,
   Edit,
   FileText,
   GripVertical,
+  HelpCircle,
+  Link,
   Plus,
   Trash2,
   Upload,
   Video,
 } from "lucide-react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomPost } from "../../../hooks/useMutation";
-import { API_ENDPOINTS } from "../../../utils/constants";
-import toast from "react-hot-toast";
-import handleErrorAlerts from "../../../utils/showErrorMessages";
-import QuizBuilderModal from "./QuizBuilderModal";
-import { readUserFromStorage } from "../../../services/auth";
-import { useEffect, useState } from "react";
+import { useDrag, useDrop } from "react-dnd";
+import { formatDuration } from "../../../utils/formatDuration";
 
-type AssessmentChoice = { text: string; is_correct: boolean };
-type AssessmentQuestion = {
-  text: string;
-  question_type: "mcq";
-  explanation?: string;
-  choices: AssessmentChoice[];
+interface Props {
+  addLesson: (moduleId: string, type: BuilderLesson["type"]) => void;
+  addModule: () => void;
+  course: BuilderCourse;
+  deleteLesson: (moduleId: string, lessonId: string) => void;
+  deleteModule: (moduleId: string) => void;
+  editQuiz: (moduleId: string, lessonId: string) => void;
+  updateModule: (moduleId: string, updates: Partial<BuilderModule>) => void;
+  getLessonIcon: (
+    type: "quiz" | "video" | "article" | "exam" | "material"
+  ) => JSX.Element;
+  updateLesson: (
+    moduleId: string,
+    lessonId: string,
+    updates: Partial<BuilderLesson>
+  ) => void;
+  setEditingLesson: React.Dispatch<
+    React.SetStateAction<{
+      moduleId: string;
+      lessonId: string;
+    } | null>
+  >;
+  setEditingArticle: React.Dispatch<
+    React.SetStateAction<{
+      moduleId: string;
+      lessonId: string;
+    } | null>
+  >;
+  setUploadingMaterial: React.Dispatch<
+    React.SetStateAction<{
+      moduleId: string;
+      lessonId: string;
+    } | null>
+  >;
+  moveModule: (dragId: string, hoverId: string) => void;
+  moveLesson: (moduleId: string, dragId: string, hoverId: string) => void;
+}
+
+const isContent = (t?: string) =>
+  t === "video" || t === "article" || t === "material";
+
+/** DnD item types */
+const DND_TYPES = {
+  MODULE: "MODULE",
+  LESSON: "LESSON",
+} as const;
+
+type ModuleItemProps = {
+  module: BuilderModule;
+  index: number;
+  moveModule: (dragId: string, hoverId: string) => void;
+  children: React.ReactNode;
 };
-
-export type AssessmentDraft = {
-  title: string;
-  description?: string;
-  time_limit_mins: number;
-  passing_score: number;
-  type: "quiz" | "exam";
-  questions: AssessmentQuestion[];
-};
-
-type LessonDraft = {
-  id?: string;
-  title: string;
-  description: string;
-  content_type: "video" | "article" | "material";
-  video_url: string | null;
-  free_preview: boolean;
-  duration_hours: number | "";
-  order?: number;
-  quizDraft?: AssessmentDraft | null;
-  examDraft?: AssessmentDraft | null;
-};
-
-type SectionFormValues = {
-  courseId: string;
-  title: string;
-  description: string;
-  order?: number;
-  lessons: LessonDraft[];
-};
-
-const lessonIcon = (type: LessonDraft["content_type"]) => {
-  switch (type) {
-    case "video":
-      return <Video className="w-4 h-4" />;
-    case "article":
-      return <FileText className="w-4 h-4" />;
-    case "material":
-      return <Upload className="w-4 h-4" />;
-    default:
-      return <FileText className="w-4 h-4" />;
-  }
-};
-
-const defaultLesson = (type: LessonDraft["content_type"]): LessonDraft => ({
-  title:
-    type === "video"
-      ? "New Video"
-      : `New ${type[0].toUpperCase()}${type.slice(1)}`,
-  description: "",
-  content_type: type,
-  duration_hours: "",
-  video_url: type === "video" ? "" : null,
-  free_preview: false,
-  quizDraft: null,
-  examDraft: null,
-});
-
-export default function CreateSectionsForm() {
-  const currentUser: User = readUserFromStorage();
-
-  const { data: coursesRes } = useCustomQuery(API_ENDPOINTS.courses, [
-    "courses",
-  ]);
-  const allCourses: Course[] = coursesRes?.data ?? [];
-
-  const courses: Array<{ id: string; title: string }> = allCourses
-    ?.filter((c) => c?.instructor?.id === currentUser?.id)
-    .map((i) => ({ id: i?.id, title: i?.title }));
-
-  const { mutateAsync: createSection, isPending: creatingSection } =
-    useCustomPost(API_ENDPOINTS.createSection, ["modules"]);
-
-  const { mutateAsync: createAssessment, isPending: creatingAssessments } =
-    useCustomPost(API_ENDPOINTS.createExam, ["modules"]);
-
-  /** Form */
-  const {
-    control,
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<SectionFormValues>({
-    mode: "onChange",
-    defaultValues: {
-      courseId: courses?.[0]?.id ?? "",
-      title: "",
-      description: "",
-      order: 1,
-      lessons: [],
+function ModuleItem({ module, index, moveModule, children }: ModuleItemProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [, drop] = useDrop({
+    accept: DND_TYPES.MODULE,
+    hover(item: { id: string; index: number }) {
+      if (!ref.current || item.id === module.id) return;
+      moveModule(item.id, module.id);
+      item.index = index;
     },
   });
-
-  useEffect(() => {
-    const first = courses?.[0]?.id;
-    if (first && !watch("courseId"))
-      setValue("courseId", first, { shouldDirty: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courses?.length]);
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "lessons",
+  const [{ isDragging }, drag] = useDrag({
+    type: DND_TYPES.MODULE,
+    item: { id: module.id, index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
   });
+  drag(drop(ref));
+  return (
+    <div ref={ref} style={{ opacity: isDragging ? 0.7 : 1 }}>
+      {children}
+    </div>
+  );
+}
 
-  const addLesson = (type: LessonDraft["content_type"]) =>
-    append(defaultLesson(type));
+type LessonItemProps = {
+  moduleId: string;
+  lesson: BuilderLesson;
+  index: number;
+  moveLesson: (moduleId: string, dragId: string, hoverId: string) => void;
+  children: React.ReactNode;
+};
+function LessonItem({
+  moduleId,
+  lesson,
+  index,
+  moveLesson,
+  children,
+}: LessonItemProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [, drop] = useDrop({
+    accept: DND_TYPES.LESSON,
+    hover(item: { id: string; index: number; moduleId: string }) {
+      if (!ref.current || item.id === lesson.id || item.moduleId !== moduleId)
+        return;
+      moveLesson(moduleId, item.id, lesson.id);
+      item.index = index;
+    },
+  });
+  const [{ isDragging }, drag] = useDrag({
+    type: DND_TYPES.LESSON,
+    item: { id: lesson.id, index, moduleId },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+  drag(drop(ref));
+  return (
+    <div ref={ref} style={{ opacity: isDragging ? 0.7 : 1 }}>
+      {children}
+    </div>
+  );
+}
 
-  const [quizModal, setQuizModal] = useState<{
-    open: boolean;
-    index: number | null;
-    type: "quiz" | "exam";
-    initial?: AssessmentDraft | null;
-  }>({ open: false, index: null, type: "quiz", initial: null });
+export default function CreateSectionsForm({
+  addLesson,
+  addModule,
+  course,
+  deleteLesson,
+  deleteModule,
+  editQuiz,
+  getLessonIcon,
+  updateModule,
+  updateLesson,
+  setEditingLesson,
+  setEditingArticle,
+  setUploadingMaterial,
+  moveModule,
+  moveLesson,
+}: Props) {
+  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
 
-  const openAssessmentModal = (idx: number, type: "quiz" | "exam") => {
-    const initial =
-      type === "quiz"
-        ? (watch(`lessons.${idx}.quizDraft`) as AssessmentDraft | null)
-        : (watch(`lessons.${idx}.examDraft`) as AssessmentDraft | null);
-    setQuizModal({ open: true, index: idx, type, initial: initial ?? null });
-  };
-
-  const onSaveDraftFromModal = (draft: AssessmentDraft) => {
-    if (quizModal.index == null) return;
-    const minutes = Math.max(1, Math.floor(Number(draft.time_limit_mins || 1)));
-    if (quizModal.type === "quiz") {
-      setValue(
-        `lessons.${quizModal.index}.quizDraft`,
-        { ...draft, time_limit_mins: minutes, type: "quiz" },
-        { shouldDirty: true }
-      );
-    } else {
-      setValue(
-        `lessons.${quizModal.index}.examDraft`,
-        { ...draft, time_limit_mins: minutes, type: "exam" },
-        { shouldDirty: true }
-      );
-    }
-    setQuizModal({ open: false, index: null, type: "quiz", initial: null });
-  };
-
-  const onSubmit = async (values: SectionFormValues) => {
-    if (!values.courseId) return toast.error("Please choose a course.");
-    if (!values.title.trim()) return toast.error("Section title is required.");
-    if (!values.lessons?.length) return toast.error("Add at least one lesson.");
-
-    const lessonsPayload = values.lessons.map((l, idx) => ({
-      title: l.title?.trim() || `Lesson ${idx + 1}`,
-      description: l.description?.trim() || "",
-      order: idx + 1,
-      video_url: l.content_type === "video" ? l.video_url || "" : null,
-      free_preview: !!l.free_preview,
-      duration_hours: l.duration_hours || 0,
-      content_type: l.content_type,
-    }));
-
-    const sectionPayload = {
-      title: values.title.trim(),
-      course: values.courseId,
-      description: values.description?.trim() || "",
-      order: Number(values.order ?? 1),
-      lessons: lessonsPayload,
+  // per-module refs so the outside-click handler targets the correct menu
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const setMenuRef =
+    (id: string) =>
+    (el: HTMLDivElement | null): void => {
+      menuRefs.current[id] = el;
     };
 
-    try {
-      const res = await createSection(sectionPayload);
-      const created = res?.data ?? res;
-      const createdLessons:
-        | Array<{ id: string; order: number; title?: string }>
-        | undefined = created?.lessons ?? created?.data?.lessons;
-
-      const tasks: Array<Promise<any>> = [];
-      values.lessons.forEach((local, idx) => {
-        if (local.content_type !== "video") return;
-        const found = createdLessons?.find(
-          (cl) => Number(cl.order) === idx + 1
-        );
-        if (!found) return;
-
-        const pushAssessment = (draft?: AssessmentDraft | null) => {
-          if (!draft) return;
-          const payload = {
-            title:
-              draft.title?.trim() ||
-              `${draft.type === "exam" ? "Exam" : "Quiz"} for ${
-                local.title || `Lesson ${idx + 1}`
-              }`,
-            description: draft.description || "",
-            lesson: found.id,
-            time_limit: Math.max(1, Math.floor(Number(draft.time_limit_mins))),
-            type: draft.type,
-            passing_score: Math.max(
-              0,
-              Math.min(100, Math.floor(Number(draft.passing_score || 0)))
-            ),
-            questions: draft.questions || [],
-          };
-          tasks.push(createAssessment(payload));
-        };
-
-        pushAssessment(local.quizDraft);
-        pushAssessment(local.examDraft);
-      });
-
-      if (tasks.length) {
-        const results = await Promise.allSettled(tasks);
-        const failed = results.filter((r) => r.status === "rejected");
-        if (failed.length) {
-          toast.error(
-            `Section saved, but ${failed.length} assessment(s) failed.`
-          );
-        } else {
-          toast.success("Section & assessments created successfully!");
-        }
-      } else {
-        toast.success("Section created successfully!");
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!openMenuFor) return;
+      const container = menuRefs.current[openMenuFor];
+      if (!container) return;
+      if (!container.contains(e.target as Node)) {
+        setOpenMenuFor(null);
       }
-
-      const keepCourse = watch("courseId");
-      reset({
-        courseId: keepCourse,
-        title: "",
-        description: "",
-        order: Number(values.order ?? 1) + 1,
-        lessons: [],
-      });
-    } catch (err: any) {
-      const p = err?.response?.data;
-      handleErrorAlerts(
-        p?.message ||
-          p?.title?.[0] ||
-          p?.description?.[0] ||
-          p?.course?.[0] ||
-          p?.order?.[0] ||
-          "There is an unexpected error occurred."
-      );
     }
-  };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [openMenuFor]);
 
   return (
-    <div className="space-y-6">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="bg-white rounded-xl shadow-sm p-8"
-      >
-        <div className="flex md:items-center items-start gap-4 justify-between mb-6 md:flex-row flex-col">
+    <div className="sm:space-y-6 space-y-3">
+      <div className="bg-white rounded-xl shadow-sm sm:p-8 p-2">
+        <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Curriculum</h2>
-
-          <div className="flex items-center gap-3 sm:flex-row flex-col sm:w-fit w-full">
-            <button
-              type="button"
-              onClick={() => addLesson("video")}
-              className="bg-gray-100 text-gray-800 px-3 py-2 sm:w-fit w-full rounded-lg hover:bg-gray-200 transition-colors flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Video
-            </button>
-            <button
-              type="button"
-              onClick={() => addLesson("article")}
-              className="bg-gray-100 text-gray-800 px-3 py-2 sm:w-fit w-full rounded-lg hover:bg-gray-200 transition-colors flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Article
-            </button>
-            <button
-              type="button"
-              onClick={() => addLesson("material")}
-              className="bg-gray-100 text-gray-800 px-3 py-2 sm:w-fit w-full rounded-lg hover:bg-gray-200 transition-colors flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Material
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={addModule}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Module
+          </button>
         </div>
 
-        {/* Section header inputs */}
-        <div className="grid sm:grid-cols-3 grid-cols-1 gap-4 mb-6">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Module Title *
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Introduction to C++"
-              {...register("title", { required: "Title is required" })}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                errors.title ? "border-red-300" : "border-gray-300"
-              }`}
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.title.message}
-              </p>
-            )}
-          </div>
-
-          <div className="sm:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Order
-            </label>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              {...register("order", {
-                valueAsNumber: true,
-                setValueAs: (v) => Math.max(1, Number(v || 1)),
-              })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course *
-            </label>
-            <select
-              {...register("courseId", { required: "Course is required" })}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                errors.courseId ? "border-red-300" : "border-gray-300"
-              }`}
-            >
-              {courses?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-            {errors.courseId && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.courseId.message}
-              </p>
-            )}
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Module Description
-            </label>
-            <textarea
-              rows={3}
-              placeholder="What will this module cover?"
-              {...register("description")}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Lessons */}
-        {fields.length === 0 ? (
+        {course.modules.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <FileText className="w-16 h-16 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No lessons yet
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Start by adding videos, articles, or materials. Quizzes/Exams
-              attach to video lessons.
+            <p className="text-gray-600">
+              Start by adding modules to structure your course content.
             </p>
             <button
               type="button"
-              onClick={() => addLesson("video")}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+              onClick={addModule}
+              className="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Add Your First Lesson
+              + Add your first module
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {fields.map((f, idx) => {
-              const type = watch(`lessons.${idx}.content_type`);
-              const isVideo = type === "video";
-              const qDraft = watch(`lessons.${idx}.quizDraft`) as
-                | AssessmentDraft
-                | undefined;
-              const eDraft = watch(`lessons.${idx}.examDraft`) as
-                | AssessmentDraft
-                | undefined;
-
+          <div className="space-y-6">
+            {course.modules.map((module, mIndex) => {
+              const hasAnyContent = (module.lessons ?? []).some((l) =>
+                isContent(l.type)
+              );
               return (
-                <div key={f.id} className="border border-gray-200 rounded-lg">
-                  <div className="p-4">
-                    <div className="flex sm:items-start sm:justify-between sm:flex-row flex-col-reverse gap-3">
-                      <div className="flex w-full items-start gap-3">
-                        <GripVertical className="w-4 h-4 text-gray-400 sm:block hidden" />
-                        <div className="sm:block hidden">
-                          {lessonIcon(type)}
-                        </div>
-
-                        <div className="space-y-2 w-full">
-                          <div className="flex flex-col md:flex-row gap-3">
+                <ModuleItem
+                  key={module.id}
+                  module={module}
+                  index={mIndex}
+                  moveModule={moveModule}
+                >
+                  {/* allow dropdowns to escape bounds */}
+                  <div className="border border-gray-200 rounded-lg overflow-visible">
+                    <div className="sm:p-4 p-2 bg-gray-50 border-b border-gray-200 relative">
+                      <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+                          </div>
+                          <div className="flex-1 flex flex-col">
                             <input
                               type="text"
-                              placeholder="Lesson title"
-                              {...register(`lessons.${idx}.title`, {
-                                required: "Title required",
-                              })}
-                              className={`md:w-80 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                                (errors?.lessons?.[idx] as any)?.title
-                                  ? "border-red-300"
-                                  : "border-gray-300"
-                              }`}
+                              value={module.title}
+                              onChange={(e) =>
+                                updateModule(module.id, {
+                                  title: e.target.value,
+                                })
+                              }
+                              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                             />
-
-                            <select
-                              {...register(`lessons.${idx}.content_type`, {
-                                onChange: (e) => {
-                                  const val = e.target
-                                    .value as LessonDraft["content_type"];
-                                  if (val !== "video") {
-                                    setValue(`lessons.${idx}.quizDraft`, null, {
-                                      shouldDirty: true,
-                                    });
-                                    setValue(`lessons.${idx}.examDraft`, null, {
-                                      shouldDirty: true,
-                                    });
-                                  }
-                                },
-                              })}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            <input
+                              type="text"
+                              value={module.description}
+                              onChange={(e) =>
+                                updateModule(module.id, {
+                                  description: e.target.value,
+                                })
+                              }
+                              placeholder="Module description"
+                              className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 sm:max-w-full max-w-60 mt-1"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex sm:self-center self-end items-center space-x-2">
+                          <div className="relative" ref={setMenuRef(module.id)}>
+                            {/* icon-only Add button */}
+                            <button
+                              type="button"
+                              aria-label="Add"
+                              onClick={() =>
+                                setOpenMenuFor((id) =>
+                                  id === module.id ? null : module.id
+                                )
+                              }
+                              className="text-purple-600 hover:text-purple-800 p-2 rounded-lg border border-purple-200 hover:border-purple-300"
+                              title="Add"
                             >
-                              <option value="video">Video</option>
-                              <option value="article">Article</option>
-                              <option value="material">Material</option>
-                            </select>
-
-                            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                              <input
-                                type="checkbox"
-                                {...register(`lessons.${idx}.free_preview`)}
-                                className="h-4 w-4 text-purple-600 rounded"
-                              />
-                              Free preview
-                            </label>
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            {openMenuFor === module.id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    addLesson(module.id, "video");
+                                    setOpenMenuFor(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                >
+                                  <Video className="w-4 h-4 mr-2" />
+                                  Video
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    addLesson(module.id, "article");
+                                    setOpenMenuFor(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Article
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    addLesson(module.id, "material");
+                                    setOpenMenuFor(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                >
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Material
+                                </button>
+                                <div className="my-1 border-t border-gray-200" />
+                                <button
+                                  type="button"
+                                  disabled={!hasAnyContent}
+                                  onClick={() => {
+                                    if (!hasAnyContent) return;
+                                    addLesson(module.id, "quiz");
+                                    setOpenMenuFor(null);
+                                  }}
+                                  className={`w-full text-left px-4 py-2 flex items-center ${
+                                    hasAnyContent
+                                      ? "hover:bg-gray-50"
+                                      : "opacity-50 cursor-not-allowed"
+                                  }`}
+                                  title={
+                                    hasAnyContent
+                                      ? "Attach a Quiz to the last content lesson"
+                                      : "Create a lesson first"
+                                  }
+                                >
+                                  <HelpCircle className="w-4 h-4 mr-2" />
+                                  Quiz
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={!hasAnyContent}
+                                  onClick={() => {
+                                    if (!hasAnyContent) return;
+                                    addLesson(module.id, "exam");
+                                    setOpenMenuFor(null);
+                                  }}
+                                  className={`w-full text-left px-4 py-2 flex items-center rounded-b-lg ${
+                                    hasAnyContent
+                                      ? "hover:bg-gray-50"
+                                      : "opacity-50 cursor-not-allowed"
+                                  }`}
+                                  title={
+                                    hasAnyContent
+                                      ? "Attach an Exam to the last content lesson"
+                                      : "Create a lesson first"
+                                  }
+                                >
+                                  <Award className="w-4 h-4 mr-2" />
+                                  Exam
+                                </button>
+                              </div>
+                            )}
                           </div>
 
-                          {isVideo && (
-                            <input
-                              type="url"
-                              placeholder="Video URL (YouTube or direct .mp4/.m3u8)"
-                              {...register(`lessons.${idx}.video_url` as const)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                          )}
-                          <input
-                            type="number"
-                            placeholder="Lesson Duration (Minutes)"
-                            {...register(
-                              `lessons.${idx}.duration_hours` as const
-                            )}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                          {!isVideo && (
-                            <textarea
-                              placeholder="Lesson description (optional)"
-                              {...register(`lessons.${idx}.description`)}
-                              rows={2}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                            />
-                          )}
-                          {isVideo && (
-                            <>
-                              <textarea
-                                placeholder="Lesson description (optional)"
-                                {...register(`lessons.${idx}.description`)}
-                                rows={2}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                              />
-                              {/* Assessment config (Video-only) */}
-                              <div className="flex sm:flex-row flex-col sm:w-fit w-full items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openAssessmentModal(idx, "quiz")
-                                  }
-                                  className="sm:w-40  w-full px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center"
-                                  title="Configure Quiz"
-                                >
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  {qDraft ? "Edit Quiz" : "Add Quiz"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openAssessmentModal(idx, "exam")
-                                  }
-                                  className="sm:w-40  w-full px-3 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition-colors flex items-center"
-                                  title="Configure Exam"
-                                >
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  {eDraft ? "Edit Exam" : "Add Exam"}
-                                </button>
-
-                                {/* status pills */}
-                                {qDraft && (
-                                  <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700">
-                                    Quiz • {qDraft.questions?.length ?? 0} Q •{" "}
-                                    {qDraft.time_limit_mins} min • pass{" "}
-                                    {qDraft.passing_score}%
-                                  </span>
-                                )}
-                                {eDraft && (
-                                  <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-                                    Exam • {eDraft.questions?.length ?? 0} Q •{" "}
-                                    {eDraft.time_limit_mins} min • pass{" "}
-                                    {eDraft.passing_score}%
-                                  </span>
-                                )}
-                              </div>
-                            </>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => deleteModule(module.id)}
+                            className="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"
+                            title="Delete Module"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      </div>
-
-                      <div className="flex w-full sm:w-fit justify-between items-center gap-2 sm:self-start self-end">
-                        <div className="flex items-center gap-2 sm:hidden">
-                          <GripVertical className="w-4 h-4 text-gray-400" />
-                          <div>{lessonIcon(type)}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => remove(idx)}
-                          className="p-2 text-red-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
+
+                    {(module.lessons?.length ?? 0) > 0 && (
+                      <div className="p-4 space-y-2">
+                        {module.lessons!.map((lesson, lIndex) => {
+                          const canDrag = true;
+                          return (
+                            <LessonItem
+                              key={lesson.id}
+                              moduleId={module.id}
+                              lesson={lesson as any}
+                              index={lIndex}
+                              moveLesson={moveLesson}
+                            >
+                              <div className="flex sm:items-center items-start sm:flex-row flex-col sm:gap-0 gap-4 justify-between sm:p-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                <div className="flex items-center gap-3 w-full">
+                                  <div>
+                                    <GripVertical
+                                      className={`w-4 h-4 text-gray-400 ${
+                                        canDrag ? "cursor-move" : "opacity-50"
+                                      }`}
+                                    />
+                                  </div>
+                                  <div>{getLessonIcon(lesson.type)}</div>
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={lesson.title}
+                                      onChange={(e) =>
+                                        updateLesson(module.id, lesson.id, {
+                                          title: e.target.value,
+                                        })
+                                      }
+                                      className="font-medium max-w-full bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                                    />
+                                    <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
+                                      <span className="inline-flex items-center flex-wrap">
+                                        {lesson.type === "article" ||
+                                        lesson.type === "quiz" ||
+                                        lesson.type === "exam" ? null : (
+                                          <>
+                                            <Link className="w-3 h-3 mr-1" />
+                                            {(lesson as any).youtubeUrl?.slice(
+                                              0,
+                                              20
+                                            ) + "..." ||
+                                              (lesson as any).url?.slice(
+                                                0,
+                                                20
+                                              ) + "..." ||
+                                              (lesson as any).video_url?.slice(
+                                                0,
+                                                20
+                                              ) + "..." ||
+                                              (lesson as any).fileUrl?.slice(
+                                                0,
+                                                20
+                                              ) + "..." ||
+                                              "No URL"}
+                                          </>
+                                        )}
+                                      </span>
+                                      {lesson.type === "video" && (
+                                        <span>
+                                          • Duration:{" "}
+                                          {formatDuration(
+                                            (lesson as any).duration
+                                          ) || "N/A"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2 sm:self-center self-end">
+                                  {isContent(lesson.type) && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deleteLesson(module.id, lesson.id)
+                                      }
+                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {lesson.type === "video" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingLesson({
+                                          moduleId: module.id,
+                                          lessonId: lesson.id,
+                                        })
+                                      }
+                                      className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                                      title="Edit Video"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {lesson.type === "article" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingArticle({
+                                          moduleId: module.id,
+                                          lessonId: lesson.id,
+                                        })
+                                      }
+                                      className="p-1 text-green-400 hover:text-green-600 transition-colors"
+                                      title="Edit Article"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {lesson.type === "material" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setUploadingMaterial({
+                                          moduleId: module.id,
+                                          lessonId: lesson.id,
+                                        })
+                                      }
+                                      className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
+                                      title="Upload Material"
+                                    >
+                                      <Upload className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {(lesson.type === "quiz" ||
+                                    lesson.type === "exam") && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        editQuiz(module.id, lesson.id)
+                                      }
+                                      className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
+                                      title={`Edit ${
+                                        lesson.type === "quiz" ? "Quiz" : "Exam"
+                                      }`}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </LessonItem>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
+                </ModuleItem>
               );
             })}
           </div>
         )}
-
-        {/* Actions */}
-        <div className="pt-6 flex items-center justify-end gap-3">
-          <button
-            type="submit"
-            disabled={isSubmitting || creatingSection || creatingAssessments}
-            className="px-6 py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-60"
-          >
-            {isSubmitting || creatingSection || creatingAssessments
-              ? "Saving…"
-              : "Save Module"}
-          </button>
-        </div>
-      </form>
-
-      {/* Quiz/Exam Builder Modal */}
-      {quizModal.open && quizModal.index != null && (
-        <QuizBuilderModal
-          type={quizModal.type}
-          initial={quizModal.initial || undefined}
-          onCancel={() =>
-            setQuizModal({
-              open: false,
-              index: null,
-              type: "quiz",
-              initial: null,
-            })
-          }
-          onSaveDraft={onSaveDraftFromModal}
-        />
-      )}
+      </div>
     </div>
   );
 }
