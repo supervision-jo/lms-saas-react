@@ -82,9 +82,9 @@ export default function CoursesSection() {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        // onClick={() =>
-                        //   navigate(`/course-builder?courseId=${course?.id}`)
-                        // }
+                        onClick={() =>
+                          navigate(`/course-builder?courseId=${course?.id}`)
+                        }
                         className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
                         title="Edit Course"
                       >
@@ -172,9 +172,9 @@ export default function CoursesSection() {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        // onClick={() => {
-                        //   navigate(`/course-builder?courseId=${course?.id}`);
-                        // }}
+                        onClick={() => {
+                          navigate(`/course-builder?courseId=${course?.id}`);
+                        }}
                         className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
                         title="Edit Course"
                       >

@@ -41,7 +41,9 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import GroupManagement from "../../components/course/course-builder/GroupManagement";
 import UserManagement from "../../components/course/course-builder/UserManagement";
-import { patch } from "../../api"; // <<< use axios helper
+
+// ⬇️ axios-based patch helper (from /src/api/index.ts)
+import { patch as apiPatch } from "../../api";
 
 /** =========================
  * Local types
@@ -108,8 +110,6 @@ function parseDurationToHours(input: unknown): number {
   return isFinite(num) ? num : 0;
 }
 
-// put near other helpers in CourseBuilderPage.tsx
-
 function normNum(n: any, fallback = 0) {
   const k = Number(n);
   return Number.isFinite(k) ? k : fallback;
@@ -121,25 +121,24 @@ function isYouTubeUrl(u: string) {
   );
 }
 
+/** ===== API → Builder mappers (with url normalization) ===== */
 function mapApiLesson(l: any, idx: number): any /* BuilderLesson */ {
   const id = String(l?.id ?? uid());
-  // prefer server-provided content_type; otherwise best-guess
   const rawType = l?.content_type ?? l?.type ?? "";
   const type: BuilderLesson["type"] =
     rawType === "video" || rawType === "article" || rawType === "material"
       ? rawType
       : l?.url
       ? "video"
-      : "article"; // fallback if backend didn't send type
+      : "article";
 
-  // unified single URL coming from backend
   const url: string =
     l?.url ?? l?.video_url ?? l?.youtube_url ?? l?.file_url ?? "";
 
   const base: any = {
     id,
     title: l?.title ?? `Lesson ${idx + 1}`,
-    type, // "video" | "article" | "material"
+    type,
     order: normNum(l?.order, idx),
     free_preview: Boolean(l?.free_preview),
   };
@@ -154,10 +153,9 @@ function mapApiLesson(l: any, idx: number): any /* BuilderLesson */ {
     }
     base.duration = l?.duration ?? l?.duration_hours ?? "";
   } else if (type === "material") {
-    base.fileUrl = url; // materials use fileUrl
+    base.fileUrl = url;
     base.description = l?.description ?? "";
   } else if (type === "article") {
-    // articles ignore url; they use description_html
     base.description = l?.description_html ?? l?.description ?? "";
     base.duration = l?.duration ?? l?.duration_hours ?? "";
   }
@@ -167,7 +165,7 @@ function mapApiLesson(l: any, idx: number): any /* BuilderLesson */ {
 
 function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
   const lessonsApi: any[] = Array.isArray(s?.lessons) ? s.lessons : [];
-  // 1) map content lessons first
+
   const contentLessons = lessonsApi
     .filter((l) => {
       const t = l?.content_type ?? l?.type;
@@ -176,7 +174,6 @@ function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
     .map(mapApiLesson)
     .sort((a, b) => a.order - b.order);
 
-  // 2) insert attached assessments *after* their parent content
   const withAssessments: any[] = [];
   for (const c of contentLessons) {
     withAssessments.push(c);
@@ -187,8 +184,6 @@ function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
       ...(Array.isArray(src.exams) ? src.exams : []),
       ...(Array.isArray(src.quizzes) ? src.quizzes : []),
     ];
-
-    // also support single quiz/exam objects
     if (src.quiz) candidates.push({ ...src.quiz, type: "quiz" });
     if (src.exam) candidates.push({ ...src.exam, type: "exam" });
 
@@ -200,9 +195,9 @@ function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
           id: String(a?.id ?? uid()),
           title: a?.title ?? (t === "quiz" ? "Quiz" : "Exam"),
           type: t,
-          order: 0, // will be re-numbered
+          order: 0,
           parentId: c.id,
-          quiz: a?.quiz ?? a, // keep any structure you need inside
+          quiz: a?.quiz ?? a,
         };
       })
       .filter(Boolean);
@@ -210,7 +205,6 @@ function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
     withAssessments.push(...attached);
   }
 
-  // 3) final ordering (content + attachments)
   withAssessments.forEach((l, i) => (l.order = i));
 
   return {
@@ -222,53 +216,36 @@ function mapApiSectionToModule(s: any, sIdx: number): BuilderModule {
   };
 }
 
-/** Keep exactly one url field depending on lesson type.
- * - video: either youtubeUrl OR videoUrl (never both)
- * - material: fileUrl only
- * - article: no url fields
- * Also accepts a raw `url` coming from the API and places it correctly.
- */
-
-// A minimal, object-only shape we can safely spread and mutate
+/** Keep exactly one url field depending on lesson type + repair bad pastes */
 type UrlSanitizable = {
   type: BuilderLesson["type"];
   url?: string | null;
   youtubeUrl?: string | null;
   videoUrl?: string | null;
   fileUrl?: string | null;
-  // keep everything else (title, order, etc.)
   [key: string]: any;
 };
-
-/** Keep exactly one URL field depending on lesson type and repair bad pastes. */
 function sanitizeLessonUrls<L extends UrlSanitizable>(lesson: L): L {
-  const l: UrlSanitizable = { ...lesson }; // safe: L is an object
-
-  const raw = String(l.url ?? "").trim(); // single backend url (if present)
+  const l: UrlSanitizable = { ...lesson };
+  const raw = String(l.url ?? "").trim();
 
   if (l.type === "video") {
     const you = String(l.youtubeUrl ?? "").trim();
     const vid = String(l.videoUrl ?? "").trim();
     let youtubeUrl = "";
     let videoUrl = "";
-
-    // 1) prefer already-set fields if valid
     if (you && isYouTubeUrl(you)) youtubeUrl = you;
     else if (vid && !isYouTubeUrl(vid)) videoUrl = vid;
-    else if (you && !isYouTubeUrl(you) && !vid)
-      videoUrl = you; // repair bad paste
-    else if (vid && isYouTubeUrl(vid) && !you) youtubeUrl = vid; // repair
-
-    // 2) fallback to raw api url
+    else if (you && !isYouTubeUrl(you) && !vid) videoUrl = you;
+    else if (vid && isYouTubeUrl(vid) && !you) youtubeUrl = vid;
     if (!youtubeUrl && !videoUrl && raw) {
       if (isYouTubeUrl(raw)) youtubeUrl = raw;
       else videoUrl = raw;
     }
-
     delete l.url;
     l.youtubeUrl = youtubeUrl;
     l.videoUrl = videoUrl;
-    l.fileUrl = ""; // videos never use fileUrl
+    l.fileUrl = "";
   } else if (l.type === "material") {
     const file = String(l.fileUrl ?? raw ?? "").trim();
     delete l.url;
@@ -276,16 +253,13 @@ function sanitizeLessonUrls<L extends UrlSanitizable>(lesson: L): L {
     l.youtubeUrl = "";
     l.videoUrl = "";
   } else if (l.type === "article") {
-    // articles ignore url fields entirely
     delete l.url;
     delete l.youtubeUrl;
     delete l.videoUrl;
     delete l.fileUrl;
   }
-
-  return l as L; // unchanged outer shape
+  return l as L;
 }
-
 function sanitizeCurriculumUrls(modules: BuilderModule[]): BuilderModule[] {
   return modules.map((m) => ({
     ...m,
@@ -293,7 +267,7 @@ function sanitizeCurriculumUrls(modules: BuilderModule[]): BuilderModule[] {
   }));
 }
 
-// ----- helpers for assessment hydration -----
+/** ----- exams API shape ----- */
 type ExamApi = {
   id: string;
   title: string;
@@ -319,14 +293,12 @@ function toArray<T = any>(payload: any): T[] {
   return [];
 }
 
-// UUID-ish detector (so we don't treat local uid() as server IDs)
 const isServerId = (id: string | undefined | null) =>
   typeof id === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     id
   );
 
-// Unwrap hook/axios payloads
 const unwrap = (x: any) => x?.data?.data ?? x?.data ?? x;
 
 function attachAssessmentsToLesson(
@@ -342,7 +314,6 @@ function attachAssessmentsToLesson(
     const parentIdx = list.findIndex((l) => l.id === lessonId);
     if (parentIdx === -1) continue;
 
-    // find last attached assessment slot after the parent
     let insertAt = parentIdx;
     for (let i = parentIdx + 1; i < list.length; i++) {
       const li = list[i];
@@ -354,7 +325,6 @@ function attachAssessmentsToLesson(
       } else break;
     }
 
-    // avoid duplicates by id
     const existingIds = new Set(list.map((x) => String(x.id)));
     const payloads = assessments
       .filter((a) => !existingIds.has(String(a.id)))
@@ -363,13 +333,12 @@ function attachAssessmentsToLesson(
         type: a.type as "quiz" | "exam",
         title: a.title || (a.type === "quiz" ? "Quiz" : "Exam"),
         parentId: lessonId,
-        order: 0, // will re-number
-        quiz: a, // keep full object for edit/preview modals
+        order: 0,
+        quiz: a,
       }));
 
     if (payloads.length) {
       list.splice(insertAt + 1, 0, ...payloads);
-      // re-number orders
       (mod.lessons ?? []).forEach((l, i) => ((l as any).order = i));
     }
   }
@@ -401,7 +370,7 @@ const AssessmentsLoader: React.FC<{
   return null;
 };
 
-/** Small modal wrapper so QuizBuilder/Preview render as true modals */
+/** Modal wrapper */
 const Modal: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({
   onClose,
   children,
@@ -475,8 +444,6 @@ const CourseBuilderPage: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState("course-info");
-
-  // Settings -> publish status
   const [isPublishedSetting, setIsPublishedSetting] = useState(false);
 
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -553,7 +520,6 @@ const CourseBuilderPage: React.FC = () => {
   useEffect(() => {
     if (!isEditMode || !apiCourse) return;
     try {
-      // Fill only course info + publish status
       const { courseLocal, isPublished } = apiToBuilder(apiCourse);
 
       setIsPublishedSetting(Boolean(isPublished ?? apiCourse?.is_published));
@@ -579,8 +545,6 @@ const CourseBuilderPage: React.FC = () => {
             ""
         )
       );
-
-      // IMPORTANT: modules are hydrated only from sections endpoint
     } catch (e) {
       console.warn("Hydration failed", e);
     }
@@ -602,13 +566,12 @@ const CourseBuilderPage: React.FC = () => {
       .sort((a, b) => a.order - b.order)
       .map((m, i) => ({ ...m, order: i }));
 
-    const mappedClean = sanitizeCurriculumUrls(mapped); // ← sanitize here
-
+    const mappedClean = sanitizeCurriculumUrls(mapped);
     setCourse((prev) => ({ ...prev, modules: mappedClean }));
     hydratedOnce.current = true;
   }, [isEditMode, sectionsResp]);
 
-  // fallback: results wrapper shape
+  // Fallback result shapes
   useEffect(() => {
     if (!isEditMode || hydratedOnce.current) return;
 
@@ -758,10 +721,8 @@ const CourseBuilderPage: React.FC = () => {
         const arr = [...(mod.lessons ?? [])] as BuilderLessonEx[];
         const idx = arr.findIndex((l) => l.id === lessonId);
         if (idx === -1) return mod;
-
-        const nextLesson = sanitizeLessonUrls({ ...arr[idx], ...updates }); // ← keep one true url
+        const nextLesson = sanitizeLessonUrls({ ...arr[idx], ...updates });
         arr[idx] = nextLesson;
-
         return { ...mod, lessons: arr };
       }),
     }));
@@ -831,11 +792,9 @@ const CourseBuilderPage: React.FC = () => {
       const moving = lessons[from];
       const firstContentIndex = lessons.findIndex((l) => isContent(l.type));
 
-      // Block assessments from going before the first content lesson
       if (isAssessment(moving.type)) {
-        if (firstContentIndex === -1) return prev; // no content at all; ignore
+        if (firstContentIndex === -1) return prev;
         if (to <= firstContentIndex) {
-          // clamp to just after first content + any of its attached assessments
           let clamp = firstContentIndex;
           for (let j = firstContentIndex + 1; j < lessons.length; j++) {
             if (
@@ -845,7 +804,6 @@ const CourseBuilderPage: React.FC = () => {
               clamp = j;
             } else break;
           }
-          // reinsert at clamped position
           const [moved] = lessons.splice(from, 1);
           lessons.splice(clamp + 1, 0, moved);
         } else {
@@ -857,10 +815,8 @@ const CourseBuilderPage: React.FC = () => {
         lessons.splice(to, 0, moved);
       }
 
-      // Re-number orders
       lessons.forEach((l, i) => ((l as any).order = i));
 
-      // Re-attach assessments to nearest content above
       let currentContentId: string | null = null;
       const reattached = lessons.map((l) => {
         if (isContent(l.type)) {
@@ -873,7 +829,6 @@ const CourseBuilderPage: React.FC = () => {
         return l;
       });
 
-      // Final guard: ensure the very first item is content
       if (reattached.length && !isContent(reattached[0].type)) {
         const idx = reattached.findIndex((l) => isContent(l.type));
         if (idx > 0) {
@@ -930,7 +885,7 @@ const CourseBuilderPage: React.FC = () => {
   };
 
   /** =========================
-   * Create / Update flow (PATCH via axios helper)
+   * Create / Update flow (now with assessment upsert + id reconciliation)
    * ========================= */
   async function runCreateOrUpdateFlow(triggerPublish?: boolean) {
     try {
@@ -942,7 +897,6 @@ const CourseBuilderPage: React.FC = () => {
         sub_category: watch("sub_category"),
       };
 
-      // Required fields guardrails
       if (!formValues.title?.trim()) {
         toast.error("Course title is required");
         setActiveTab("course-info");
@@ -964,7 +918,7 @@ const CourseBuilderPage: React.FC = () => {
           ? triggerPublish
           : isPublishedSetting;
 
-      // 1) Create / Update course (same as before)
+      // 1) Create / Update COURSE
       const fd = buildCreateCourseFormData({
         title: formValues.title,
         description: formValues.description,
@@ -984,7 +938,7 @@ const CourseBuilderPage: React.FC = () => {
         newCourseId = String(createdCourse?.id || "");
       }
 
-      // 2) For each Module (Section): PATCH if existing, POST if new
+      // 2) For each SECTION: PATCH if existing (server id), otherwise CREATE
       for (const mod of course.modules) {
         const all = (mod.lessons ?? []) as (BuilderLessonEx & {
           parentId?: string;
@@ -992,7 +946,6 @@ const CourseBuilderPage: React.FC = () => {
         const contentOnly = all.filter((l) => isContent(l.type));
         if (contentOnly.length === 0) continue;
 
-        // Build section payload (same shape as create)
         const sectionPayload = {
           title: mod.title,
           course: newCourseId,
@@ -1019,7 +972,7 @@ const CourseBuilderPage: React.FC = () => {
                 (l as any).content ?? (l as any).description ?? "";
             }
             if (l?.type === "material") {
-              base.file = null; // backend expects File later; keep null now
+              base.file = null;
             }
             return base;
           }),
@@ -1028,9 +981,10 @@ const CourseBuilderPage: React.FC = () => {
         let createdLessons: any[] = [];
 
         if (isEditMode && isServerId(mod.id)) {
-          // UPDATE section via axios helper
+          // UPDATE section (axios-based)
           const url = `${API_ENDPOINTS.updateSection}${mod.id}/`;
-          const updatedSection = await patch(url, sectionPayload);
+          const sectionResp = await apiPatch(url, sectionPayload);
+          const updatedSection = unwrap(sectionResp);
           createdLessons = Array.isArray(updatedSection?.lessons)
             ? updatedSection.lessons
             : [];
@@ -1043,13 +997,49 @@ const CourseBuilderPage: React.FC = () => {
             : [];
         }
 
-        // Build quick map: content order -> server lesson id
-        const idByOrder = new Map<number, string>();
+        // --- Reconcile local content lesson ids with server ids (by order) ---
+        const localIdByOrder = new Map<number, string>();
+        contentOnly.forEach((c) =>
+          localIdByOrder.set(Number((c as any).order ?? 0), c.id)
+        );
+
+        const serverIdByOrder = new Map<number, string>();
         for (const l of createdLessons) {
           if (isContent(l?.content_type)) {
-            idByOrder.set(Number(l.order ?? 0), String(l.id));
+            serverIdByOrder.set(Number(l.order ?? 0), String(l.id));
           }
         }
+
+        const replacements = new Map<string, string>(); // localId -> serverId
+        for (const [ord, localId] of localIdByOrder) {
+          const sid = serverIdByOrder.get(ord);
+          if (sid) replacements.set(localId, sid);
+        }
+
+        // Update builder state so UI & loaders use the new server lesson ids
+        if (replacements.size) {
+          setCourse((prev) => ({
+            ...prev,
+            modules: prev.modules.map((m) => {
+              if (m.id !== mod.id) return m;
+              const nextLessons = (m.lessons ?? []).map((l: any) => {
+                if (isContent(l.type)) {
+                  const newId = replacements.get(l.id);
+                  if (newId && newId !== l.id) return { ...l, id: newId };
+                }
+                if ((l.type === "quiz" || l.type === "exam") && l.parentId) {
+                  const newParent = replacements.get(l.parentId);
+                  if (newParent) return { ...l, parentId: newParent };
+                }
+                return l;
+              });
+              return { ...m, lessons: nextLessons };
+            }),
+          }));
+        }
+
+        // Build map order->serverLessonId for attaching exams
+        const idByOrder = new Map<number, string>(serverIdByOrder);
 
         // 3) Upsert attached assessments per content lesson
         for (const content of contentOnly) {
@@ -1069,22 +1059,38 @@ const CourseBuilderPage: React.FC = () => {
               serverLessonId
             );
 
-            // Existing exam/quiz if it already has an id (from edit hydration)
             const existingExamId =
-              (a as any)?.quiz?.id || // from API-attached assessments
-              (a as any)?.id; // if you stored it directly
+              (a as any)?.id || // when stored directly
+              (a as any)?.quiz?.id; // when hydrated from API
 
-            if (isEditMode && isServerId(String(existingExamId || ""))) {
-              // UPDATE assessment via axios helper
-              const url = `${API_ENDPOINTS.updateExam}${existingExamId}/`;
-              await patch(url, payload);
-            } else {
-              // CREATE assessment
-              try {
-                await createAssessment(payload);
-              } catch (e) {
-                console.warn("Assessment create failed", e);
+            try {
+              if (isEditMode && isServerId(String(existingExamId || ""))) {
+                // UPDATE existing quiz/exam
+                const url = `${API_ENDPOINTS.updateExam}${existingExamId}/`;
+                await apiPatch(url, payload);
+              } else {
+                // CREATE new quiz/exam
+                const res = await createAssessment(payload);
+                const created = unwrap(res);
+                if (created?.id) {
+                  // reflect new server id in builder so it persists in UI
+                  setCourse((prev) => ({
+                    ...prev,
+                    modules: prev.modules.map((m) => {
+                      if (m.id !== mod.id) return m;
+                      const nextLessons = (m.lessons ?? []).map((l: any) => {
+                        if (l.id === (a as any).id) {
+                          return { ...l, id: String(created.id) };
+                        }
+                        return l;
+                      });
+                      return { ...m, lessons: nextLessons };
+                    }),
+                  }));
+                }
               }
+            } catch (e) {
+              console.warn("Assessment upsert failed", e);
             }
           }
         }
@@ -1160,6 +1166,7 @@ const CourseBuilderPage: React.FC = () => {
     },
     []
   );
+
   // ---------- UI ----------
   return (
     <div className="min-h-screen bg-gray-50">

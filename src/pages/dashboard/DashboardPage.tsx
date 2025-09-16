@@ -96,7 +96,9 @@ const DashboardPage: React.FC = () => {
               <div className="hidden md:block">
                 <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-xl p-6">
                   <div className="text-center">
-                    <div className="text-3xl font-bold mb-1">68%</div>
+                    <div className="text-3xl font-bold mb-1">
+                      {studentStats?.overall_progress ?? 0}%
+                    </div>
                     <div className="text-purple-100 text-sm">
                       Overall Progress
                     </div>

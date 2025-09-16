@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Star, Clock, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router";
 import { formatDuration } from "../../utils/formatDuration";
@@ -30,6 +30,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
   const [userId, setUserId] = useState<string | null>(
     readUserFromStorage()?.id ?? null
   );
+  const currentUser: User = readUserFromStorage();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -55,7 +56,12 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
   const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
 
-  const isEnrolled = enrolledOptimistic || computedEnrolled;
+  const isInstructorCourse =
+    currentUser?.is_instructor && course?.instructor?.id === currentUser?.id;
+
+  const isEnrolled = isInstructorCourse
+    ? true
+    : enrolledOptimistic || computedEnrolled;
 
   const createEnroll = useCustomPost(API_ENDPOINTS.createEnrollment, [
     "enrolledCourses",
@@ -63,12 +69,37 @@ const CourseCard: React.FC<CourseCardProps> = ({
     course?.id as string,
   ]);
 
+  const { data: modulesResp } = useCustomQuery(
+    `${API_ENDPOINTS.modules}?course=${course?.id}`,
+    ["modules", course?.id],
+    undefined,
+    !!course?.id
+  );
+
+  const modulesData: Module[] = useMemo(
+    () => modulesResp?.data?.data ?? [],
+    [modulesResp]
+  );
+
+  const firstPlayableLessonId = useMemo(() => {
+    for (const m of modulesData ?? []) {
+      const lessons = m?.lessons ?? [];
+      const playable =
+        lessons.find((l) => isEnrolled || l?.free_preview) || lessons[0];
+      if (playable?.id) return String(playable.id);
+    }
+    return null;
+  }, [modulesData, isEnrolled]);
+
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
-  }, [computedEnrolled, enrolledOptimistic]);
+  const goToPlayer = (opts?: { lessonId?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.lessonId) params.set("lesson", String(opts.lessonId));
+    const qs = params.toString();
+    navigate(`/catalog/${course?.id}/player${qs ? `?${qs}` : ""}`);
+  };
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -79,6 +110,10 @@ const CourseCard: React.FC<CourseCardProps> = ({
     if (isEnrolled || createEnroll.isPending) return;
 
     try {
+      if (currentUser?.is_instructor) {
+        toast.error("Please sign in as student!");
+        return;
+      }
       setEnrolledOptimistic(true);
       const res = await createEnroll.mutateAsync({ course: course?.id });
       if (res?.status) {
@@ -94,12 +129,22 @@ const CourseCard: React.FC<CourseCardProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
+  }, [computedEnrolled, enrolledOptimistic]);
+
   return (
     <div
       className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
         isListView ? "flex items-start" : ""
       }`}
-      onClick={() => navigate(`/catalog/${course?.id}`)}
+      onClick={() => {
+        if (isListView) {
+          return;
+        } else {
+          navigate(`/catalog/${course?.id}`);
+        }
+      }}
     >
       <div className={`relative ${isListView ? "w-80 flex-shrink-0" : ""}`}>
         <img
@@ -169,14 +214,14 @@ const CourseCard: React.FC<CourseCardProps> = ({
             <div className="flex items-center mb-4">
               <div className="flex items-center">
                 <span className="text-yellow-500 font-bold mr-1">
-                  {Math.floor(course?.average_rating) ?? 0}
+                  {Math.floor(+course?.average_rating) ?? 0}
                 </span>
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(Math.floor(course?.average_rating) ?? 0)
+                        i < Math.floor(Math.floor(+course?.average_rating) ?? 0)
                           ? "text-yellow-400 fill-current"
                           : "text-gray-300"
                       }`}
@@ -225,7 +270,9 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
           <div
             className={`${
-              isListView ? "text-right" : "flex items-center justify-between"
+              isListView
+                ? "flex items-end flex-col justify-between gap-4"
+                : "flex items-center justify-between"
             }`}
           >
             {course?.is_paid ? (
@@ -248,18 +295,39 @@ const CourseCard: React.FC<CourseCardProps> = ({
             )}
 
             {isListView && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEnroll();
-                }}
-                disabled={
-                  enrolledCoursesData?.isFetching || createEnroll?.isPending
-                }
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-              >
-                {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
-              </button>
+              <>
+                {!isEnrolled ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEnroll();
+                    }}
+                    disabled={
+                      enrolledCoursesData?.isFetching || createEnroll?.isPending
+                    }
+                    className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                  >
+                    {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
+                  </button>
+                ) : (
+                  <div className="text-center mb-4">
+                    <button
+                      onClick={() => {
+                        if (firstPlayableLessonId) {
+                          goToPlayer({ lessonId: firstPlayableLessonId });
+                        } else {
+                          console.log("Cannot find lesson");
+                        }
+                      }}
+                      className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                    >
+                      {isInstructorCourse
+                        ? "View your course"
+                        : "Start Learning"}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {showLoginModal && (

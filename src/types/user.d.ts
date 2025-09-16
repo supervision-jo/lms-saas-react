@@ -36,6 +36,7 @@ interface StudentStats {
   hours_learned: number | string | null;
   certificates_earned: number;
   current_streak: number;
+  overall_progress: number;
   new_courses_this_month: number;
   hours_learned_this_month: number | string | null;
   certificates_this_month: number;

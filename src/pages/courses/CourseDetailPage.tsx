@@ -36,6 +36,7 @@ const CourseDetailPage: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(
     readUserFromStorage()?.id ?? null
   );
+  const currentUser: User = readUserFromStorage();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -91,7 +92,13 @@ const CourseDetailPage: React.FC = () => {
     (c) => String(c?.course?.id) === String(course?.id ?? courseId)
   );
   const [enrolledOptimistic, setEnrolledOptimistic] = useState(false);
-  const isEnrolled = enrolledOptimistic || computedEnrolled;
+
+  const isInstructorCourse =
+    currentUser?.is_instructor && course?.instructor?.id === currentUser?.id;
+
+  const isEnrolled = isInstructorCourse
+    ? true
+    : enrolledOptimistic || computedEnrolled;
 
   useEffect(() => {
     if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
@@ -115,6 +122,10 @@ const CourseDetailPage: React.FC = () => {
     if (isEnrolled || createEnroll.isPending) return;
 
     try {
+      if (currentUser?.is_instructor) {
+        toast.error("Please sign in as student!");
+        return;
+      }
       setEnrolledOptimistic(true);
       const res = await createEnroll.mutateAsync({ course: course?.id });
       if (res?.status) {
@@ -202,7 +213,7 @@ const CourseDetailPage: React.FC = () => {
                       <Star
                         key={i + 1000}
                         className={`w-4 h-4 ${
-                          i < Math.floor(course?.average_rating ?? 0)
+                          i < parseInt(course?.average_rating)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-400"
                         }`}
@@ -305,10 +316,12 @@ const CourseDetailPage: React.FC = () => {
                     </button>
                   ) : (
                     <div className="text-center mb-4">
-                      <div className="flex items-center justify-center text-green-600 mb-2">
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        <span className="font-medium">Enrolled</span>
-                      </div>
+                      {!isInstructorCourse && (
+                        <div className="flex items-center justify-center text-green-600 mb-2">
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                          <span className="font-medium">Enrolled</span>
+                        </div>
+                      )}
                       <button
                         onClick={() => {
                           if (firstPlayableLessonId) {
@@ -319,14 +332,18 @@ const CourseDetailPage: React.FC = () => {
                         }}
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold mb-2 hover:bg-purple-700 transition-colors"
                       >
-                        Start Learning
+                        {isInstructorCourse
+                          ? "View your course"
+                          : "Start Learning"}
                       </button>
-                      <button
-                        onClick={() => setShowRatingModal(true)}
-                        className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
-                      >
-                        Rate This Course
-                      </button>
+                      {!isInstructorCourse && (
+                        <button
+                          onClick={() => setShowRatingModal(true)}
+                          className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
+                        >
+                          Rate This Course
+                        </button>
+                      )}
                     </div>
                   )}
 

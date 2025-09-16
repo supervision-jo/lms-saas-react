@@ -6,13 +6,14 @@ export const USER_KEY = "lms-user";
 export const BASE_URL = "https://lms-saas-jv3u7.ondigitalocean.app/api/";
 
 export const API_ENDPOINTS = {
-  courses: "course/courses/",
+  courses: "course/v2/courses/",
   createCourse: "course/create-course/",
   updateCourse: "course/update-course/",
   createSection: "course/create-section/",
   updateSection: "course/update-section/",
   createExam: "course/create-exam/",
   updateExam: "course/update-exam/",
+  submitExam: "exam/exam-quiz/",
   exams: "course/git-quizs/",
   categories: "course/categories/",
   subCategories: "course/get-sub-categories/",
