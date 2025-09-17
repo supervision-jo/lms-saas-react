@@ -1,10 +1,16 @@
 import React, { useRef } from "react";
 import { Upload } from "lucide-react";
+import { fileToBase64 } from "../../../utils/courseBuilder";
 
-type LessonLocal = BuilderLesson & { parentId?: string; file?: File | null };
+type LessonLocal = Lesson & {
+  parentId?: string;
+  file?: File | null;
+  fileUrl?: string | null;
+  string_file?: string | null;
+};
 
 interface Props {
-  course: BuilderCourse;
+  modules: Module[];
   setUploadingMaterial: React.Dispatch<
     React.SetStateAction<{
       moduleId: string;
@@ -20,22 +26,28 @@ interface Props {
     moduleId: string;
     lessonId: string;
   };
+  onCancel?: () => void;
+  onSave?: () => void;
 }
 
 export default function UploadingMaterial({
-  course,
+  modules,
   setUploadingMaterial,
   updateLesson,
   uploadingMaterial,
   onCancel,
   onSave,
-}: Props & { onCancel?: () => void; onSave?: () => void }) {
+}: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const mod = course.modules.find((m) => m.id === uploadingMaterial.moduleId);
+  const mod = modules.find((m) => m.id === uploadingMaterial.moduleId);
   const les = mod?.lessons.find((l) => l.id === uploadingMaterial.lessonId) as
     | LessonLocal
     | undefined;
+
+  const canSave =
+    Boolean((les?.title || "").trim()) &&
+    (Boolean(les?.file) || Boolean((les as any)?.fileUrl));
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -83,7 +95,7 @@ export default function UploadingMaterial({
                   Click to upload or drag and drop
                 </p>
                 <p className="text-sm text-gray-500">
-                  PDF, DOC, ZIP, or any file type (Max 50MB)
+                  PDF, DOC, ZIP, PPT, XLS… (Max 50MB)
                 </p>
                 <input
                   ref={inputRef}
@@ -99,7 +111,7 @@ export default function UploadingMaterial({
                         uploadingMaterial.lessonId,
                         {
                           fileUrl,
-                          file, // keep real File for FormData path
+                          file, // temporary File; will be converted to base64 on Save
                         }
                       );
                     }
@@ -130,14 +142,15 @@ export default function UploadingMaterial({
               </label>
               <input
                 type="url"
-                value={les?.fileUrl || ""}
+                value={(les as any)?.fileUrl || ""}
                 onChange={(e) =>
                   updateLesson(
                     uploadingMaterial.moduleId,
                     uploadingMaterial.lessonId,
                     {
                       fileUrl: e.target.value,
-                      file: null, // prefer URL if provided
+                      file: null, // prefer external URL if provided
+                      string_file: undefined,
                     }
                   )
                 }
@@ -177,8 +190,43 @@ export default function UploadingMaterial({
             Cancel
           </button>
           <button
-            onClick={() => (onSave ? onSave() : setUploadingMaterial(null))}
-            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            onClick={async () => {
+              if (!canSave) return;
+
+              const m = modules.find(
+                (mm) => mm.id === uploadingMaterial.moduleId
+              )!;
+              const draft = m.lessons.find(
+                (l) => l.id === uploadingMaterial.lessonId
+              ) as any;
+
+              let string_file: string | null = null;
+              let fileUrl: string | null = draft?.fileUrl || null;
+
+              if (draft.file instanceof File) {
+                // convert to base64 string and send as JSON under `string_file`
+                string_file = await fileToBase64(draft.file);
+                fileUrl = null; // prefer base64 if uploaded
+              }
+
+              updateLesson(
+                uploadingMaterial.moduleId,
+                uploadingMaterial.lessonId,
+                {
+                  type: "material",
+                  string_file,
+                  fileUrl,
+                  file: null, // clear transient File
+                } as any
+              );
+
+              if (onSave) onSave();
+              else setUploadingMaterial(null);
+            }}
+            disabled={!canSave}
+            className={`bg-purple-600 text-white px-6 py-2 rounded-lg ${
+              !canSave ? "opacity-60 cursor-not-allowed" : "hover:bg-purple-700"
+            } transition-colors`}
           >
             Save Material
           </button>

@@ -47,7 +47,7 @@ const CourseDetailPage: React.FC = () => {
   }, [isAuthenticated, queryClient]);
 
   const courseData = useCustomQuery(
-    `${API_ENDPOINTS.courses}${courseId}/`,
+    `${API_ENDPOINTS.oldCourses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId

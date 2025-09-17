@@ -92,7 +92,6 @@ interface Course {
   created_at: string;
   updated_at: string;
   total_students: number;
-  rating: number;
   average_rating: string;
   total_reviews: number;
   total_enrollments: number;
@@ -113,6 +112,7 @@ interface Lesson {
   content_type: "video" | "article" | "quiz" | "exam" | "material";
   order: number;
   file: any;
+  string_file: string;
   description_html: any;
 }
 

@@ -1,10 +1,12 @@
-// EditLesson.tsx
-import { Video, Youtube } from "lucide-react";
+import { Youtube } from "lucide-react";
+import {
+  isYouTubeUrl,
+  extractYouTubeVideoId,
+  getYouTubeThumbnail,
+} from "../../../utils/courseBuilder";
 
 interface Props {
-  course: BuilderCourse;
-  extractYouTubeVideoId: (url: string) => string | null;
-  getYouTubeThumbnail: (videoId: string) => string;
+  modules: Module[];
   updateLesson: (
     moduleId: string,
     lessonId: string,
@@ -20,28 +22,41 @@ interface Props {
       lessonId: string;
     } | null>
   >;
+  onCancel?: () => void;
+  onSave?: () => void;
 }
 
 export default function EditLesson({
-  course,
+  modules,
   editingLesson,
-  extractYouTubeVideoId,
-  getYouTubeThumbnail,
   setEditingLesson,
   updateLesson,
   onCancel,
   onSave,
-}: Props & { onCancel?: () => void; onSave?: () => void }) {
-  const mod = course.modules.find((m) => m.id === editingLesson.moduleId);
-  const les = mod?.lessons.find((l) => l.id === editingLesson.lessonId);
+}: Props) {
+  const mod = modules.find((m) => m.id === editingLesson.moduleId);
+  const les = mod?.lessons.find((l) => l.id === editingLesson.lessonId) as any;
 
-  const hasYouTube = Boolean((les as any)?.youtubeUrl?.trim());
-  const hasVideoUrl = Boolean((les as any)?.videoUrl?.trim());
+  const url: string = les?.url || "";
+  const isYT = isYouTubeUrl(url);
+  const ytValue = isYT ? url : "";
+  const fileValue = !isYT && url ? url : "";
 
-  const videoId = (les as any)?.youtubeUrl
-    ? extractYouTubeVideoId((les as any).youtubeUrl)
-    : null;
+  const videoId = isYT ? extractYouTubeVideoId(url) : null;
   const thumb = videoId ? getYouTubeThumbnail(videoId) : "";
+
+  // Valid if we have a syntactically valid URL
+  const isValid = (() => {
+    if (!url.trim()) return false;
+    try {
+      // Accept any valid URL (YouTube or direct file)
+      // If you want to restrict types, add logic here.
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -49,7 +64,8 @@ export default function EditLesson({
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 className="text-xl font-bold text-gray-900">Add Video Link</h3>
           <p className="text-gray-600 mt-1">
-            Add a YouTube video or a direct video file URL
+            Add a YouTube link or a direct video file URL (we’ll save it as{" "}
+            <code>url</code>)
           </p>
         </div>
 
@@ -66,29 +82,28 @@ export default function EditLesson({
                 </div>
                 <input
                   type="url"
-                  value={(les as any)?.youtubeUrl || ""}
+                  value={ytValue}
                   onChange={(e) =>
                     updateLesson(
                       editingLesson.moduleId,
                       editingLesson.lessonId,
                       {
-                        youtubeUrl: e.target.value,
-                        videoUrl: "",
+                        youtubeUrl: e.target.value, // ← SINGLE SOURCE FIELD
                       }
                     )
                   }
+                  name="url"
                   placeholder="https://www.youtube.com/watch?v=..."
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
-                  disabled={hasVideoUrl}
+                  disabled={!!fileValue}
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Paste a YouTube URL (watch, youtu.be, or embed). When this is
-                filled, the direct video URL is disabled.
+                When filled, the direct file URL is disabled.
               </p>
             </div>
 
-            {/* Fixed preview box */}
+            {/* Preview */}
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
               <h4 className="font-medium text-gray-900 mb-3">Video Preview</h4>
               <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
@@ -101,7 +116,9 @@ export default function EditLesson({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <span className="text-sm">No preview</span>
+                    <span className="text-sm">
+                      {url ? "No preview for non-YouTube URL" : "No preview"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -123,7 +140,7 @@ export default function EditLesson({
             </div>
 
             {/* Regular Video URL */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Video File URL
               </label>
@@ -133,36 +150,34 @@ export default function EditLesson({
                 </div>
                 <input
                   type="url"
-                  value={(les as any)?.videoUrl || ""}
+                  value={fileValue}
                   onChange={(e) =>
                     updateLesson(
                       editingLesson.moduleId,
                       editingLesson.lessonId,
                       {
-                        videoUrl: e.target.value,
-                        youtubeUrl: "",
+                        videoUrl: e.target.value, // ← SINGLE SOURCE FIELD
                       }
                     )
                   }
                   placeholder="https://example.com/video.mp4"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
-                  disabled={hasYouTube}
+                  disabled={!!ytValue}
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Direct link to video file (MP4, WebM, etc.). When this is
-                filled, the YouTube URL is disabled.
+                When filled, the YouTube URL is disabled.
               </p>
-            </div>
+            </div> */}
 
-            {/* Duration */}
+            {/* Optional duration (kept UI as-is; will only be sent if your types support it) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video Duration
+                Video Duration (optional)
               </label>
               <input
                 type="text"
-                value={(les as any)?.duration || ""}
+                value={les?.duration || ""}
                 onChange={(e) =>
                   updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
                     duration: e.target.value,
@@ -183,8 +198,21 @@ export default function EditLesson({
             Cancel
           </button>
           <button
-            onClick={() => (onSave ? onSave() : setEditingLesson(null))}
-            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            onClick={async () => {
+              if (!isValid) return;
+              // Persist via parent
+              updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
+                type: "video",
+                url: (les?.url || "").trim(),
+              } as any);
+
+              if (onSave) onSave();
+              else setEditingLesson(null);
+            }}
+            disabled={!isValid}
+            className={`bg-purple-600 text-white px-6 py-2 rounded-lg ${
+              !isValid ? "opacity-60 cursor-not-allowed" : "hover:bg-purple-700"
+            } transition-colors`}
           >
             Save Video
           </button>

@@ -1,89 +1,273 @@
 import { Upload } from "lucide-react";
-import {
-  UseFormRegister,
-  UseFormSetValue,
-  UseFormWatch,
-} from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { useEffect, useState } from "react";
+import { useCustomPatch } from "../../../hooks/useMutation";
+import handleErrorAlerts from "../../../utils/showErrorMessages";
+import toast from "react-hot-toast";
 
-type CourseFormInputs = {
+type FormValues = {
   title: string;
   description: string;
-  price: number;
-  level: string; // "beginner" | "intermediate" | "advanced" | "all-levels"
-  sub_category: string; // uuid from API
-};
-
-type CourseLocal = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string; // sub_category id
+  price: number | "";
+  sub_category: string;
+  category: string;
   level: string;
-  modules: BuilderModule[]; // lessons array items may be BuilderLessonEx at runtime
+  picture: string;
 };
 
 interface Props {
-  register: UseFormRegister<CourseFormInputs>;
-  setThumbnailFile: React.Dispatch<React.SetStateAction<File | null>>;
-  setValue: UseFormSetValue<CourseFormInputs>;
-  watch: UseFormWatch<CourseFormInputs>;
-  subCategories: SubCategory[];
-  syncCourseField: (field: keyof CourseLocal, value: any) => void;
-  thumbnailFile: File | null;
+  course: Course;
 }
 
-export default function CourseInformationForm({
-  register,
-  setThumbnailFile,
-  setValue,
-  subCategories,
-  syncCourseField,
-  thumbnailFile,
-  watch,
-}: Props) {
+export default function CourseInformationForm({ course }: Props) {
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+
+  const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
+    "categories",
+  ]);
+  const categories: Category[] = categoriesData?.data?.data || [];
+
+  const {
+    reset,
+    setValue,
+    watch,
+    setError,
+    register,
+    getValues,
+    formState: { dirtyFields },
+  } = useForm<FormValues>({
+    defaultValues: {
+      title: "",
+      description: "",
+      level: "beginner",
+      picture: "",
+      price: "",
+      sub_category: "",
+      category: "",
+    },
+  });
+
+  // Prefill on mount / when course prop changes
+  useEffect(() => {
+    if (!course) return;
+
+    // Map incoming course shape into form shape here:
+    const incoming: Partial<FormValues> = {
+      title: course?.title ?? "",
+      description: course?.description ?? "",
+      level: course?.level ?? "beginner",
+      price: typeof course?.price === "number" ? course?.price : "",
+      sub_category: course?.sub_category ?? "",
+      // category is UI-only, we will infer it when Hamed return it in course response so for now it will be empty after update but it behind scene it saved successfully
+      category: "",
+      picture: course?.picture ?? "",
+    };
+
+    reset(incoming, { keepDirtyValues: false });
+    setThumbPreview(incoming.picture || null);
+  }, [course, reset]);
+
+  // ---------- Dependent Sub-categories ----------
+  const selectedCategory = watch("category");
+  const { data: subCategoriesData, isLoading: subCatsLoading } = useCustomQuery(
+    `${API_ENDPOINTS.subCategories}?category=${selectedCategory}`,
+    ["sub-categories", selectedCategory],
+    undefined,
+    !!selectedCategory
+  );
+  const subCategories: SubCategory[] = subCategoriesData?.data || [];
+
+  // When category changes, clear sub_category
+  useEffect(() => {
+    setValue("sub_category", "");
+  }, [selectedCategory, setValue]);
+
+  // ---------- Patch (autosave) ----------
+  const { mutateAsync: updateCourse } = useCustomPatch(
+    `${API_ENDPOINTS.updateCourse}${course?.id}/`,
+    ["course", course?.id] // lets parent/other tabs refetch fresh course
+  );
+
+  // Rehydrate helper (keeps UI-only `category`)
+  const rehydrateFromServer = (serverCourse?: any) => {
+    if (!serverCourse) return;
+    const updated: Partial<FormValues> = {
+      title: serverCourse?.title ?? getValues("title"),
+      description: serverCourse?.description ?? getValues("description"),
+      level: serverCourse?.level ?? getValues("level"),
+      price:
+        typeof serverCourse?.price === "number"
+          ? serverCourse?.price
+          : getValues("price"),
+      sub_category:
+        serverCourse?.sub_category_id ??
+        serverCourse?.sub_category ??
+        getValues("sub_category"),
+      picture:
+        serverCourse?.picture_url ??
+        serverCourse?.picture ??
+        getValues("picture"),
+      category: getValues("category"), // keep current UI-only
+    };
+    reset(updated, { keepDirtyValues: true });
+  };
+
+  // PATCH only one text/select field
+  const saveField = async (name: keyof FormValues) => {
+    // Category is UI-only → never send it
+    if (name === "category") return;
+
+    // If the field isn't dirty, skip (optional)
+    if (dirtyFields && !dirtyFields[name]) return;
+
+    const value = getValues(name);
+    const fd = new FormData();
+
+    // Only append the single field you’re updating
+    switch (name) {
+      case "title":
+      case "description":
+      case "level":
+      case "sub_category":
+        if (value !== "" && value !== undefined && value !== null) {
+          fd.append(name, String(value));
+        } else {
+          return;
+        }
+        break;
+
+      case "price": {
+        const num =
+          typeof value === "number" ? value : parseFloat(String(value ?? ""));
+        if (Number.isNaN(num) || num < 0) {
+          setError(
+            "price",
+            { message: "Price must be ≥ 0" },
+            { shouldFocus: true }
+          );
+          return;
+        }
+        fd.append("price", String(num));
+        // Only include is_paid when price itself is being updated
+        fd.append("is_paid", num === 0 ? "false" : "true");
+        break;
+      }
+
+      // picture is handled by savePicture below
+      case "picture":
+      default:
+        return;
+    }
+
+    try {
+      const res = await updateCourse(fd);
+      const ok =
+        res?.status === true || res?.status === 200 || res?.ok === true;
+      if (!ok) {
+        const payload = res?.data?.error || res?.error;
+        if (payload) handleErrorAlerts(payload);
+        throw new Error("Save failed");
+      }
+      const serverCourse = res?.data?.data || res?.data || res?.result?.data;
+      rehydrateFromServer(serverCourse);
+      toast.success("Saved");
+    } catch (error: any) {
+      const payload = error?.response?.data?.error;
+      if (payload) handleErrorAlerts(payload);
+      else toast.error(error?.message || "Failed to save");
+    }
+  };
+
+  // PATCH only the image file
+  const savePicture = async (file: File) => {
+    const fd = new FormData();
+    fd.append("picture", file);
+
+    try {
+      const res = await updateCourse(fd);
+      const ok =
+        res?.status === true || res?.status === 200 || res?.ok === true;
+      if (!ok) {
+        const payload = res?.data?.error || res?.error;
+        if (payload) handleErrorAlerts(payload);
+        throw new Error("Image save failed");
+      }
+      const serverCourse = res?.data?.data || res?.data || res?.result?.data;
+      rehydrateFromServer(serverCourse);
+      toast.success("Image uploaded");
+    } catch (error: any) {
+      const payload = error?.response?.data?.error;
+      if (payload) handleErrorAlerts(payload);
+      else toast.error(error?.message || "Failed to upload image");
+    }
+  };
+
+  // Autosave on blur for any field
+  const onBlurSave: React.FocusEventHandler<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+  > = async (e) => {
+    const name = e.target.name as keyof FormValues;
+    await saveField(name);
+  };
+
+  // Local preview for new image
+  useEffect(() => {
+    if (!thumbnailFile) return;
+    const url = URL.createObjectURL(thumbnailFile);
+    setThumbPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [thumbnailFile]);
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Course Information
       </h2>
 
-      <div className="space-y-6">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          if (
+            e.key === "Enter" &&
+            (e.target as HTMLElement).tagName !== "TEXTAREA"
+          ) {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-6"
+        encType="multipart/form-data"
+      >
+        {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Course Title *
           </label>
           <input
             type="text"
-            {...register("title")}
-            onChange={(e) => {
-              setValue("title", e.target.value);
-              syncCourseField("title", e.target.value);
-            }}
-            value={watch("title") || ""}
             placeholder="Enter course title"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            {...register("title", { onBlur: onBlurSave })}
           />
         </div>
 
+        {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Course Description *
           </label>
           <textarea
-            {...register("description")}
-            onChange={(e) => {
-              setValue("description", e.target.value);
-              syncCourseField("description", e.target.value);
-            }}
-            value={watch("description") || ""}
-            placeholder="Describe what students will learn in this course"
             rows={5}
+            placeholder="Describe what students will learn in this course"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+            {...register("description", { onBlur: onBlurSave })}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Price ($) *
@@ -91,37 +275,66 @@ export default function CourseInformationForm({
             <input
               type="number"
               min="0"
-              step="0.01"
-              {...register("price", { valueAsNumber: true })}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                const safe = Number.isFinite(val) ? val : 0;
-                setValue("price", safe as any);
-                syncCourseField("price", safe);
-              }}
-              value={
-                Number.isFinite(watch("price") as any)
-                  ? (watch("price") as any)
-                  : 0
-              }
+              placeholder="Course price"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              {...register("price", {
+                valueAsNumber: true,
+                min: { value: 0, message: "Price cannot be negative" },
+                onBlur: onBlurSave,
+                onChange: (e) => {
+                  const val = parseFloat(e.target.value);
+                  setValue("price", Number.isFinite(val) ? val : 0, {
+                    shouldDirty: true,
+                  });
+                },
+              })}
             />
           </div>
 
+          {/* Category (UI-only) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Category *
             </label>
             <select
-              {...register("sub_category")}
-              onChange={(e) => {
-                setValue("sub_category", e.target.value);
-                syncCourseField("category", e.target.value);
-              }}
-              value={watch("sub_category") || ""}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              {...register("category", {
+                onChange: (e) => {
+                  setValue("category", e.target.value, { shouldDirty: true });
+                },
+                onBlur: onBlurSave, // optional: save selection change
+              })}
             >
               <option value="">Select a category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sub-category (SENT to backend) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sub-category *
+            </label>
+            <select
+              disabled={!selectedCategory || subCatsLoading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-60"
+              {...register("sub_category", {
+                onChange: (e) =>
+                  setValue("sub_category", e.target.value, {
+                    shouldDirty: true,
+                  }),
+                onBlur: onBlurSave,
+              })}
+            >
+              <option value="">
+                {selectedCategory
+                  ? "Select a sub-category"
+                  : "Choose a category first"}
+              </option>
               {subCategories.map((sc) => (
                 <option key={sc.id} value={sc.id}>
                   {sc.name}
@@ -130,18 +343,18 @@ export default function CourseInformationForm({
             </select>
           </div>
 
-          <div>
+          {/* Level */}
+          <div className="md:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Level *
             </label>
             <select
-              {...register("level")}
-              onChange={(e) => {
-                setValue("level", e.target.value);
-                syncCourseField("level", e.target.value);
-              }}
-              value={watch("level") || "beginner"}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              {...register("level", {
+                onChange: (e) =>
+                  setValue("level", e.target.value, { shouldDirty: true }),
+                onBlur: onBlurSave,
+              })}
             >
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -150,37 +363,56 @@ export default function CourseInformationForm({
           </div>
         </div>
 
+        {/* Thumbnail */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Course Thumbnail
           </label>
+
           <div
             className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer"
-            onClick={() => {
-              const inp = document.getElementById(
-                "course-thumb"
-              ) as HTMLInputElement | null;
-              inp?.click();
-            }}
+            onClick={() => document.getElementById("course-thumb")?.click()}
           >
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-gray-600">Click to upload or drag and drop</p>
             <p className="text-sm text-gray-500 mt-1">PNG, JPG up to 2MB</p>
+
             <input
               id="course-thumb"
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setThumbnailFile(f);
+                if (f) {
+                  const url = URL.createObjectURL(f);
+                  setThumbPreview(url);
+                  // upload ONLY the file
+                  void savePicture(f);
+                }
+              }}
             />
-            {thumbnailFile && (
-              <p className="text-sm text-gray-500 mt-2 truncate">
-                Selected: {thumbnailFile.name}
-              </p>
+
+            {/* Live preview */}
+            {thumbPreview ? (
+              <div className="mt-4 flex items-center justify-center">
+                <img
+                  src={thumbPreview}
+                  alt="Course thumbnail preview"
+                  className="max-h-40 rounded-lg object-cover"
+                />
+              </div>
+            ) : (
+              thumbnailFile && (
+                <p className="text-sm text-gray-500 mt-2 truncate">
+                  Selected: {thumbnailFile.name}
+                </p>
+              )
             )}
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

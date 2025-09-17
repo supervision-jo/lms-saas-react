@@ -6,11 +6,55 @@ import CoursesSection from "../../components/instructor-dashboard/CoursesSection
 import AnalyticsSection from "../../components/instructor-dashboard/AnalyticsSection";
 import ReviewsSection from "../../components/instructor-dashboard/ReviewsSection";
 import InstructorDashboardSidebar from "../../components/instructor-dashboard/Sidebar";
+import Modal from "../../components/reusable-components/Modal";
+import { useCustomPost } from "../../hooks/useMutation";
+import { API_ENDPOINTS } from "../../utils/constants";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import handleErrorAlerts from "../../utils/showErrorMessages";
+
+type FormValues = {
+  title: string;
+};
 
 const InstructorPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("courses");
+  const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<FormValues>({
+    // mode: "onChange",
+    // reValidateMode: "onChange",
+    defaultValues: { title: "" },
+  });
+
+  const { mutateAsync: createCourse } = useCustomPost(
+    API_ENDPOINTS.createCourse,
+    ["courses"]
+  );
+
+  const handleCreateCourseSubmit = async (data: FormValues) => {
+    try {
+      const formData = new FormData();
+      formData.append("title", data.title);
+
+      const res = await createCourse(formData);
+
+      if (res.status) {
+        toast.success("Course created successfully!");
+        navigate(`/course-builder/${res?.data?.id}`);
+        console.log(res);
+      }
+    } catch (error: any) {
+      const payload = error?.response?.data?.error;
+      handleErrorAlerts(payload || "There is an unexpected error occured.");
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -26,7 +70,7 @@ const InstructorPage: React.FC = () => {
           </div>
           <button
             onClick={() => {
-              navigate("/course-builder");
+              setIsCreateCourseModalOpen(true);
             }}
             className="bg-purple-600 text-white sm:px-6 px-3 py-2 sm:py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
@@ -77,6 +121,87 @@ const InstructorPage: React.FC = () => {
           <InstructorDashboardSidebar />
         </div>
       </div>
+      <Modal
+        isOpen={isCreateCourseModalOpen}
+        onClose={() => {
+          setIsCreateCourseModalOpen(false);
+          reset();
+        }}
+        title="Create New Course"
+      >
+        <form
+          onSubmit={handleSubmit(handleCreateCourseSubmit)}
+          className="space-y-6"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Course Title *
+            </label>
+            <input
+              type="text"
+              {...register("title", {
+                required: "Title is required",
+              })}
+              placeholder="Enter your course name (e.g., Complete React Developer Course)"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base ${
+                errors.title ? "border-red-300" : "border-gray-300"
+              }`}
+              autoFocus
+            />
+            {errors.title ? (
+              <p className="text-sm text-red-500 mt-2">
+                {errors.title.message}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 mt-2">
+                Choose a clear, descriptive name that tells students what
+                they'll learn.
+              </p>
+            )}
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 mb-2">
+              What happens next?
+            </h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• You'll be taken to the course builder</li>
+              <li>• Add course description and details</li>
+              <li>• Create your curriculum and lessons</li>
+              <li>• Set pricing and publish when ready</li>
+            </ul>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => {
+                setIsCreateCourseModalOpen(false);
+                reset();
+              }}
+              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Course
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -1,314 +1,79 @@
+// /src/utils/builder.ts
+
 /** =========================
- * Mapping & Flow helpers
+ * Builder (local) types
  * ========================= */
-
-export function durationToHours(input?: string): number | undefined {
-  if (!input) return undefined;
-  const s = input.toLowerCase().trim();
-  let seconds = 0;
-  const hms = s.match(/^(\d+):([0-5]?\d)(?::([0-5]?\d))?$/);
-  if (hms) {
-    const h = hms[3] ? parseInt(hms[1]) : 0;
-    const m = hms[3] ? parseInt(hms[2]) : parseInt(hms[1]);
-    const sec = hms[3] ? parseInt(hms[3]) : parseInt(hms[2]);
-    seconds = h * 3600 + m * 60 + sec;
-    return +(seconds / 3600).toFixed(3);
-  }
-  const h = /(\d+)\s*h/.exec(s)?.[1];
-  const m = /(\d+)\s*m(in)?/.exec(s)?.[1];
-  const sec = /(\d+)\s*s(ec)?/.exec(s)?.[1];
-  if (h || m || sec) {
-    seconds =
-      (h ? parseInt(h) * 3600 : 0) +
-      (m ? parseInt(m) * 60 : 0) +
-      (sec ? parseInt(sec) : 0);
-    return +(seconds / 3600).toFixed(3);
-  }
-  const plain = parseFloat(s);
-  if (!Number.isNaN(plain)) return +(plain / 60).toFixed(3);
-  return undefined;
-}
-
-const stripUndefined = <T extends Record<string, any>>(obj: T): T => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
-  ) as T;
+export type BuilderLesson = {
+  id: string;
+  title: string;
+  type: "video" | "article" | "quiz" | "exam" | "material";
+  videoUrl?: string;
+  youtubeUrl?: string;
+  duration?: string; // UI string; we convert to hours:number
+  free_preview?: boolean;
+  fileUrl?: string; // for material preview/url
+  order: number; // 1-based in UI
+  description?: string;
+  description_html?: any; // article rich content
+  quiz?: any; // optional in-UI
 };
 
-export function mapLessonToApi(lesson: BuilderLesson, orderIndex0: number) {
-  const common = {
-    title: lesson.title,
-    order: orderIndex0 + 1,
-    free_preview: !!lesson.free_preview,
-  };
-  const duration_hours = durationToHours(lesson.duration);
+export type BuilderModule = {
+  id: string;
+  title: string;
+  description?: string;
+  order: number; // 1-based in UI
+  lessons: BuilderLesson[];
+};
 
-  switch (lesson.type) {
-    case "video": {
-      const url = lesson.youtubeUrl?.trim() || lesson.videoUrl?.trim();
-      return stripUndefined({
-        ...common,
-        description: lesson.description,
-        content_type: "video",
-        url,
-        duration_hours,
-      });
-    }
-    case "article": {
-      return stripUndefined({
-        ...common,
-        content_type: "article",
-        description: lesson.description,
-        description_html: lesson.description_html,
-        duration_hours,
-      });
-    }
-    case "material": {
-      // TEMP: use url to carry the download link (backend to add material_url later)
-      return stripUndefined({
-        ...common,
-        content_type: "material",
-        description: lesson.description_html || lesson.description,
-        url: (lesson as any).fileUrl?.trim() || undefined, // <— important
-        duration_hours,
-      });
-    }
-    case "quiz":
-    case "exam": {
-      return stripUndefined({
-        ...common,
-        content_type: lesson.type,
-        description: lesson.description,
-        duration_hours,
-      });
-    }
-    default: {
-      return stripUndefined({
-        ...common,
-        content_type: "video",
-        url: lesson.videoUrl?.trim(),
-        duration_hours,
-      });
-    }
-  }
-}
-
-export function buildCreateSectionBody(courseId: string, mod: BuilderModule) {
-  return {
-    title: mod.title,
-    course: courseId,
-    description: mod.description ?? "",
-    order: mod.order + 1, // 1-based for API
-    lessons: (mod.lessons ?? []).map((l, idx) => mapLessonToApi(l, idx)),
-  };
-}
-
-// Build Exam/Quiz payload (API type Exam) – robust mapping
-export function buildExamPayloadFromLesson(
-  lesson: BuilderLesson & { quiz?: any },
-  createdLessonId: string
-) {
-  const q = lesson?.quiz ?? {};
-
-  const rawQuestions =
-    (Array.isArray(q?.questions) && q.questions) ||
-    (Array.isArray(q?.items) && q.items) ||
-    (Array.isArray(q?.data?.questions) && q.data.questions) ||
-    [];
-
-  const questions = rawQuestions
-    .map((qq: any, idx: number) => {
-      const text =
-        qq?.question ?? qq?.text ?? qq?.title ?? `Question ${idx + 1}`;
-
-      const rawType = String(qq?.question_type ?? qq?.type ?? "").toLowerCase();
-
-      const rawOptions: any[] = Array.isArray(qq?.options)
-        ? qq.options
-        : Array.isArray(qq?.choices)
-        ? qq.choices
-        : [];
-
-      const choices =
-        rawOptions.length > 0
-          ? rawOptions.map((opt: any) => ({
-              text: String(opt?.text ?? opt?.label ?? ""),
-              is_correct: Boolean(opt?.isCorrect ?? opt?.is_correct ?? false),
-            }))
-          : [];
-
-      const answerText =
-        qq?.answer ?? qq?.correct_answer ?? qq?.correctAnswer ?? "";
-
-      let qtype: "mcq" | "short_answer";
-      if (rawType.includes("short")) {
-        qtype = "short_answer";
-      } else if (choices.length > 0) {
-        qtype = "mcq";
-      } else if (String(answerText).trim().length > 0) {
-        qtype = "short_answer";
-      } else {
-        return null;
-      }
-
-      if (qtype === "mcq") {
-        if (choices.length === 0) return null;
-        return {
-          text: String(text),
-          question_type: "mcq",
-          explanation: String(qq?.explanation ?? ""),
-          choices,
-        };
-      }
-
-      return {
-        text: String(text),
-        question_type: "short_answer",
-        explanation: String(qq?.explanation ?? ""),
-        answer: String(answerText ?? ""),
-      };
-    })
-    .filter(Boolean);
-
-  const minutes = q?.time_limit_mins
-    ? Math.max(0, Math.round(Number(q.time_limit_mins)))
-    : q?.totalTimeLimit
-    ? Math.max(0, Math.round(Number(q.totalTimeLimit) / 60))
-    : 0;
-
-  const title =
-    q?.title || lesson.title || (lesson.type === "exam" ? "Exam" : "Quiz");
-
-  const passing_score =
-    typeof q?.passing_score === "number" ? q.passing_score : 70;
-
-  return {
-    lesson: createdLessonId,
-    type: lesson.type, // "quiz" | "exam"
-    title,
-    description: q?.description || "",
-    time_limit: minutes,
-    passing_score,
-    questions,
-  } as any;
-}
-
-export type CreateCourseInput = {
+export type BuilderCourse = {
+  id: string;
   title: string;
   description: string;
-  subCategoryId: string;
-  level: "beginner" | "intermediate" | "advanced" | "all-levels" | string;
-  price?: number;
-  isPaid?: boolean;
-  isPublished?: boolean;
-  pictureFile?: File | null;
+  price: number;
+  category: string; // UI-only, maps to sub_category when needed elsewhere
+  level: string;
+  modules: BuilderModule[];
 };
 
-export function buildCreateCourseFormData(input: CreateCourseInput) {
-  const fd = new FormData();
-  if (input.pictureFile) fd.append("picture", input.pictureFile);
-  fd.append("title", (input.title || "").trim());
-  fd.append("description", (input.description || "").trim());
-  fd.append("sub_category", input.subCategoryId);
-  fd.append("level", String(input.level));
+/** =========================
+ * Server shapes (minimal)
+ * ========================= */
+export type ApiLesson = {
+  id: string;
+  title: string;
+  duration_hours: number;
+  description: string;
+  url: string | null;
+  free_preview: boolean;
+  content_type: "video" | "article" | "quiz" | "exam" | "material";
+  order: number; // 1-based
+  file: any;
+  string_file: string; // base64 if provided
+  description_html: any;
+};
 
-  const price = Number(input.price ?? 0);
-  const isPaid = input.isPaid ?? price > 0;
-
-  fd.append("price", String(price));
-  fd.append("is_paid", String(!!isPaid));
-  fd.append("is_published", String(!!input.isPublished));
-  return fd;
-}
+export type ApiModule = {
+  id: string;
+  title: string;
+  description: string;
+  order: number; // 1-based
+  lessons: ApiLesson[];
+};
 
 /** =========================
- * Edit-mode hydrate helper
+ * Small utilities
  * ========================= */
-export function apiToBuilder(course: any): {
-  courseLocal: {
-    id: string;
-    title: string;
-    description: string;
-    price: number;
-    category: string;
-    level: string;
-    modules: BuilderModule[];
-  };
-  isPublished: boolean;
-} {
-  const modules = (course?.modules ?? []).map((m: Module, mi: number) => {
-    const lessons = (m?.lessons ?? []).map((ls: Lesson, li: number) => {
-      const base: BuilderLesson = {
-        id: String(ls.id ?? `${mi}-${li}`),
-        title: ls.title ?? `Lesson ${li + 1}`,
-        type: (ls.content_type as any) ?? "video",
-        order: (ls.order ?? li) as number,
-        description: (ls.description ?? "") as any,
-        free_preview: !!ls.free_preview,
-      };
-      if (ls.content_type === "video") {
-        return {
-          ...base,
-          videoUrl: (ls.url as any) ?? "",
-        };
-      }
-      if (ls.content_type === "article") {
-        return {
-          ...base,
-          content: (ls.description_html as any) ?? "",
-        };
-      }
-      if (ls.content_type === "material") {
-        return {
-          ...base,
-          fileUrl: (ls.file as any) ?? "",
-        };
-      }
-      if (ls.content_type === "quiz" || ls.content_type === "exam") {
-        return {
-          ...base,
-          // quiz/exam content is stored separately; we show as attached placeholder
-        };
-      }
-      return base;
-    });
-    return {
-      id: String(m.id),
-      title: m.title ?? `Module ${mi + 1}`,
-      description: m.description ?? "",
-      order: (m.order ?? mi) as number,
-      lessons,
-    } as BuilderModule;
-  });
 
-  return {
-    courseLocal: {
-      id: String(course?.id ?? ""),
-      title: course?.title ?? "",
-      description: course?.description ?? "",
-      price: Number(course?.price ?? 0),
-      category: String(course?.sub_category ?? ""),
-      level: String(course?.level ?? "beginner"),
-      modules,
-    },
-    isPublished: !!course?.is_published,
-  };
-}
-
-/** Convert various duration inputs to hours (float).
- * Accepts:  "1:30", "01:30:45", "10m 30s", "1h 5m", "90m", "5400s", 1.5, "1.5"
- */
-export function parseDurationToHours(input: unknown): number {
-  if (input == null) return 0;
-
-  if (typeof input === "number") {
-    return isFinite(input) ? input : 0;
-  }
+// "1h 30m 20s" | "75:20" | "1:15:30" | "90m" -> hours number
+export function parseDurationToHours(input?: string | number | null): number {
+  if (input == null || input === "") return 0;
+  if (typeof input === "number") return Number.isFinite(input) ? input : 0;
 
   const s = String(input).trim().toLowerCase();
   if (!s) return 0;
 
-  // HH:MM(:SS)? or MM:SS
+  // HH:MM:SS or MM:SS or H
   if (s.includes(":")) {
     const parts = s.split(":").map((p) => p.trim());
     if (parts.length === 3) {
@@ -319,12 +84,10 @@ export function parseDurationToHours(input: unknown): number {
       const [mm, ss] = parts.map((x) => parseFloat(x) || 0);
       return mm / 60 + ss / 3600;
     }
-    // single value with colon? treat as hours fallback
     const h = parseFloat(parts[0]);
-    return isFinite(h) ? h : 0;
+    return Number.isFinite(h) ? h : 0;
   }
 
-  // Tokens like "1h 20m 30s", "90m", "5400s"
   let h = 0,
     m = 0,
     sec = 0;
@@ -341,7 +104,278 @@ export function parseDurationToHours(input: unknown): number {
   }
   if (matched) return h + m / 60 + sec / 3600;
 
-  // Plain numeric string: assume hours
   const num = parseFloat(s);
-  return isFinite(num) ? num : 0;
+  return Number.isFinite(num) ? num : 0;
+}
+
+export function isYouTubeUrl(u?: string) {
+  if (!u) return false;
+  return /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))/i.test(
+    u
+  );
+}
+
+export function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) {
+      return u.pathname.replace("/", "") || null;
+    }
+    if (u.hostname.includes("youtube.com")) {
+      if (u.pathname.startsWith("/watch")) return u.searchParams.get("v");
+      if (u.pathname.startsWith("/embed/"))
+        return u.pathname.split("/")[2] ?? null;
+      if (u.pathname.startsWith("/shorts/"))
+        return u.pathname.split("/")[2] ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function getYouTubeThumbnail(videoId: string) {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+export function isContent(
+  t?: BuilderLesson["type"] | ApiLesson["content_type"]
+) {
+  return t === "video" || t === "article" || t === "material";
+}
+
+export function isAssessment(
+  t?: BuilderLesson["type"] | ApiLesson["content_type"]
+) {
+  return t === "quiz" || t === "exam";
+}
+
+// Reindex array items with 1-based order (no gaps)
+export function reindexOrders1Based<T extends { order: number }>(
+  items: T[]
+): T[] {
+  return items.map((it, idx) => ({ ...it, order: idx + 1 }));
+}
+
+// Find the content lesson id immediately above a given index
+export function anchorAbove(
+  lessons: { id: string; content_type?: any; type?: any }[],
+  idx: number
+): string | null {
+  for (let i = idx - 1; i >= 0; i--) {
+    const t = (lessons[i] as any).content_type ?? (lessons[i] as any).type;
+    if (isContent(t)) return (lessons[i] as any).id;
+  }
+  return null;
+}
+
+export function nextAssessmentTitle(
+  mod: { lessons: { title: string; content_type: string }[] },
+  kind: "quiz" | "exam"
+) {
+  const count = (mod.lessons || []).filter(
+    (l) => l.content_type === kind
+  ).length;
+  const base = kind === "quiz" ? "Quiz" : "Exam";
+  return `${base} ${count + 1}`;
+}
+
+// Convert File/blob to base64 string (no data: prefix)
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      // strip "data:*/*;base64," prefix
+      const idx = result.indexOf("base64,");
+      res(idx >= 0 ? result.slice(idx + 7) : result);
+    };
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+/** =========================
+ * Mappers (Server <-> Builder)
+ * ========================= */
+
+// Server -> Builder
+export function apiLessonToBuilder(api: ApiLesson): BuilderLesson {
+  if (api.content_type === "video") {
+    return {
+      id: api.id,
+      title: api.title,
+      type: "video",
+      youtubeUrl: isYouTubeUrl(api.url || "") ? api.url || "" : "",
+      videoUrl: isYouTubeUrl(api.url || "") ? "" : api.url || "",
+      duration: api.duration_hours ? String(api.duration_hours) : "",
+      free_preview: api.free_preview,
+      order: api.order,
+      description: api.description || "",
+    };
+  }
+  if (api.content_type === "article") {
+    return {
+      id: api.id,
+      title: api.title,
+      type: "article",
+      description: api.description || "",
+      description_html: api.description_html,
+      order: api.order,
+    };
+  }
+  if (api.content_type === "material") {
+    return {
+      id: api.id,
+      title: api.title,
+      type: "material",
+      fileUrl: api.url || "", // server may store a URL to the material
+      order: api.order,
+      description: api.description || "",
+    };
+  }
+  // quiz/exam kept in lessons list for UI, but managed via separate endpoint
+  if (api.content_type === "quiz" || api.content_type === "exam") {
+    return {
+      id: api.id,
+      title: api.title,
+      type: api.content_type,
+      order: api.order,
+    };
+  }
+
+  // fallback
+  return {
+    id: api.id,
+    title: api.title,
+    type: "article",
+    order: api.order,
+  };
+}
+
+export function apiModuleToBuilder(api: ApiModule): BuilderModule {
+  return {
+    id: api.id,
+    title: api.title,
+    description: api.description,
+    order: api.order,
+    lessons: (api.lessons || [])
+      .map(apiLessonToBuilder)
+      .sort((a, b) => a.order - b.order),
+  };
+}
+
+export function apiModulesToBuilder(mods: ApiModule[]): BuilderModule[] {
+  return mods.map(apiModuleToBuilder).sort((a, b) => a.order - b.order);
+}
+
+// Builder -> Server (content lessons only)
+export function builderLessonToApiContent(
+  b: BuilderLesson
+): Partial<ApiLesson> | null {
+  // skip assessments in section payload
+  if (!isContent(b.type)) return null;
+
+  const duration_hours = parseDurationToHours(b.duration);
+  const free_preview = Boolean(b.free_preview);
+
+  if (b.type === "video") {
+    const url = b.youtubeUrl?.trim()
+      ? b.youtubeUrl!.trim()
+      : b.videoUrl?.trim()
+      ? b.videoUrl!.trim()
+      : null;
+
+    return {
+      id: String(b.id),
+      title: b.title?.trim() || "Untitled Video",
+      content_type: "video",
+      url,
+      duration_hours,
+      description: b.description || "",
+      free_preview,
+      order: Number(b.order) || 1,
+      string_file: "", // n/a for video
+      file: null,
+      description_html: null,
+    } as Partial<ApiLesson>;
+  }
+
+  if (b.type === "article") {
+    return {
+      id: String(b.id),
+      title: b.title?.trim() || "Untitled Article",
+      content_type: "article",
+      url: null,
+      duration_hours: 0, // optional
+      description: b.description || "",
+      description_html: b.description_html ?? b.description ?? "",
+      free_preview,
+      order: Number(b.order) || 1,
+      string_file: "",
+      file: null,
+    } as Partial<ApiLesson>;
+  }
+
+  if (b.type === "material") {
+    // material supports either direct URL (fileUrl) or base64 string_file
+    return {
+      id: String(b.id),
+      title: b.title?.trim() || "Untitled Material",
+      content_type: "material",
+      url: b.fileUrl?.trim() || null,
+      duration_hours: 0,
+      description: b.description || "",
+      free_preview,
+      order: Number(b.order) || 1,
+      // string_file is appended by caller if a base64 is available
+      string_file: "",
+      file: null,
+      description_html: null,
+    } as Partial<ApiLesson>;
+  }
+
+  return null;
+}
+
+/**
+ * Build FormData for updateSection endpoint.
+ * - Includes ONLY content lessons (video/article/material)
+ * - Ensures 1-based order
+ * - If you have a base64 file for a given material lesson, pass it via `materialBase64ById`.
+ *
+ * Server usually expects: fd.append("lessons", JSON.stringify([...]))
+ */
+export function buildSectionLessonsFD(
+  lessons: BuilderLesson[],
+  materialBase64ById?: Record<string, string> // { [lessonId]: base64StringOnly }
+): FormData {
+  const contentLessons = lessons
+    .filter((l) => isContent(l.type))
+    .map((l) => ({ ...l }))
+    .sort((a, b) => a.order - b.order);
+
+  const normalized = reindexOrders1Based(contentLessons);
+
+  const payload = normalized.map((l) => {
+    const base = builderLessonToApiContent(l)!; // non-null because filtered by isContent
+    // wire string_file if provided (for material upload)
+    if (l.type === "material" && materialBase64ById?.[l.id]) {
+      (base as any).string_file = materialBase64ById[l.id];
+    }
+    return base;
+  });
+
+  const fd = new FormData();
+  fd.append("lessons", JSON.stringify(payload));
+  return fd;
+}
+
+/** Helpful guard: find last content lesson’s id */
+export function lastContentLessonId(lessons: BuilderLesson[]): string | null {
+  for (let i = lessons.length - 1; i >= 0; i--) {
+    if (isContent(lessons[i].type)) return lessons[i].id;
+  }
+  return null;
 }

@@ -53,7 +53,10 @@ export default function AppRoutes() {
               </RequireAuth>
             }
           />
-          <Route path="/course-builder" element={<CourseBuilderPage />} />
+          <Route
+            path="/course-builder/:courseId"
+            element={<CourseBuilderPage />}
+          />
           {/* Main */}
 
           {/* Courses */}
