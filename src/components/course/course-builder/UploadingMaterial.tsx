@@ -1,12 +1,16 @@
-import React, { useRef } from "react";
+// UploadingMaterial.tsx
+// — aligns to { content_type:"material", title, description, url, string_file (base64) }
+//   and stops using transient `fileUrl` as the canonical field.
+
+import React, { useMemo, useRef } from "react";
 import { Upload } from "lucide-react";
 import { fileToBase64 } from "../../../utils/courseBuilder";
 
 type LessonLocal = Lesson & {
   parentId?: string;
   file?: File | null;
-  fileUrl?: string | null;
-  string_file?: string | null;
+  url?: string | null; // external or preview link
+  string_file?: string | null; // base64
 };
 
 interface Props {
@@ -47,7 +51,12 @@ export default function UploadingMaterial({
 
   const canSave =
     Boolean((les?.title || "").trim()) &&
-    (Boolean(les?.file) || Boolean((les as any)?.fileUrl));
+    (Boolean(les?.file) || Boolean((les as any)?.url));
+
+  const localPreviewUrl = useMemo(() => {
+    if (les?.file instanceof File) return URL.createObjectURL(les.file);
+    return null;
+  }, [les?.file]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -105,13 +114,13 @@ export default function UploadingMaterial({
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
                     if (file) {
-                      const fileUrl = URL.createObjectURL(file);
                       updateLesson(
                         uploadingMaterial.moduleId,
                         uploadingMaterial.lessonId,
                         {
-                          fileUrl,
-                          file, // temporary File; will be converted to base64 on Save
+                          file, // transient File; will be converted to base64 on Save
+                          url: null, // prefer base64 if uploaded
+                          string_file: undefined,
                         }
                       );
                     }
@@ -120,6 +129,11 @@ export default function UploadingMaterial({
                 {(les?.file as any)?.name && (
                   <p className="text-sm text-gray-500 mt-2 truncate">
                     Selected: {(les?.file as any)?.name}
+                  </p>
+                )}
+                {!!localPreviewUrl && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Ready to encode as base64
                   </p>
                 )}
               </div>
@@ -142,13 +156,13 @@ export default function UploadingMaterial({
               </label>
               <input
                 type="url"
-                value={(les as any)?.fileUrl || ""}
+                value={(les as any)?.url || ""}
                 onChange={(e) =>
                   updateLesson(
                     uploadingMaterial.moduleId,
                     uploadingMaterial.lessonId,
                     {
-                      fileUrl: e.target.value,
+                      url: e.target.value,
                       file: null, // prefer external URL if provided
                       string_file: undefined,
                     }
@@ -200,22 +214,25 @@ export default function UploadingMaterial({
                 (l) => l.id === uploadingMaterial.lessonId
               ) as any;
 
-              let string_file: string | null = null;
-              let fileUrl: string | null = draft?.fileUrl || null;
+              let string_file: string | undefined =
+                draft?.string_file ?? undefined;
+
+              let url: string | null = draft?.url ?? null;
 
               if (draft.file instanceof File) {
                 // convert to base64 string and send as JSON under `string_file`
                 string_file = await fileToBase64(draft.file);
-                fileUrl = null; // prefer base64 if uploaded
+                url = null; // prefer base64 if uploaded
               }
 
               updateLesson(
                 uploadingMaterial.moduleId,
                 uploadingMaterial.lessonId,
                 {
-                  type: "material",
-                  string_file,
-                  fileUrl,
+                  type: "material" as any,
+                  content_type: "material" as any,
+                  ...(string_file ? { string_file } : {}),
+                  ...(url ? { url } : {}),
                   file: null, // clear transient File
                 } as any
               );

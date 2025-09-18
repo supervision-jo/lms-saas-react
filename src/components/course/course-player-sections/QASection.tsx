@@ -331,6 +331,7 @@ export default function QASection({
                         </button>
                         <button
                           onClick={() => {
+                            // Opening "create reply" must close any edit state
                             setAnswerEdit(null);
                             setOpenReplyId((prev) =>
                               prev === qa.id ? null : qa.id
@@ -349,95 +350,114 @@ export default function QASection({
                           const isMyAnswer =
                             reply?.user_?.id === currentUser?.id;
 
+                          const isEditingThisAnswer =
+                            answerEdit?.questionId === qa.id &&
+                            answerEdit?.answer?.id === reply.id;
+
                           return (
-                            <div
-                              key={reply?.id}
-                              className="w-full bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500 group relative"
-                            >
-                              <div className="flex items-center w-full justify-between mb-2 relative">
-                                <div className="flex items-center space-x-2">
-                                  {reply?.user_?.profile_image ? (
-                                    <img
-                                      src={reply?.user_?.profile_image}
-                                      alt={reply?.user_?.first_name}
-                                      className="w-6 h-6 rounded-full object-cover border border-gray-500"
-                                    />
-                                  ) : (
-                                    <div className="w-6 h-6 bg-gray-600 rounded-full border border-gray-500 flex items-center justify-center">
-                                      <span className="text-white text-sm font-medium">
-                                        {reply?.user_?.first_name
-                                          ?.charAt(0)
-                                          .toUpperCase()}
+                            <div key={reply.id} className="w-full">
+                              {isEditingThisAnswer ? (
+                                <ReplyForm
+                                  question={qa}
+                                  currentUser={currentUser}
+                                  editingAnswer={reply}
+                                  onSubmitReply={onSubmitReply} // not used in edit path
+                                  onSubmitEdit={onSubmitEditReply} // used here
+                                  isSubmitting={createAnswerPending}
+                                  onClose={() => {
+                                    setAnswerEdit(null);
+                                    setOpenReplyId(null);
+                                  }}
+                                />
+                              ) : (
+                                <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500 group relative">
+                                  <div className="flex items-center w-full justify-between mb-2 relative">
+                                    <div className="flex items-center space-x-2">
+                                      {reply?.user_?.profile_image ? (
+                                        <img
+                                          src={reply?.user_?.profile_image}
+                                          alt={reply?.user_?.first_name}
+                                          className="w-6 h-6 rounded-full object-cover border border-gray-500"
+                                        />
+                                      ) : (
+                                        <div className="w-6 h-6 bg-gray-600 rounded-full border border-gray-500 flex items-center justify-center">
+                                          <span className="text-white text-sm font-medium">
+                                            {reply?.user_?.first_name
+                                              ?.charAt(0)
+                                              .toUpperCase()}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <span className="font-medium text-white hover:text-purple-300 cursor-pointer transition-colors">
+                                        {reply?.user_?.first_name}{" "}
+                                        {reply?.user_?.last_name}
                                       </span>
+                                      {reply?.user_?.is_instructor && (
+                                        <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded-full font-medium">
+                                          Instructor
+                                        </span>
+                                      )}
                                     </div>
-                                  )}
-                                  <span className="font-medium text-white hover:text-purple-300 cursor-pointer transition-colors">
-                                    {reply?.user_?.first_name}{" "}
-                                    {reply?.user_?.last_name}
-                                  </span>
-                                  {reply?.user_?.is_instructor && (
-                                    <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded-full font-medium">
-                                      Instructor
+
+                                    <span className="text-xs text-gray-400">
+                                      {formatDateTimeSimple(reply?.created_at)}
                                     </span>
-                                  )}
+
+                                    {isMyAnswer && (
+                                      <button
+                                        onClick={() => {
+                                          // FIX 1: do NOT open the create-reply box while editing
+                                          setOpenReplyId(null);
+                                          setAnswerEdit({
+                                            questionId: qa.id,
+                                            answer: reply,
+                                          });
+                                        }}
+                                        className="absolute top-0 right-0 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg group-hover:opacity-100 opacity-0 duration-300 transition-opacity"
+                                        title="Edit your answer"
+                                      >
+                                        ✏️ Edit
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  <div className="text-gray-300 text-sm leading-relaxed">
+                                    {reply?.text}
+                                  </div>
+
+                                  <div className="flex items-center space-x-4 mt-3">
+                                    <button className="flex items-center space-x-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
+                                      <ThumbsUp className="w-3 h-3" />
+                                      <span>{reply?.count_likes}</span>
+                                    </button>
+                                  </div>
                                 </div>
-
-                                <span className="text-xs text-gray-400">
-                                  {formatDateTimeSimple(reply?.created_at)}
-                                </span>
-
-                                {isMyAnswer && (
-                                  <button
-                                    onClick={() => {
-                                      setOpenReplyId(qa.id);
-                                      setAnswerEdit({
-                                        questionId: qa.id,
-                                        answer: reply,
-                                      });
-                                    }}
-                                    className="absolute top-0 right-0 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg group-hover:opacity-100 opacity-0 duration-300 transition-opacity"
-                                    title="Edit your answer"
-                                  >
-                                    ✏️ Edit
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="text-gray-300 text-sm leading-relaxed">
-                                {reply?.text}
-                              </div>
-
-                              <div className="flex items-center space-x-4 mt-3">
-                                <button className="flex items-center space-x-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
-                                  <ThumbsUp className="w-3 h-3" />
-                                  <span>{reply?.count_likes}</span>
-                                </button>
-                              </div>
+                              )}
                             </div>
                           );
                         })}
                       </div>
 
-                      {/* Create / Edit Answer Box */}
+                      {/* Create only Answer Box */}
                       <div className="mt-4 ml-11">
-                        {openReplyId === qa.id && (
-                          <ReplyForm
-                            question={qa}
-                            currentUser={currentUser}
-                            editingAnswer={
-                              answerEdit && answerEdit.questionId === qa.id
-                                ? answerEdit.answer
-                                : null
-                            }
-                            onSubmitReply={onSubmitReply}
-                            onSubmitEdit={onSubmitEditReply}
-                            isSubmitting={createAnswerPending}
-                            onClose={() => {
-                              setOpenReplyId(null);
-                              setAnswerEdit(null);
-                            }}
-                          />
-                        )}
+                        {/*
+                          FIX 2:
+                          Show the create-reply box only when:
+                          - this question is toggled open, AND
+                          - there is NO active answer edit for this question
+                        */}
+                        {openReplyId === qa.id &&
+                          !(answerEdit && answerEdit.questionId === qa.id) && (
+                            <ReplyForm
+                              question={qa}
+                              currentUser={currentUser}
+                              editingAnswer={null}
+                              onSubmitReply={onSubmitReply}
+                              onSubmitEdit={onSubmitEditReply}
+                              isSubmitting={createAnswerPending}
+                              onClose={() => setOpenReplyId(null)}
+                            />
+                          )}
                       </div>
                     </div>
                   );

@@ -1,6 +1,6 @@
 import { Filter, X } from "lucide-react";
-import { useCustomQuery } from "../../hooks/useQuery";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
 import { useEffect, useRef, useId } from "react";
 
 type PriceFilter = "all" | "free" | "paid";

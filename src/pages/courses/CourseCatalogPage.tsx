@@ -2,8 +2,8 @@
 import { BookOpen } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import CourseCard from "../../components/course/CourseCard";
-import CoursesSortAndSearch from "../../components/course/CoursesSortAndSearch";
-import CoursesFilter from "../../components/course/CoursesFilter";
+import CoursesSortAndSearch from "../../components/course/course-catalog/CoursesSortAndSearch";
+import CoursesFilter from "../../components/course/course-catalog/CoursesFilter";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useSearchParams } from "react-router";
 import Pagination from "../../components/reusable-components/Pagination";
@@ -272,14 +272,16 @@ const CourseCatalogPage: React.FC = () => {
               </div>
             )}
 
-            {!isLoading && totalCount > 0 && (
-              <Pagination
-                total={totalCount}
-                page={page}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-              />
-            )}
+            <div>
+              {!isLoading && totalCount > 0 && (
+                <Pagination
+                  total={totalCount}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

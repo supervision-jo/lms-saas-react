@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -10,43 +10,39 @@ import {
   ChevronUp,
 } from "lucide-react";
 
-/** ===== Shapes used by the parent after normalization ===== */
 type Choice = { text: string; is_correct: boolean };
 type QuestionDraft = {
   text: string;
   question_type: "mcq";
   explanation?: string;
+  points: number;
   choices: Choice[];
 };
 export type AssessmentDraft = {
   title: string;
   description?: string;
-  time_limit_mins: number; // minutes
-  passing_score: number; // 0..100
-  type?: "quiz" | "exam"; // parent may provide, not required here
+  time_limit_mins: number;
+  time_limit?: number;
+  passing_score: number;
+  type?: "quiz" | "exam";
   questions: QuestionDraft[];
 };
 
-/** ===== Props ===== */
 interface QuizBuilderProps {
   onSave: (draft: AssessmentDraft) => void;
   onPreview: (draft: AssessmentDraft) => void;
-  /**
-   * May come in the new AssessmentDraft-like shape (preferred) or
-   * the legacy quiz shape you had before. We gracefully adapt.
-   */
   onClose: (s: boolean) => void;
   initialQuiz?: any;
+  onTitleChange?: (title: string) => void;
 }
 
-/** ===== Internal editor state (UI friendly) ===== */
 type UiOption = { id: string; text: string; is_correct: boolean };
 type UiQuestion = {
   id: string;
   text: string;
   explanation?: string;
   points: number; // UI-only (not sent to API)
-  timeLimitSeconds?: number; // UI optional per-question time; not sent
+  timeLimitSeconds?: number; // UI optional per-question time (not sent to API)
   options: UiOption[];
 };
 
@@ -59,7 +55,6 @@ type UiQuiz = {
   questions: UiQuestion[];
 };
 
-/** ===== Helpers ===== */
 const uid = () => Math.random().toString(36).slice(2);
 
 function fromInitialToUi(initial?: any): UiQuiz {
@@ -169,10 +164,12 @@ function fromInitialToUi(initial?: any): UiQuiz {
 }
 
 function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
+  const mins = Math.max(1, Math.floor(Number(ui.time_limit_mins || 1)));
   return {
     title: ui.title.trim(),
     description: ui.description?.trim() || "",
-    time_limit_mins: Math.max(1, Math.floor(Number(ui.time_limit_mins || 1))),
+    time_limit_mins: mins,
+    time_limit: mins, // <-- mirror for APIs that expect time_limit
     passing_score: Math.max(
       0,
       Math.min(100, Math.floor(Number(ui.passing_score || 0)))
@@ -182,6 +179,7 @@ function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
       text: q.text.trim(),
       question_type: "mcq",
       explanation: q.explanation?.trim() || "",
+      points: Math.max(1, Number(q.points || 1)), // <-- include points
       choices: q.options.map((o) => ({
         text: o.text.trim(),
         is_correct: !!o.is_correct,
@@ -196,8 +194,20 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onPreview,
   initialQuiz,
   onClose,
+  onTitleChange,
 }) => {
   const [quiz, setQuiz] = useState<UiQuiz>(() => fromInitialToUi(initialQuiz));
+
+  useEffect(() => {
+    if (!initialQuiz) return;
+    const next = fromInitialToUi(initialQuiz);
+    setQuiz(next);
+    if (typeof onTitleChange === "function") {
+      onTitleChange(next.title || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuiz]);
+
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
     () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
   );
@@ -334,7 +344,10 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   /** ---- actions ---- */
   const handleSave = () => {
     if (!validate()) return;
-    onSave(toAssessmentDraft(quiz));
+    const draft = toAssessmentDraft(quiz);
+    onTitleChange?.(draft.title);
+    onSave(draft);
+    onClose(false);
   };
   const handlePreview = () => {
     if (!validate()) return;
@@ -370,9 +383,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               <input
                 type="text"
                 value={quiz.title}
-                onChange={(e) =>
-                  setQuiz((p) => ({ ...p, title: e.target.value }))
-                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setQuiz((p) => ({ ...p, title: v }));
+                  onTitleChange?.(v);
+                }}
                 placeholder={`Enter ${
                   quiz.type === "exam" ? "exam" : "quiz"
                 } title`}

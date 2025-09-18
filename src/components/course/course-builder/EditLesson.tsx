@@ -3,6 +3,9 @@ import {
   isYouTubeUrl,
   extractYouTubeVideoId,
   getYouTubeThumbnail,
+  getYouTubeDurationSeconds,
+  secondsToHours,
+  getHtmlVideoDurationSeconds,
 } from "../../../utils/courseBuilder";
 
 interface Props {
@@ -10,7 +13,7 @@ interface Props {
   updateLesson: (
     moduleId: string,
     lessonId: string,
-    updates: Partial<BuilderLesson>
+    updates: Partial<Lesson>
   ) => void;
   editingLesson: {
     moduleId: string;
@@ -39,9 +42,6 @@ export default function EditLesson({
 
   const url: string = les?.url || "";
   const isYT = isYouTubeUrl(url);
-  const ytValue = isYT ? url : "";
-  const fileValue = !isYT && url ? url : "";
-
   const videoId = isYT ? extractYouTubeVideoId(url) : null;
   const thumb = videoId ? getYouTubeThumbnail(videoId) : "";
 
@@ -49,8 +49,6 @@ export default function EditLesson({
   const isValid = (() => {
     if (!url.trim()) return false;
     try {
-      // Accept any valid URL (YouTube or direct file)
-      // If you want to restrict types, add logic here.
       new URL(url);
       return true;
     } catch {
@@ -58,14 +56,38 @@ export default function EditLesson({
     }
   })();
 
+  const handleUrlChange = async (value: string) => {
+    updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
+      url: value,
+    });
+
+    // Auto-extract duration -> duration_hours
+    try {
+      let seconds = 0;
+      if (isYouTubeUrl(value)) {
+        const id = extractYouTubeVideoId(value);
+        if (id) seconds = await getYouTubeDurationSeconds(id);
+      } else {
+        seconds = await getHtmlVideoDurationSeconds(value);
+      }
+      const hours = secondsToHours(seconds);
+      if (hours > 0) {
+        updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
+          duration_hours: hours,
+        });
+      }
+    } catch {
+      // silently ignore
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 className="text-xl font-bold text-gray-900">Add Video Link</h3>
           <p className="text-gray-600 mt-1">
-            Add a YouTube link or a direct video file URL (we’ll save it as{" "}
-            <code>url</code>)
+            Add a YouTube link (we’ll save it as <code>url</code>)
           </p>
         </div>
 
@@ -82,24 +104,15 @@ export default function EditLesson({
                 </div>
                 <input
                   type="url"
-                  value={ytValue}
-                  onChange={(e) =>
-                    updateLesson(
-                      editingLesson.moduleId,
-                      editingLesson.lessonId,
-                      {
-                        youtubeUrl: e.target.value, // ← SINGLE SOURCE FIELD
-                      }
-                    )
-                  }
+                  value={url}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   name="url"
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
-                  disabled={!!fileValue}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                When filled, the direct file URL is disabled.
+                We auto-fill duration when possible.
               </p>
             </div>
 
@@ -129,61 +142,24 @@ export default function EditLesson({
               )}
             </div>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or</span>
-              </div>
-            </div>
-
-            {/* Regular Video URL */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video File URL
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Video className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="url"
-                  value={fileValue}
-                  onChange={(e) =>
-                    updateLesson(
-                      editingLesson.moduleId,
-                      editingLesson.lessonId,
-                      {
-                        videoUrl: e.target.value, // ← SINGLE SOURCE FIELD
-                      }
-                    )
-                  }
-                  placeholder="https://example.com/video.mp4"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
-                  disabled={!!ytValue}
-                />
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
-                When filled, the YouTube URL is disabled.
-              </p>
-            </div> */}
-
-            {/* Optional duration (kept UI as-is; will only be sent if your types support it) */}
+            {/* Duration (hours) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video Duration (optional)
+                Video Duration (hours)
               </label>
               <input
-                type="text"
-                value={les?.duration || ""}
+                type="number"
+                step="0.01"
+                min={0}
+                value={les?.duration_hours ?? ""}
                 onChange={(e) =>
                   updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-                    duration: e.target.value,
+                    duration_hours: e.target.value
+                      ? Number(e.target.value)
+                      : null,
                   })
                 }
-                placeholder="e.g., 1h 15m 30s or 75:30"
+                placeholder="e.g., 1.25"
                 className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -200,12 +176,10 @@ export default function EditLesson({
           <button
             onClick={async () => {
               if (!isValid) return;
-              // Persist via parent
               updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-                type: "video",
+                content_type: "video",
                 url: (les?.url || "").trim(),
               } as any);
-
               if (onSave) onSave();
               else setEditingLesson(null);
             }}

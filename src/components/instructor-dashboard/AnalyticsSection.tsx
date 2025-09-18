@@ -81,7 +81,7 @@ export default function AnalyticsSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">
           Student Growth
         </h3>
@@ -135,7 +135,7 @@ export default function AnalyticsSection() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

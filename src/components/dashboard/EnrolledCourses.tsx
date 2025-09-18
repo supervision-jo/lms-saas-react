@@ -107,9 +107,15 @@ export default function EnrolledCourses({
                 </span>
                 {Array.from({ length: 5 }).map((_, i) =>
                   i < (currentEnrollStat?.average_rating ?? 0) ? (
-                    <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
+                    <Star
+                      key={i + 9000}
+                      className="w-4 h-4 mr-1 text-yellow-400 fill-current"
+                    />
                   ) : (
-                    <Star className="text-gray-300 w-4 h-4 mr-1" />
+                    <Star
+                      key={i + 9050}
+                      className="text-gray-300 w-4 h-4 mr-1"
+                    />
                   )
                 )}
                 <span className="mr-4">

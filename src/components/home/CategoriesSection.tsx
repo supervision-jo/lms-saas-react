@@ -26,7 +26,7 @@ export default function CategoriesSection() {
           {categories?.map((category: Category) => (
             <div
               key={category?.id}
-              onClick={() => navigate("/catalog")}
+              onClick={() => navigate(`/catalog?category=${category?.id}`)}
               className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden"
             >
               <div

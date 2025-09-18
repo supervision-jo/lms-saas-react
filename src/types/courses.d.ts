@@ -102,18 +102,20 @@ interface Course {
   language: string;
 }
 
+type ContentType = "video" | "article" | "material" | "quiz" | "exam";
+
 interface Lesson {
   id: string;
   title: string;
-  duration_hours: number;
-  description: string;
-  url: string | null;
-  free_preview: boolean;
-  content_type: "video" | "article" | "quiz" | "exam" | "material";
+  content_type: ContentType;
+  description?: string | null;
+  description_html?: any;
+  free_preview?: boolean;
   order: number;
+  url?: string | null;
+  duration_hours?: number | null;
+  string_file?: string | null;
   file: any;
-  string_file: string;
-  description_html: any;
 }
 
 interface Module {
@@ -125,20 +127,8 @@ interface Module {
 }
 
 interface CourseReview {
-  student_: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    is_student: boolean;
-    is_instructor: boolean;
-    profile_image: string | null;
-    bio: string | null;
-    phone: string | null;
-    location: string | null;
-    data_joined: string;
-  };
-  id: number;
+  student_: Person;
+  id: string;
   course: string;
   course_title: string;
   rating: number;

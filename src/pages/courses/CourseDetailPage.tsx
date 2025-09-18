@@ -19,12 +19,13 @@ import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { formatDuration } from "../../utils/formatDuration";
-import CourseRatingModal from "../../components/course/CourseRatingModal";
 import { readUserFromStorage } from "../../services/auth";
 import LoginPopup from "../../components/auth-modals/LoginPopup";
 import SignupPopup from "../../components/auth-modals/SignupPopup";
 import useAuth from "../../store/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
+import CourseRatingModal from "../../components/course/course-details/CourseRatingModal";
+import CourseReviews from "../../components/course/course-details/CourseReviews";
 
 const CourseDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -65,10 +66,17 @@ const CourseDetailPage: React.FC = () => {
     [modulesResp]
   );
 
+  // const { data: subCatesData } = useCustomQuery(
+  //   `${API_ENDPOINTS.subCategories}`,
+  //   ["sub-categories-details"]
+  // );
+
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
   const cates: Category[] = catesData?.data?.data ?? [];
+  // const subCategories: SubCategory[] = subCatesData?.data || [];
+
   const currentCategory = cates?.find((c) => c.id === course?.sub_category);
 
   const { data: instructorData } = useCustomQuery(
@@ -267,11 +275,15 @@ const CourseDetailPage: React.FC = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                     <button
                       onClick={() => {
-                        // Start at first playable lesson to mirror player UX
-                        if (firstPlayableLessonId) {
-                          goToPlayer({ lessonId: firstPlayableLessonId });
+                        // Start at first playable lesson to mirror player UX isEnrolled
+                        if (isEnrolled) {
+                          if (firstPlayableLessonId) {
+                            goToPlayer({ lessonId: firstPlayableLessonId });
+                          } else {
+                            goToPlayer(); // fallback
+                          }
                         } else {
-                          goToPlayer(); // fallback
+                          toast.error("Please enroll first.");
                         }
                       }}
                       className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center"
@@ -541,9 +553,7 @@ const CourseDetailPage: React.FC = () => {
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Student Reviews
                   </h3>
-                  <div className="text-center py-12 text-gray-500">
-                    <p>Reviews will be displayed here</p>
-                  </div>
+                  <CourseReviews courseId={course?.id} />
                 </div>
               )}
             </div>

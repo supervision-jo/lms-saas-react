@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Star, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 import { useParams } from "react-router";
-import { useCustomQuery } from "../../hooks/useQuery";
-import { API_ENDPOINTS } from "../../utils/constants";
-import { useCustomPatch, useCustomPost } from "../../hooks/useMutation";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { useCustomPatch, useCustomPost } from "../../../hooks/useMutation";
 import toast from "react-hot-toast";
-import handleErrorAlerts from "../../utils/showErrorMessages";
-import { readUserFromStorage } from "../../services/auth";
-import ReviewReasonsSkeleton from "../resource-stats/ReviewReasonsLoading";
+import handleErrorAlerts from "../../../utils/showErrorMessages";
+import { readUserFromStorage } from "../../../services/auth";
+import ReviewReasonsSkeleton from "../../resource-stats/ReviewReasonsLoading";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface CourseRatingProps {

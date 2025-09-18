@@ -1,5 +1,5 @@
-// only the relevant parts are highlighted; this is the full component for drop-in use
-import React, { useEffect, useRef, useState } from "react";
+// components/course/CreateSectionsForm.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
   Edit,
@@ -15,23 +15,25 @@ import {
 import { useDrag, useDrop } from "react-dnd";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
-import { useParams } from "react-router";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
 import EditLesson from "./EditLesson";
 import EditArticle from "./EditArticle";
 import UploadingMaterial from "./UploadingMaterial";
 import {
-  // extractYouTubeVideoId,
-  // getYouTubeThumbnail,
   isContent,
   isAssessment,
   nextAssessmentTitle,
   anchorAbove,
   reindexOrders1Based,
+  fetchAssessmentsForLessons,
+  injectAssessmentsIntoModules,
 } from "../../../utils/courseBuilder";
 import { useCustomPost } from "../../../hooks/useMutation";
-import { patch } from "../../../api";
+import { patch, remove, get } from "../../../api";
+import QuizBuilder, { AssessmentDraft } from "../../quizes/QuizBuilder";
+import QuizPreview from "../../quizes/QuizPreview";
+import { useQueryClient } from "@tanstack/react-query";
 
 const DND_TYPES = { MODULE: "MODULE", LESSON: "LESSON" } as const;
 
@@ -79,6 +81,7 @@ type LessonItemProps = {
   index: number;
   moveLesson: (moduleId: string, dragId: string, hoverId: string) => void;
   onDragEnd: () => void;
+  canDrag?: boolean;
   children: React.ReactNode;
 };
 
@@ -88,6 +91,7 @@ function LessonItem({
   index,
   moveLesson,
   onDragEnd,
+  canDrag = true,
   children,
 }: LessonItemProps) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -102,11 +106,21 @@ function LessonItem({
   });
   const [{ isDragging }, drag] = useDrag({
     type: DND_TYPES.LESSON,
-    item: { id: lesson.id, index, moduleId },
+    item: {
+      id: lesson.id,
+      index,
+      moduleId,
+      content_type: (lesson as any).content_type,
+    },
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    canDrag: () => !!canDrag,
     end: () => onDragEnd(),
   });
-  drag(drop(ref));
+  if (canDrag) {
+    drag(drop(ref));
+  } else {
+    drop(ref);
+  }
   return (
     <div ref={ref} style={{ opacity: isDragging ? 0.7 : 1 }}>
       {children}
@@ -114,16 +128,36 @@ function LessonItem({
   );
 }
 
-export default function CreateSectionsForm() {
-  const { courseId } = useParams();
-  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+const Modal: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({
+  onClose,
+  children,
+}) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-label="Close modal overlay"
+      />
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
 
+export default function CreateSectionsForm({ courseId }: { courseId: string }) {
+  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const setMenuRef =
     (id: string) =>
     (el: HTMLDivElement | null): void => {
       menuRefs.current[id] = el;
     };
+
+  const assessmentCacheRef = useRef<Record<string, AssessmentDraft>>({});
+
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
       if (!openMenuFor) return;
@@ -136,48 +170,80 @@ export default function CreateSectionsForm() {
   }, [openMenuFor]);
 
   // Prefill modules on load
-  const {
-    data: modulesData,
-    refetch,
-    isLoading,
-  } = useCustomQuery(
+  const { data: modulesData, isLoading } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
     undefined,
     !!courseId
   );
-  const serverModules: Module[] = modulesData?.data?.data ?? [];
+  const serverModules: Module[] = useMemo(
+    () => modulesData?.data?.data ?? [],
+    [modulesData]
+  );
+
   const [modules, setModules] = useState<Module[]>(serverModules);
+
   useEffect(() => {
-    if (Array.isArray(serverModules)) setModules(serverModules);
-  }, [modulesData]); // eslint-disable-line
+    let cancelled = false;
+    (async () => {
+      if (!Array.isArray(serverModules)) return;
+      // collect all content lesson ids (anchors)
+      const lessonIds: string[] = [];
+      serverModules.forEach((mod) =>
+        (mod.lessons || []).forEach((l: any) => {
+          if (isContent(l?.content_type)) lessonIds.push(l.id);
+        })
+      );
+      // fetch exams/quizzes by anchor lesson id
+      const byLesson = await fetchAssessmentsForLessons(
+        lessonIds,
+        API_ENDPOINTS.exams
+      );
+      const stitched = injectAssessmentsIntoModules(serverModules, byLesson);
+      if (!cancelled) setModules(stitched);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [serverModules]);
 
   const { mutateAsync: createSection } = useCustomPost(
     API_ENDPOINTS.createSection,
     ["modules", courseId!]
   );
 
-  /** ================= Normalization =================
-   * Video now sends a single `url` field.
-   * Material already sends { title, description, string_file, url }.
-   */
+  const { mutateAsync: createExam } = useCustomPost(API_ENDPOINTS.createExam, [
+    "exams",
+    courseId!,
+  ]);
+
+  /** =============== Normalization =============== */
   const normalizeLessonForSave = (l: any) => {
+    // ⛔ assessments are saved via /exams APIs only
+    if (l?.content_type === "quiz" || l?.content_type === "exam") return null;
     const common: any = {};
     if (l?.id && !String(l.id).startsWith("tmp-")) common.id = l.id;
-    if (l?.type) common.type = l.type;
+    if (l?.content_type) common.content_type = l.content_type;
     if (l?.order != null) common.order = Number(l.order);
+    if (typeof l?.free_preview === "boolean")
+      common.free_preview = l.free_preview;
 
-    if (l?.type === "video") {
+    if (l?.content_type === "video") {
       return {
         ...common,
         title: l?.title ?? "",
         description: l?.description ?? "",
-        url: l?.url || "", // ← IMPORTANT
-        ...(l?.duration ? { duration: l.duration } : {}),
+        url: l?.url || "",
+        duration_hours:
+          typeof l?.duration_hours === "number"
+            ? l.duration_hours
+            : l?.duration
+            ? Number(l.duration) || null
+            : null,
       };
     }
 
-    if (l?.type === "article") {
+    if (l?.content_type === "article") {
       return {
         ...common,
         title: l?.title ?? "",
@@ -185,26 +251,23 @@ export default function CreateSectionsForm() {
           l?.description_html != null
             ? l.description_html
             : l?.description ?? "",
+        duration_hours:
+          typeof l?.duration_hours === "number" ? l.duration_hours : null,
       };
     }
 
-    if (l?.type === "material") {
-      return {
+    if (l?.content_type === "material") {
+      const out: any = {
         ...common,
         title: l?.title ?? "",
         description: l?.description ?? "",
-        string_file: l?.string_file ?? null,
-        url: l?.url ?? null,
       };
+      if (l?.string_file) out.string_file = l.string_file;
+      if (l?.url) out.url = l.url;
+      return out;
     }
 
-    if (l?.type === "quiz" || l?.type === "exam") {
-      return {
-        ...common,
-        title: l?.title ?? "",
-      };
-    }
-
+    // fallback
     return {
       ...common,
       title: l?.title ?? "",
@@ -216,8 +279,16 @@ export default function CreateSectionsForm() {
     const mod = modules.find((m) => m.id === moduleId);
     if (!mod) return;
 
-    const normalized = reindexOrders1Based(mod.lessons || []);
-    const payload = { lessons: normalized.map(normalizeLessonForSave) };
+    const contentOnly = (mod.lessons || []).filter(
+      (x: any) =>
+        x?.content_type === "video" ||
+        x?.content_type === "article" ||
+        x?.content_type === "material"
+    );
+    const normalized = reindexOrders1Based(contentOnly);
+    const payload = {
+      lessons: normalized.map(normalizeLessonForSave).filter(Boolean), // drop nulls
+    };
     await patch(`${API_ENDPOINTS.updateSection}${moduleId}/`, payload);
   };
 
@@ -229,16 +300,113 @@ export default function CreateSectionsForm() {
     const body: Record<string, any> = { [field]: value };
     await patch(`${API_ENDPOINTS.updateSection}${id}/`, body);
     toast.success("Saved");
-    await refetch();
+    await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
   };
 
+  const getCachedAssessment = (id: string) => assessmentCacheRef.current[id];
+
+  const setCachedAssessment = (id: string, draft: AssessmentDraft) => {
+    // ensure points & choices shape are present
+    assessmentCacheRef.current[id] = {
+      ...draft,
+      questions: (draft.questions || []).map((q) => ({
+        text: q.text,
+        question_type: q.question_type || "mcq",
+        explanation: q.explanation || "",
+        // default defensively
+        choices: (q.choices || []).map((c) => ({
+          text: c.text,
+          is_correct: !!c.is_correct,
+        })),
+        points: typeof (q as any).points === "number" ? (q as any).points : 1,
+      })),
+    };
+  };
+
+  function normalizeAssessmentFromServer(server: any): AssessmentDraft {
+    const timeLimit =
+      typeof server?.time_limit_mins === "number"
+        ? server.time_limit_mins
+        : typeof server?.time_limit === "number"
+        ? server.time_limit
+        : 10;
+
+    const questions = Array.isArray(server?.questions) ? server.questions : [];
+
+    return {
+      title: server?.title ?? "",
+      description: server?.description ?? "",
+      type: server?.type === "exam" ? "exam" : "quiz",
+      time_limit_mins: Math.max(1, Number(timeLimit) || 10),
+      passing_score: Math.max(
+        0,
+        Math.min(100, Number(server?.passing_score ?? 70))
+      ),
+      questions: questions.map((q: any) => ({
+        text: String(q?.text ?? ""),
+        question_type: (q?.question_type as "mcq") || "mcq",
+        explanation: String(q?.explanation ?? ""),
+        choices: Array.isArray(q?.choices)
+          ? q.choices.map((c: any) => ({
+              text: String(c?.text ?? ""),
+              is_correct: !!c?.is_correct,
+            }))
+          : [],
+        points: Number.isFinite(q?.points) ? Number(q.points) : 1,
+      })),
+    };
+  }
+
+  const fetchAssessmentByAnchor = async (
+    anchorLessonId: string,
+    preferType?: "quiz" | "exam"
+  ): Promise<AssessmentDraft | null> => {
+    const resp = await get(`${API_ENDPOINTS.exams}?lesson=${anchorLessonId}`);
+    const list = resp?.data ?? resp?.results ?? resp ?? [];
+    if (!Array.isArray(list) || !list.length) return null;
+    const server =
+      (preferType ? list.find((x: any) => x?.type === preferType) : null) ||
+      list[0];
+    const full = normalizeAssessmentFromServer(server);
+    // Only accept if it actually has questions (to avoid wiping)
+    if (!Array.isArray(full.questions) || full.questions.length === 0)
+      return null;
+    return full;
+  };
+
+  // GET from read endpoints only → then PATCH to update endpoint
   const patchAssessmentField = async (
     id: string,
     field: string,
-    value: string | number | boolean
+    value: string | number | boolean,
+    anchorLessonId: string,
+    preferType?: "quiz" | "exam"
   ) => {
-    const body: Record<string, any> = { [field]: value };
-    await patch(`${API_ENDPOINTS.exams}${id}/`, body);
+    // 1) prefer local cache
+    let full = getCachedAssessment(id);
+
+    // 2) fallback: server fetch by anchor, but only if it has questions
+    if (!full) {
+      const fetched = await fetchAssessmentByAnchor(anchorLessonId, preferType);
+      if (!fetched) {
+        toast.error("Open the quiz/exam and save once before editing inline.");
+        throw new Error("No complete assessment available for safe PATCH");
+      }
+      full = fetched;
+      setCachedAssessment(id, full);
+    }
+
+    const merged: any = {
+      ...full,
+      [field]: value,
+      lesson: anchorLessonId,
+    };
+    // some backends expect time_limit instead of *_mins
+    merged.time_limit = merged.time_limit_mins;
+
+    await patch(`${API_ENDPOINTS.updateExam}${id}/`, merged);
+    // keep cache in sync
+    setCachedAssessment(id, merged);
     toast.success("Saved");
   };
 
@@ -248,11 +416,11 @@ export default function CreateSectionsForm() {
         course: courseId,
         title: `New Module ${modules.length + 1}`,
         description: "",
-        order: modules.length + 1,
+        order: modules.length + 1, // 1-based
       };
       await createSection(body);
       toast.success("New module added!");
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
@@ -290,6 +458,48 @@ export default function CreateSectionsForm() {
     lessonId: string;
   } | null>(null);
 
+  // Assessment editing / preview
+  const [editingAssessment, setEditingAssessment] = useState<{
+    id: string;
+    moduleId: string;
+    type: "quiz" | "exam";
+  } | null>(null);
+  const [previewDraft, setPreviewDraft] = useState<AssessmentDraft | null>(
+    null
+  );
+
+  const anchorIdForEditingAssessment = useMemo(() => {
+    if (!editingAssessment) return null;
+    const mod = modules.find((m) => m.id === editingAssessment.moduleId);
+    if (!mod) return null;
+    const idx = mod.lessons.findIndex((l) => l.id === editingAssessment.id);
+    if (idx < 0) return null;
+    return anchorAbove(mod.lessons as any, idx);
+  }, [editingAssessment, modules]);
+
+  // fetch exams/quiz list for the parent lesson, then pick the one we need
+  const { data: examsByLessonResp } = useCustomQuery(
+    anchorIdForEditingAssessment
+      ? `${API_ENDPOINTS.exams}?lesson=${anchorIdForEditingAssessment}`
+      : "",
+    ["exams-by-lesson", anchorIdForEditingAssessment],
+    undefined,
+    !!anchorIdForEditingAssessment
+  );
+
+  // Normalize returned list (array from the collection endpoint)
+  const assessmentDetail = useMemo(() => {
+    const arr =
+      examsByLessonResp?.data ??
+      examsByLessonResp?.results ??
+      examsByLessonResp ??
+      [];
+    if (!Array.isArray(arr) || !arr.length) return null;
+    const wantType = editingAssessment?.type;
+    const byType = wantType ? arr.find((x: any) => x?.type === wantType) : null;
+    return byType || arr[0];
+  }, [examsByLessonResp, editingAssessment?.type]);
+
   const addContentLesson = (
     moduleId: string,
     type: "video" | "article" | "material"
@@ -308,12 +518,21 @@ export default function CreateSectionsForm() {
               : "New Material",
           description: "",
           description_html: null,
-          type,
+          content_type: type,
+          free_preview: false,
           order: (m.lessons?.length ?? 0) + 1, // 1-based
-          url: "", // ← video/material write here
-          string_file: null, // ← material only
+          url: "",
+          string_file: null,
+          duration_hours: null,
         };
         const lessons = [...(m.lessons || []), stub];
+
+        // Immediately patch section (prev array + new lesson in lessons[])
+        setTimeout(() => {
+          saveSectionLessons(moduleId).catch(() => {});
+        }, 0);
+
+        // Open editor
         setTimeout(() => {
           if (type === "video")
             setEditingLesson({ moduleId, lessonId: tempId });
@@ -322,15 +541,11 @@ export default function CreateSectionsForm() {
           if (type === "material")
             setUploadingMaterial({ moduleId, lessonId: tempId });
         }, 0);
+
         return { ...m, lessons };
       })
     );
   };
-
-  const { mutateAsync: createExam } = useCustomPost(API_ENDPOINTS.exams, [
-    "modules",
-    courseId!,
-  ]);
 
   const addAssessment = async (moduleId: string, type: "quiz" | "exam") => {
     const mod = modules.find((m) => m.id === moduleId);
@@ -340,7 +555,7 @@ export default function CreateSectionsForm() {
       [...(mod.lessons || [])]
         .map((l, i) => ({ l, i }))
         .reverse()
-        .find(({ l }) => isContent(l.content_type))?.i ?? -1;
+        .find(({ l }) => isContent((l as any).content_type))?.i ?? -1;
 
     if (lastContentIndex < 0) {
       toast.error("Create a content lesson first");
@@ -351,9 +566,48 @@ export default function CreateSectionsForm() {
     const title = nextAssessmentTitle(mod as any, type);
 
     try {
-      const body = { title, type, lesson: anchorId };
+      const body = {
+        title,
+        type,
+        lesson: anchorId,
+        time_limit: 10,
+        passing_score: 70,
+        questions: [
+          {
+            text: "Sample question",
+            question_type: "mcq",
+            points: 1,
+            explanation: "",
+            choices: [
+              { text: "Option 1", is_correct: true },
+              { text: "Option 2", is_correct: false },
+            ],
+          },
+        ],
+      };
       const created = await createExam(body);
       const newId = created?.data?.id ?? created?.id;
+
+      setCachedAssessment(newId, {
+        title,
+        description: "",
+        type,
+        time_limit_mins: 10,
+        passing_score: 70,
+        questions: [
+          {
+            text: "Sample question",
+            question_type: "mcq",
+            explanation: "",
+            choices: [
+              { text: "Option 1", is_correct: true },
+              { text: "Option 2", is_correct: false },
+            ],
+            points: 1,
+          },
+        ],
+      });
+
       if (!newId) throw new Error("No id returned");
 
       setModules((prev) =>
@@ -364,7 +618,7 @@ export default function CreateSectionsForm() {
             title,
             description: "",
             description_html: null,
-            type,
+            content_type: type,
             order: lastContentIndex + 2,
           };
           const next = [...m.lessons];
@@ -375,7 +629,8 @@ export default function CreateSectionsForm() {
 
       toast.success(`${type === "quiz" ? "Quiz" : "Exam"} created`);
     } catch (e: any) {
-      toast.error(e?.message || "Cannot create quiz/exam");
+      const payload = e?.response?.data?.error;
+      handleErrorAlerts(payload);
     }
   };
 
@@ -404,10 +659,10 @@ export default function CreateSectionsForm() {
     try {
       await Promise.all(ops);
       toast.success("Module order updated");
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
     } catch {
       toast.error("Failed to update module order");
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
     }
   };
 
@@ -415,13 +670,60 @@ export default function CreateSectionsForm() {
     setModules((prev) =>
       prev.map((m) => {
         if (m.id !== moduleId) return m;
-        const d = m.lessons.findIndex((l) => l.id === dragId);
-        const h = m.lessons.findIndex((l) => l.id === hoverId);
+        const lessons = [...m.lessons];
+        let d = lessons.findIndex((l: any) => l.id === dragId);
+        let h = lessons.findIndex((l: any) => l.id === hoverId);
         if (d < 0 || h < 0 || d === h) return m;
-        const next = [...m.lessons];
-        const [dragged] = next.splice(d, 1);
-        next.splice(h, 0, dragged);
-        return { ...m, lessons: next };
+
+        // If dragging an assessment, convert to its anchor (content) so you can only move the group
+        const dIsAssessment = isAssessment((lessons[d] as any)?.content_type);
+        if (dIsAssessment) {
+          // find anchor above d
+          for (let i = d - 1; i >= 0; i--) {
+            if (isContent((lessons[i] as any)?.content_type)) {
+              d = i;
+              break;
+            }
+          }
+        }
+
+        // If hovering over an assessment, normalize drop target to its anchor content
+        const hIsAssessment = isAssessment((lessons[h] as any)?.content_type);
+        if (hIsAssessment) {
+          for (let i = h - 1; i >= 0; i--) {
+            if (isContent((lessons[i] as any)?.content_type)) {
+              h = i;
+              break;
+            }
+          }
+        }
+
+        if (d === h) return m;
+
+        // Determine the group slice: anchor content + all contiguous assessments until next content
+        const start = d;
+        if (!isContent((lessons[start] as any)?.content_type)) return m;
+        let endExclusive = start + 1;
+        while (
+          endExclusive < lessons.length &&
+          isAssessment((lessons[endExclusive] as any)?.content_type)
+        ) {
+          endExclusive++;
+        }
+
+        // Extract the group
+        const group = lessons.slice(start, endExclusive);
+        lessons.splice(start, group.length);
+
+        // After removal, target index may shift
+        if (start < h) {
+          h -= group.length;
+        }
+
+        // Insert group before the hover anchor
+        lessons.splice(h, 0, ...group);
+
+        return { ...m, lessons };
       })
     );
   };
@@ -434,33 +736,87 @@ export default function CreateSectionsForm() {
       await saveSectionLessons(moduleId);
     } catch {
       toast.error("Failed to save lesson order");
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
       return;
     }
 
-    const ops =
-      mod.lessons
-        ?.map((l, idx) => {
-          if (!isAssessment(l.content_type)) return null;
-          const anch = anchorAbove(mod.lessons as any, idx);
-          if (!anch) return null;
-          return patch(`${API_ENDPOINTS.exams}${l.id}/`, { lesson: anch });
+    const patches: Promise<any>[] = [];
+    const nextLessons = [...(mod.lessons || [])];
+    nextLessons.forEach((l, idx) => {
+      if (!isAssessment((l as any).content_type)) return;
+      const newAnchor = anchorAbove(nextLessons as any, idx);
+      const oldAnchor = (l as any)._anchor; // set during inject
+      if (!newAnchor || newAnchor === oldAnchor) return; // no change => no PATCH
+      patches.push(
+        patch(`${API_ENDPOINTS.updateExam}${(l as any).id}/`, {
+          lesson: newAnchor,
         })
-        .filter(Boolean) ?? [];
+      );
+      (l as any)._anchor = newAnchor;
+    });
 
-    if (ops.length) {
+    if (patches.length) {
       try {
-        await Promise.all(ops as any[]);
+        await Promise.all(patches);
         toast.success("Attachments updated");
       } catch {
         toast.error("Failed to update some attachments");
-      } finally {
-        await refetch();
       }
     }
   };
 
-  const deleteModule = (id: string) => console.log(id);
+  const deleteModule = async (id: string) => {
+    try {
+      await remove(`${API_ENDPOINTS.deleteSection}${id}/`);
+      toast.success("Module deleted");
+      await queryClient.invalidateQueries({
+        queryKey: ["modules", courseId],
+      });
+    } catch (e: any) {
+      const payload = e?.response?.data?.error;
+      handleErrorAlerts(payload);
+    }
+  };
+
+  const deleteContentLesson = async (moduleId: string, lessonId: string) => {
+    setModules((prev) =>
+      prev.map((m) =>
+        m.id !== moduleId
+          ? m
+          : {
+              ...m,
+              lessons: reindexOrders1Based(
+                (m.lessons || []).filter((l) => l.id !== lessonId)
+              ),
+            }
+      )
+    );
+    try {
+      await saveSectionLessons(moduleId);
+      toast.success("Lesson removed");
+      await commitLessonOrderAndAnchors(moduleId);
+    } catch {
+      toast.error("Failed to remove lesson");
+      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+    }
+  };
+
+  const deleteExamOrQuiz = async (id: string, moduleId: string) => {
+    try {
+      await remove(`${API_ENDPOINTS.updateExam}${id}/`);
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id !== moduleId
+            ? m
+            : { ...m, lessons: m.lessons.filter((l) => l.id !== id) }
+        )
+      );
+      toast.success("Assessment deleted");
+    } catch (e: any) {
+      const payload = e?.response?.data?.error;
+      handleErrorAlerts(payload);
+    }
+  };
 
   return (
     <div className="sm:space-y-6 space-y-3">
@@ -496,7 +852,7 @@ export default function CreateSectionsForm() {
           <div className="space-y-6">
             {modules.map((module, mIndex) => {
               const hasAnyContent = (module.lessons ?? []).some((l) =>
-                isContent((l as any).type)
+                isContent((l as any).content_type)
               );
               return (
                 <ModuleItem
@@ -674,10 +1030,8 @@ export default function CreateSectionsForm() {
                       <div className="p-4 space-y-2">
                         {module.lessons!.map((lesson, lIndex) => {
                           const isContentLesson = isContent(
-                            (lesson as any).type
+                            (lesson as any).content_type
                           );
-                          const canDrag = true;
-
                           const videoUrlPreview = (lesson as any)?.url || "";
 
                           return (
@@ -690,26 +1044,30 @@ export default function CreateSectionsForm() {
                               onDragEnd={() =>
                                 commitLessonOrderAndAnchors(module.id)
                               }
+                              canDrag={isContentLesson}
                             >
                               <div className="flex sm:items-center items-start sm:flex-row flex-col sm:gap-0 gap-4 justify-between sm:p-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
                                 <div className="flex items-center gap-3 w-full">
                                   <div>
-                                    <GripVertical
-                                      className={`w-4 h-4 text-gray-400 ${
-                                        canDrag ? "cursor-move" : "opacity-50"
-                                      }`}
-                                    />
+                                    {isContentLesson ? (
+                                      <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+                                    ) : (
+                                      <div className="w-4 h-4" />
+                                    )}
                                   </div>
                                   <div>
                                     {isContentLesson ? (
-                                      (lesson as any).type === "video" ? (
+                                      (lesson as any).content_type ===
+                                      "video" ? (
                                         <Video className="w-4 h-4" />
-                                      ) : (lesson as any).type === "article" ? (
+                                      ) : (lesson as any).content_type ===
+                                        "article" ? (
                                         <FileText className="w-4 h-4" />
                                       ) : (
                                         <Upload className="w-4 h-4" />
                                       )
-                                    ) : (lesson as any).type === "quiz" ? (
+                                    ) : (lesson as any).content_type ===
+                                      "quiz" ? (
                                       <HelpCircle className="w-4 h-4" />
                                     ) : (
                                       <Award className="w-4 h-4" />
@@ -728,11 +1086,19 @@ export default function CreateSectionsForm() {
                                       }
                                       onBlur={async (e) => {
                                         if (!isContentLesson) {
+                                          const anchor = anchorAbove(
+                                            module.lessons as any,
+                                            lIndex
+                                          );
                                           try {
                                             await patchAssessmentField(
                                               (lesson as any).id,
                                               "title",
-                                              e.target.value
+                                              e.target.value,
+                                              anchor ?? "", // API needs a string
+                                              (lesson as any).content_type as
+                                                | "quiz"
+                                                | "exam"
                                             );
                                           } catch {
                                             //
@@ -751,7 +1117,8 @@ export default function CreateSectionsForm() {
                                     <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
                                       <span className="inline-flex items-center flex-wrap">
                                         {isContentLesson &&
-                                        (lesson as any).type === "video" ? (
+                                        (lesson as any).content_type ===
+                                          "video" ? (
                                           <>
                                             <Link className="w-3 h-3 mr-1" />
                                             {videoUrlPreview
@@ -763,77 +1130,106 @@ export default function CreateSectionsForm() {
                                           </>
                                         ) : null}
                                       </span>
-                                      {!isContentLesson ? (
-                                        <span className="text-purple-600">
-                                          •{" "}
-                                          {lesson?.content_type?.toUpperCase()}{" "}
-                                          (attached to content above)
-                                        </span>
-                                      ) : null}
                                     </div>
                                   </div>
                                 </div>
 
                                 <div className="flex items-center space-x-2 sm:self-center self-end">
-                                  {isContentLesson && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        toast("Delete lesson not implemented")
-                                      }
-                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  )}
+                                  {isContentLesson ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          deleteContentLesson(
+                                            module.id,
+                                            lesson.id
+                                          )
+                                        }
+                                        className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
 
-                                  {(lesson as any).type === "video" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setEditingLesson({
-                                          moduleId: module.id,
-                                          lessonId: lesson.id,
-                                        })
-                                      }
-                                      className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                                      title="Edit Video"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </button>
-                                  )}
+                                      {(lesson as any).content_type ===
+                                        "video" && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditingLesson({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
+                                          className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                                          title="Edit Video"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                      )}
 
-                                  {(lesson as any).type === "article" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setEditingArticle({
-                                          moduleId: module.id,
-                                          lessonId: lesson.id,
-                                        })
-                                      }
-                                      className="p-1 text-green-400 hover:text-green-600 transition-colors"
-                                      title="Edit Article"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </button>
-                                  )}
+                                      {(lesson as any).content_type ===
+                                        "article" && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditingArticle({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
+                                          className="p-1 text-green-400 hover:text-green-600 transition-colors"
+                                          title="Edit Article"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                      )}
 
-                                  {(lesson as any).type === "material" && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setUploadingMaterial({
-                                          moduleId: module.id,
-                                          lessonId: lesson.id,
-                                        })
-                                      }
-                                      className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                      title="Upload Material"
-                                    >
-                                      <Upload className="w-4 h-4" />
-                                    </button>
+                                      {(lesson as any).content_type ===
+                                        "material" && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setUploadingMaterial({
+                                              moduleId: module.id,
+                                              lessonId: lesson.id,
+                                            })
+                                          }
+                                          className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
+                                          title="Upload Material"
+                                        >
+                                          <Upload className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditingAssessment({
+                                            id: lesson.id,
+                                            moduleId: module.id,
+                                            type: (lesson as any)
+                                              .content_type as "quiz" | "exam",
+                                          })
+                                        }
+                                        className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
+                                        title="Edit"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          deleteExamOrQuiz(lesson.id, module.id)
+                                        }
+                                        className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -882,7 +1278,9 @@ export default function CreateSectionsForm() {
             try {
               await saveSectionLessons(editingLesson.moduleId);
               toast.success("Video saved");
-              await refetch();
+              await queryClient.invalidateQueries({
+                queryKey: ["modules", courseId],
+              });
             } catch {
               //
             }
@@ -923,7 +1321,9 @@ export default function CreateSectionsForm() {
             try {
               await saveSectionLessons(editingArticle.moduleId);
               toast.success("Article saved");
-              await refetch();
+              await queryClient.invalidateQueries({
+                queryKey: ["modules", courseId],
+              });
             } catch {
               //
             }
@@ -966,13 +1366,80 @@ export default function CreateSectionsForm() {
             try {
               await saveSectionLessons(uploadingMaterial.moduleId);
               toast.success("Material saved");
-              await refetch();
+              await queryClient.invalidateQueries({
+                queryKey: ["modules", courseId],
+              });
             } catch {
               //
             }
             setUploadingMaterial(null);
           }}
         />
+      )}
+
+      {/* Quiz / Exam Builder & Preview */}
+      {editingAssessment && (
+        <Modal onClose={() => setEditingAssessment(null)}>
+          <QuizBuilder
+            initialQuiz={assessmentDetail ?? { type: editingAssessment?.type }}
+            onTitleChange={(t) =>
+              updateLessonLocal(
+                editingAssessment.moduleId,
+                editingAssessment.id,
+                { title: t } as any
+              )
+            }
+            onSave={async (draft) => {
+              try {
+                await patch(
+                  `${API_ENDPOINTS.updateExam}${editingAssessment.id}/`,
+                  {
+                    ...draft,
+                    type: editingAssessment.type,
+                    lesson: anchorIdForEditingAssessment,
+                    time_limit: draft.time_limit_mins,
+                  }
+                );
+                // cache the full draft we just saved
+                setCachedAssessment(editingAssessment.id, draft);
+
+                updateLessonLocal(
+                  editingAssessment.moduleId,
+                  editingAssessment.id,
+                  { title: draft.title } as any
+                );
+                toast.success("Saved");
+                queryClient.invalidateQueries({
+                  queryKey: ["exams-by-lesson", anchorIdForEditingAssessment],
+                });
+              } catch {
+                toast.error("Failed to save");
+              }
+            }}
+            onPreview={(draft) => setPreviewDraft(draft)}
+            onClose={() => setEditingAssessment(null)}
+          />
+        </Modal>
+      )}
+
+      {previewDraft && (
+        <Modal onClose={() => setPreviewDraft(null)}>
+          <QuizPreview
+            quiz={{
+              title: previewDraft.title,
+              description: previewDraft.description,
+              questions: previewDraft.questions.map((q) => ({
+                text: q.text,
+                question_type: q.question_type,
+                explanation: q.explanation,
+                choices: q.choices,
+              })),
+              totalTimeLimit: (previewDraft.time_limit_mins || 0) * 60,
+            }}
+            onEdit={() => setPreviewDraft(null)}
+            onClose={() => setPreviewDraft(null)}
+          />
+        </Modal>
       )}
     </div>
   );

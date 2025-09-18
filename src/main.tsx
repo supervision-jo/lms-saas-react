@@ -21,7 +21,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<div>Loading...</div>}>
         <AppRoutes />
-        <Toaster />
+        <Toaster position="top-right" />
         <TokenRefreshSubscriber />
       </Suspense>
     </QueryClientProvider>

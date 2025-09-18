@@ -83,11 +83,14 @@ export default function Pagination({
 
   return (
     <div className="mt-12 flex items-center justify-center">
-      <nav className="flex items-center space-x-2" aria-label="Pagination">
+      <nav
+        className="flex items-center sm:space-x-2 gap-2"
+        aria-label="Pagination"
+      >
         {/* Prev */}
         <button
           type="button"
-          className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+          className="sm:block hidden px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
           onClick={() => onPageChange(current - 1)}
           disabled={current <= 1}
         >
@@ -95,35 +98,60 @@ export default function Pagination({
         </button>
 
         {/* Page items */}
-        {items.map((p, idx) =>
-          p === DOTS ? (
-            <span
-              key={`dots-${idx}`}
-              className="px-4 py-2 text-gray-500 select-none"
-            >
-              {DOTS}
-            </span>
-          ) : (
+        <div className="flex items-center justify-start w-full gap-4 flex-col">
+          <div className="w-full flex items-center justify-center gap-2">
+            {items.map((p, idx) =>
+              p === DOTS ? (
+                <span
+                  key={`dots-${idx}`}
+                  className="px-4 py-2 text-gray-500 select-none"
+                >
+                  {DOTS}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  key={p}
+                  onClick={() => onPageChange(p as number)}
+                  aria-current={p === current ? "page" : undefined}
+                  className={`px-4 py-2 rounded-lg ${
+                    p === current
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+          </div>
+          <div className="flex w-full items-center justify-between gap-2 sm:hidden">
             <button
               type="button"
-              key={p}
-              onClick={() => onPageChange(p as number)}
-              aria-current={p === current ? "page" : undefined}
-              className={`px-4 py-2 rounded-lg ${
-                p === current
-                  ? "bg-purple-600 text-white"
-                  : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+              onClick={() => onPageChange(current - 1)}
+              disabled={current <= 1}
             >
-              {p}
+              Previous
             </button>
-          )
-        )}
+
+            <button
+              type="button"
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+              onClick={() => {
+                onPageChange(current + 1);
+              }}
+              disabled={current >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
 
         {/* Next */}
         <button
           type="button"
-          className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+          className="sm:block hidden px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg disabled:opacity-50"
           onClick={() => {
             onPageChange(current + 1);
           }}

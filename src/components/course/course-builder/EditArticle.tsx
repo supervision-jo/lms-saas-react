@@ -95,6 +95,30 @@ export default function EditArticle({
                 lessons payload.
               </p>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reading Time (hours)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min={0}
+                value={les?.duration_hours ?? ""}
+                onChange={(e) =>
+                  updateLesson(
+                    editingArticle.moduleId,
+                    editingArticle.lessonId,
+                    {
+                      duration_hours: e.target.value
+                        ? Number(e.target.value)
+                        : null,
+                    }
+                  )
+                }
+                placeholder="e.g., 1.25"
+                className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
         <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
