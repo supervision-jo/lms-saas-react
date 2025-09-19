@@ -1,11 +1,21 @@
 // components/qa/ReactionGroup.tsx
-import { useEffect, useRef, useState } from "react";
-import { Heart, ThumbsUp, Sparkles } from "lucide-react"; // Sparkles for "react"/claps
+import { useRef, useState } from "react";
+import { Heart, ThumbsUp, Sparkles } from "lucide-react";
 import { Subject, useReaction } from "../../../hooks/useReaction";
+
+const colorFor = (type: null | "like" | "love" | "clap") =>
+  type === "love"
+    ? "text-rose-500"
+    : type === "clap"
+    ? "text-amber-500"
+    : type === "like"
+    ? "text-sky-500"
+    : "text-gray-400";
 
 export default function ReactionGroup({
   subject,
   countsFromServer,
+  myFromServer = null, // pass user's current reaction type if you have it
   className = "",
 }: {
   subject: Subject;
@@ -14,8 +24,12 @@ export default function ReactionGroup({
     count_loves: number;
     count_claps: number;
   };
-  className?: string; // so you can keep your styles
+  myFromServer?: null | "like" | "love" | "clap";
+  className?: string;
 }) {
+  const PRESS_THRESHOLD = 350; // ms
+  const downAt = useRef<number>(0);
+
   const { my, counts, isPending, toggleDefaultLike, pick } = useReaction({
     subject,
     initCounts: {
@@ -23,72 +37,101 @@ export default function ReactionGroup({
       love: countsFromServer.count_loves,
       clap: countsFromServer.count_claps,
     },
+    initMine: myFromServer ?? null,
   });
 
   const [open, setOpen] = useState(false);
   const hideTimer = useRef<number | null>(null);
-  const pressTimer = useRef<number | null>(null);
-  const [pressed, setPressed] = useState(false);
+  // const pressTimer = useRef<number | null>(null);
+  // const [pressed, setPressed] = useState(false);
 
-  // desktop hover: keep open while mouse is over container OR palette
   const safeOpen = () => {
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
     setOpen(true);
   };
   const safeClose = () => {
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
-    hideTimer.current = window.setTimeout(() => setOpen(false), 130) as any;
+    hideTimer.current = window.setTimeout(() => setOpen(false), 120) as any;
   };
 
-  // mobile long-press
-  const onPointerDown = () => {
-    setPressed(true);
-    pressTimer.current = window.setTimeout(() => {
-      if (pressed) setOpen(true);
-    }, 400) as any;
-  };
-  const cancelPress = () => {
-    setPressed(false);
-    if (pressTimer.current) window.clearTimeout(pressTimer.current);
-    pressTimer.current = null;
-  };
-  const onPointerUp = () => {
-    // if the palette isn't open after press, treat as a short tap (toggle like)
-    if (!open) toggleDefaultLike();
-    cancelPress();
+  // mobile long-press to open palette
+  const onPointerDown = (e: React.PointerEvent) => {
+    // record press start; we’ll decide what to do on release
+    console.log(e.currentTarget.ariaValueNow);
+    downAt.current = Date.now();
   };
 
-  useEffect(() => () => cancelPress(), []);
+  // const cancelPress = () => {
+  //   setPressed(false);
+  //   if (pressTimer.current) window.clearTimeout(pressTimer.current);
+  //   pressTimer.current = null;
+  // };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    console.log(e.currentTarget.ariaValueNow);
+
+    const elapsed = Date.now() - (downAt.current || 0);
+    downAt.current = 0;
+
+    // Long-press -> open palette, don't toggle anything
+    if (elapsed >= PRESS_THRESHOLD) {
+      setOpen(true);
+      return;
+    }
+
+    // Short tap -> default like toggle (add/remove)
+    toggleDefaultLike();
+  };
+
+  const onPointerCancel = () => {
+    downAt.current = 0;
+  };
+
+  const onPointerLeave = () => {
+    // if finger slides off, treat as cancel
+    downAt.current = 0;
+  };
+
+  // useEffect(() => () => cancelPress(), []);
+
+  // click a palette item -> pick + close immediately
+  const choose = async (t: "like" | "love" | "clap") => {
+    await pick(t);
+    setOpen(false);
+  };
+
+  const total = counts.like + counts.love + counts.clap;
 
   return (
     <div
-      className={`relative inline-flex items-center${className}`}
+      className={`relative inline-flex items-center ${className}`}
       onMouseEnter={safeOpen}
       onMouseLeave={safeClose}
     >
-      {/* === Your main like button (keeps your style) === */}
+      {/* Main button (one-click like / remove). Colors reflect current reaction */}
       <button
         type="button"
         disabled={isPending}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
-        onPointerCancel={cancelPress}
-        onPointerLeave={cancelPress}
-        className={`
-          flex items-center space-x-1 text-sm px-2 py-1 rounded transition-colors
-          ${
-            my
-              ? "bg-purple-600 text-white"
-              : "text-gray-400 hover:text-white hover:bg-gray-700"
-          }
+        onPointerCancel={onPointerCancel}
+        onPointerLeave={onPointerLeave}
+        className={`flex items-center space-x-1 text-sm px-2 py-1 rounded transition-colors
+          ${my ? "bg-gray-700" : "hover:bg-gray-700"}
+          ${colorFor(my)}
         `}
         title={my ? "Remove reaction" : "Like"}
       >
-        <ThumbsUp className="w-4 h-4" />
-        <span>{counts.like + counts.love + counts.clap}</span>
+        <ThumbsUp
+          className="w-4 h-4"
+          // Fill only when active "like"
+          fill={my === "like" ? "currentColor" : "none"}
+          stroke="currentColor"
+        />
+        <span className="tabular-nums">{total}</span>
       </button>
 
-      {/* === Palette (stays open while hovering) === */}
+      {/* Reaction palette */}
       {open && (
         <div
           className="absolute z-30 -top-12 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-700 rounded-full px-2 py-1 flex gap-1 shadow-lg"
@@ -96,25 +139,42 @@ export default function ReactionGroup({
           onMouseLeave={safeClose}
         >
           <PaletteBtn
-            active={my === "like"}
             label="Like"
-            onClick={() => pick("like")}
+            active={my === "like"}
+            colorClass="text-sky-500"
+            onClick={() => choose("like")}
           >
-            <ThumbsUp className="w-4 h-4" />
+            <ThumbsUp
+              className="w-4 h-4"
+              fill={my === "like" ? "currentColor" : "none"}
+              stroke="currentColor"
+            />
           </PaletteBtn>
+
           <PaletteBtn
-            active={my === "love"}
             label="Love"
-            onClick={() => pick("love")}
+            active={my === "love"}
+            colorClass="text-rose-500"
+            onClick={() => choose("love")}
           >
-            <Heart className="w-4 h-4" />
+            <Heart
+              className="w-4 h-4"
+              fill={my === "love" ? "currentColor" : "none"}
+              stroke="currentColor"
+            />
           </PaletteBtn>
+
           <PaletteBtn
-            active={my === "clap"}
             label="Clap"
-            onClick={() => pick("clap")}
+            active={my === "clap"}
+            colorClass="text-amber-500"
+            onClick={() => choose("clap")}
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles
+              className="w-4 h-4"
+              fill={my === "clap" ? "currentColor" : "none"}
+              stroke="currentColor"
+            />
           </PaletteBtn>
         </div>
       )}
@@ -127,18 +187,22 @@ function PaletteBtn({
   onClick,
   active,
   label,
+  colorClass,
 }: React.PropsWithChildren<{
   onClick: () => void;
   active?: boolean;
   label: string;
+  colorClass: string; // tailwind text color
 }>) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={label}
-      className={`p-2 rounded-full hover:bg-gray-700 text-white outline-none
-        ${active && "bg-purple-600"}
+      className={`p-2 rounded-full outline-none transition-colors
+        hover:bg-gray-700
+        ${colorClass}
+        ${active ? "bg-gray-700" : ""}
       `}
     >
       {children}

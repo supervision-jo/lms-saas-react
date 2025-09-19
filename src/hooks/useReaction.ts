@@ -1,80 +1,74 @@
-import { useState } from "react";
+// hooks/useReaction.ts
+import { useState, useRef } from "react";
+import axios from "../api/config"; // your axios instance
 import { API_ENDPOINTS } from "../utils/constants";
-import { useCustomPost } from "../hooks/useMutation";
 
 export type ReactionType = "like" | "love" | "clap";
-export type Subject = { kind: "question" | "answer"; id: number };
+export type Subject =
+  | { kind: "question"; id: number }
+  | { kind: "answer"; id: number };
 
-export function useReaction(opts: {
+type Counts = { like: number; love: number; clap: number };
+
+export function useReaction({
+  subject,
+  initCounts,
+  initMine = null as null | ReactionType,
+}: {
   subject: Subject;
-  initCounts?: { like: number; love: number; clap: number };
-  initMine?: ReactionType | null;
-  onServerOk?: (next: ReactionType | null) => void;
+  initCounts: Counts;
+  initMine?: null | ReactionType;
 }) {
-  const { subject, initCounts, initMine = null, onServerOk } = opts;
-  const [my, setMy] = useState<ReactionType | null>(initMine);
-  const [counts, setCounts] = useState({
-    like: initCounts?.like ?? 0,
-    love: initCounts?.love ?? 0,
-    clap: initCounts?.clap ?? 0,
-  });
+  const [counts, setCounts] = useState<Counts>(initCounts);
+  const [my, setMy] = useState<null | ReactionType>(initMine);
+  const [isPending, setPending] = useState(false);
+  const inflight = useRef<Promise<any> | null>(null);
 
-  const { mutateAsync, isPending } = useCustomPost(
-    API_ENDPOINTS.toggleReaction,
-    []
-  );
+  const post = (type: ReactionType | null) => {
+    const body: any = {
+      type, // when null -> remove
+    };
+    if (subject.kind === "question") body.question = subject.id;
+    else body.answer = subject.id;
+    return axios.post(API_ENDPOINTS.toggleReaction, body);
+  };
 
-  const keyPayload =
-    subject.kind === "question"
-      ? { question: subject.id }
-      : { answer: subject.id };
-
-  const apply = (next: ReactionType | null) => {
-    // optimistic counts
+  const applyOptimistic = (
+    prev: null | ReactionType,
+    next: null | ReactionType
+  ) => {
     setCounts((c) => {
-      const dec = (t: ReactionType) =>
-        ({ ...c, [t]: Math.max(0, c[t] - 1) } as typeof c);
-      const inc = (t: ReactionType) => ({ ...c, [t]: c[t] + 1 } as typeof c);
-
-      let tmp = { ...c };
-      if (my) tmp = dec(my); // remove previous pick
-      if (next) tmp = inc(next); // add new pick
-      return tmp;
+      const n = { ...c };
+      if (prev && prev !== next) n[prev] = Math.max(0, n[prev] - 1);
+      if (next && next !== prev) n[next] = n[next] + 1;
+      return n;
     });
     setMy(next);
   };
 
-  const send = async (next: ReactionType | null) => {
-    const body = { ...keyPayload, type: next }; // null removes reaction
+  const pick = async (next: ReactionType) => {
+    if (isPending) return;
+    const prev = my;
+    // if clicking same type → remove
+    const realNext: null | ReactionType = prev === next ? null : next;
+
+    // optimistic update
+    applyOptimistic(prev, realNext);
+
     try {
-      await mutateAsync(body);
-      onServerOk?.(next);
+      setPending(true);
+      inflight.current = post(realNext);
+      await inflight.current;
     } catch {
-      // rollback on failure
-      setCounts((c) => {
-        // reverse the optimistic change
-        const reverse = { like: c.like, love: c.love, clap: c.clap };
-        if (next) reverse[next] = Math.max(0, reverse[next] - 1);
-        if (my) reverse[my] = reverse[my] + 1;
-        return reverse;
-      });
-      setMy(my); // restore
+      // revert on error
+      applyOptimistic(realNext, prev);
+    } finally {
+      setPending(false);
+      inflight.current = null;
     }
   };
 
-  const toggleDefaultLike = async () => {
-    if (isPending) return;
-    const next = my === "like" ? null : ("like" as ReactionType);
-    apply(next);
-    await send(next);
-  };
+  const toggleDefaultLike = () => pick("like");
 
-  const pick = async (t: ReactionType) => {
-    if (isPending) return;
-    const next = my === t ? null : t;
-    apply(next);
-    await send(next);
-  };
-
-  return { my, counts, isPending, toggleDefaultLike, pick };
+  return { my, counts, isPending, pick, toggleDefaultLike };
 }
