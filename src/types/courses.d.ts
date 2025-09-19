@@ -121,8 +121,11 @@ interface Lesson {
 interface Module {
   id: string;
   title: string;
+  course: string;
   description: string;
   order: number;
+  lesson_count: number;
+  total_hours: number;
   lessons: Lesson[];
 }
 

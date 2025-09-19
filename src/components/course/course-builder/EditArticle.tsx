@@ -1,3 +1,5 @@
+import SimpleEditor from "./Editor";
+
 type LessonLocal = Lesson & { parentId?: string };
 
 interface Props {
@@ -50,7 +52,7 @@ export default function EditArticle({
           </p>
         </div>
         <div className="p-6">
-          <div className="space-y-6">
+          <div className="space-y-6 mx-auto max-w-[980px]">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Article Title
@@ -75,20 +77,20 @@ export default function EditArticle({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Article Content
               </label>
-              <textarea
-                value={les?.description || ""}
-                onChange={(e) =>
+              <SimpleEditor
+                className="w-full" // let the editor handle its own containment
+                value={les?.description_html ?? "<p></p>"}
+                onChange={(html) =>
                   updateLesson(
                     editingArticle.moduleId,
                     editingArticle.lessonId,
                     {
-                      description: e.target.value, // will be mapped into description_html on save
+                      description_html: html,
                     }
                   )
                 }
-                placeholder="Write your article content here (TipTap JSON or HTML)..."
-                rows={15}
-                className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                placeholder="Write your article content here…"
+                minHeight={320}
               />
               <p className="mt-1 text-sm text-gray-500">
                 This will be sent as <code>description_html</code> in the
@@ -132,9 +134,7 @@ export default function EditArticle({
             onClick={() => {
               if (!canSave) return;
               updateLesson(editingArticle.moduleId, editingArticle.lessonId, {
-                description_html: (les?.description ??
-                  les?.description_html ??
-                  "") as any,
+                description_html: (les?.description_html ?? "") as any,
                 content_type: "article",
               });
               if (onSave) onSave();

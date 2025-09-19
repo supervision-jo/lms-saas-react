@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Star, Clock, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router";
 import { formatDuration } from "../../utils/formatDuration";
@@ -7,7 +7,7 @@ import LoginPopup from "../auth-modals/LoginPopup";
 import SignupPopup from "../auth-modals/SignupPopup";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import toast from "react-hot-toast";
-import { useCustomQuery } from "../../hooks/useQuery";
+// import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { readUserFromStorage } from "../../services/auth";
 import { useCustomPost } from "../../hooks/useMutation";
@@ -17,38 +17,21 @@ interface CourseCardProps {
   course: Course;
   coursePic: string | null;
   isListView?: boolean;
+  enrolledCourses: EnrolledCourse[];
+  isFetching: boolean;
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({
   course,
   coursePic,
   isListView,
+  enrolledCourses,
+  isFetching,
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const [userId, setUserId] = useState<string | null>(
-    readUserFromStorage()?.id ?? null
-  );
   const currentUser: User = readUserFromStorage();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const id = readUserFromStorage()?.id ?? null;
-      setUserId(id);
-      queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
-    }
-  }, [isAuthenticated, queryClient]);
-
-  const enrolledCoursesData = useCustomQuery(
-    API_ENDPOINTS.enrolledCourses,
-    ["enrolledCourses", isAuthenticated, userId],
-    undefined,
-    !!isAuthenticated
-  );
-
-  const enrolledCourses: EnrolledCourse[] =
-    enrolledCoursesData?.data?.data ?? [];
 
   const computedEnrolled = enrolledCourses.some(
     (c) => String(c?.course?.id) === String(course?.id ?? course?.id)
@@ -69,37 +52,37 @@ const CourseCard: React.FC<CourseCardProps> = ({
     course?.id as string,
   ]);
 
-  const { data: modulesResp } = useCustomQuery(
-    `${API_ENDPOINTS.modules}?course=${course?.id}`,
-    ["modules", course?.id],
-    undefined,
-    !!course?.id
-  );
+  // const { data: modulesResp } = useCustomQuery(
+  //   `${API_ENDPOINTS.modules}?course=${course?.id}`,
+  //   ["modules", course?.id],
+  //   undefined,
+  //   !!course?.id
+  // );
 
-  const modulesData: Module[] = useMemo(
-    () => modulesResp?.data?.data ?? [],
-    [modulesResp]
-  );
+  // const modulesData: Module[] = useMemo(
+  //   () => modulesResp?.data?.data ?? [],
+  //   [modulesResp]
+  // );
 
-  const firstPlayableLessonId = useMemo(() => {
-    for (const m of modulesData ?? []) {
-      const lessons = m?.lessons ?? [];
-      const playable =
-        lessons.find((l) => isEnrolled || l?.free_preview) || lessons[0];
-      if (playable?.id) return String(playable.id);
-    }
-    return null;
-  }, [modulesData, isEnrolled]);
+  // const firstPlayableLessonId = useMemo(() => {
+  //   for (const m of modulesData ?? []) {
+  //     const lessons = m?.lessons ?? [];
+  //     const playable =
+  //       lessons.find((l) => isEnrolled || l?.free_preview) || lessons[0];
+  //     if (playable?.id) return String(playable.id);
+  //   }
+  //   return null;
+  // }, [modulesData, isEnrolled]);
 
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
 
-  const goToPlayer = (opts?: { lessonId?: string }) => {
-    const params = new URLSearchParams();
-    if (opts?.lessonId) params.set("lesson", String(opts.lessonId));
-    const qs = params.toString();
-    navigate(`/catalog/${course?.id}/player${qs ? `?${qs}` : ""}`);
-  };
+  // const goToPlayer = (opts?: { lessonId?: string }) => {
+  //   const params = new URLSearchParams();
+  //   if (opts?.lessonId) params.set("lesson", String(opts.lessonId));
+  //   const qs = params.toString();
+  //   navigate(`/catalog/${course?.id}/player${qs ? `?${qs}` : ""}`);
+  // };
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -302,9 +285,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                       e.stopPropagation();
                       handleEnroll();
                     }}
-                    disabled={
-                      enrolledCoursesData?.isFetching || createEnroll?.isPending
-                    }
+                    disabled={isFetching || createEnroll?.isPending}
                     className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                   >
                     {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
@@ -312,12 +293,15 @@ const CourseCard: React.FC<CourseCardProps> = ({
                 ) : (
                   <div className="text-center mb-4">
                     <button
+                      // onClick={() => {
+                      //   if (firstPlayableLessonId) {
+                      //     goToPlayer({ lessonId: firstPlayableLessonId });
+                      //   } else {
+                      //     console.log("Cannot find lesson");
+                      //   }
+                      // }}
                       onClick={() => {
-                        if (firstPlayableLessonId) {
-                          goToPlayer({ lessonId: firstPlayableLessonId });
-                        } else {
-                          console.log("Cannot find lesson");
-                        }
+                        navigate(`/catalog/${course?.id}`);
                       }}
                       className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                     >

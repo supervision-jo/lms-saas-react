@@ -8,14 +8,6 @@ import {
   XCircle,
 } from "lucide-react";
 
-/** Accepts either builder shape or API shape:
- * Question text: question | text | title
- * Options: options[] | choices[]
- * Option correctness: isCorrect | is_correct
- * Question type: question_type | type  (mcq | short_answer)
- * Short answer key: answer | correct_answer
- */
-
 type RawAnswer = {
   id?: string;
   text?: string;
@@ -351,7 +343,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                       </div>
                     </div>
                     <div className="text-xs mt-1 opacity-75">
-                      {q.points} point{q.points !== 1 ? "s" : ""}
+                      {q?.points} point{q?.points !== 1 ? "s" : ""}
                     </div>
                   </button>
                 );

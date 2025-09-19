@@ -2,7 +2,11 @@
 
 import { get } from "../api";
 
-export type ContentType = "video" | "article" | "material" | "quiz" | "exam";
+const QUIZ_CACHE_TTL = 5 * 60 * 1000; // 5 mins
+type CacheEntry = { ts: number; data: any[] };
+const quizCache = new Map<string, CacheEntry>();
+
+const CONCURRENCY = 3;
 
 export const isYouTubeUrl = (url: string) =>
   /(?:youtube\.com\/watch\?v=|youtu\.be\/)/i.test(url || "");
@@ -143,40 +147,73 @@ export const nextAssessmentTitle = (
   return type === "quiz" ? `Quiz ${count + 1}` : `Exam ${count + 1}`;
 };
 
-export const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(",")[1] || "");
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
+export async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++)
+    binary += String.fromCharCode(bytes[i]);
+  return btoa(binary); // raw base64, no data: prefix
+}
 
 export async function fetchAssessmentsForLessons(
   lessonIds: string[],
   examsEndpoint: string
 ): Promise<Map<string, any[]>> {
   const unique = Array.from(new Set(lessonIds.filter(Boolean)));
-  const pairs = await Promise.allSettled(
-    unique.map((id) => get(`${examsEndpoint}?lesson=${id}`))
-  );
 
-  const byLesson = new Map<string, any[]>();
-  pairs.forEach((res, idx) => {
-    const id = unique[idx];
-    if (res.status === "fulfilled") {
-      // backend may return [], {data: []}, or {results: []}
-      const payload = res.value;
-      const arr =
-        (Array.isArray(payload) && payload) ||
-        payload?.data ||
-        payload?.results ||
-        [];
-      byLesson.set(id, Array.isArray(arr) ? arr : []);
+  // pull cached first
+  const out = new Map<string, any[]>();
+  const toFetch: string[] = [];
+  const now = Date.now();
+
+  unique.forEach((id) => {
+    const cached = quizCache.get(id);
+    if (cached && now - cached.ts < QUIZ_CACHE_TTL) {
+      out.set(id, cached.data);
     } else {
-      byLesson.set(id, []); // be resilient
+      toFetch.push(id);
     }
   });
-  return byLesson;
+
+  // nothing to fetch => done
+  if (!toFetch.length) return out;
+
+  // fetch in small parallel batches
+  const chunks: string[][] = [];
+  for (let i = 0; i < toFetch.length; i += CONCURRENCY) {
+    chunks.push(toFetch.slice(i, i + CONCURRENCY));
+  }
+
+  for (const chunk of chunks) {
+    const pairs = await Promise.allSettled(
+      chunk.map((id) => get(`${examsEndpoint}?lesson=${id}`))
+    );
+
+    pairs.forEach((res, idx) => {
+      const id = chunk[idx];
+      if (res.status === "fulfilled") {
+        const payload = res.value;
+        const arr =
+          (Array.isArray(payload) && payload) ||
+          payload?.data ||
+          payload?.results ||
+          [];
+        const safe: any[] = Array.isArray(arr) ? arr : [];
+        quizCache.set(id, { ts: Date.now(), data: safe });
+        out.set(id, safe);
+      } else {
+        quizCache.set(id, { ts: Date.now(), data: [] });
+        out.set(id, []);
+      }
+    });
+  }
+
+  return out;
+}
+
+export function invalidateAssessmentsCacheForLesson(lessonId: string) {
+  quizCache.delete(lessonId);
 }
 
 // Inject assessments right after their anchor lesson

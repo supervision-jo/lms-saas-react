@@ -21,8 +21,7 @@ type QuestionDraft = {
 export type AssessmentDraft = {
   title: string;
   description?: string;
-  time_limit_mins: number;
-  time_limit?: number;
+  time_limit: number;
   passing_score: number;
   type?: "quiz" | "exam";
   questions: QuestionDraft[];
@@ -49,7 +48,7 @@ type UiQuestion = {
 type UiQuiz = {
   title: string;
   description?: string;
-  time_limit_mins: number;
+  time_limit: number;
   passing_score: number;
   type?: "quiz" | "exam";
   questions: UiQuestion[];
@@ -62,7 +61,7 @@ function fromInitialToUi(initial?: any): UiQuiz {
   const base: UiQuiz = {
     title: "",
     description: "",
-    time_limit_mins: 10,
+    time_limit: 10,
     passing_score: 70,
     type: initial?.type === "exam" ? "exam" : "quiz",
     questions: [
@@ -86,16 +85,15 @@ function fromInitialToUi(initial?: any): UiQuiz {
   if (
     typeof initial?.title === "string" &&
     Array.isArray(initial?.questions) &&
-    (typeof initial?.time_limit_mins === "number" ||
-      initial?.time_limit_mins == null)
+    (typeof initial?.time_limit === "number" || initial?.time_limit == null)
   ) {
     return {
       title: initial.title ?? base.title,
       description: initial.description ?? base.description,
-      time_limit_mins:
-        typeof initial.time_limit_mins === "number"
-          ? Math.max(1, Math.floor(initial.time_limit_mins))
-          : base.time_limit_mins,
+      time_limit:
+        typeof initial.time_limit === "number"
+          ? Math.max(1, Math.floor(initial.time_limit))
+          : base.time_limit,
       passing_score:
         typeof initial.passing_score === "number"
           ? Math.max(0, Math.min(100, Math.floor(initial.passing_score)))
@@ -107,7 +105,7 @@ function fromInitialToUi(initial?: any): UiQuiz {
               id: uid(),
               text: String(q.text ?? ""),
               explanation: q.explanation ?? "",
-              points: 1,
+              points: q.points,
               timeLimitSeconds: undefined,
               options:
                 Array.isArray(q.choices) && q.choices.length > 0
@@ -130,9 +128,9 @@ function fromInitialToUi(initial?: any): UiQuiz {
   const fromLegacy: UiQuiz = {
     title: initial?.title ?? base.title,
     description: initial?.description ?? base.description,
-    time_limit_mins: initial?.totalTimeLimit
+    time_limit: initial?.totalTimeLimit
       ? Math.max(1, Math.floor(Number(initial.totalTimeLimit) / 60))
-      : base.time_limit_mins,
+      : base.time_limit,
     passing_score: 70,
     type: "quiz",
     questions:
@@ -164,12 +162,11 @@ function fromInitialToUi(initial?: any): UiQuiz {
 }
 
 function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
-  const mins = Math.max(1, Math.floor(Number(ui.time_limit_mins || 1)));
+  const mins = Math.max(1, Math.floor(Number(ui.time_limit || 1)));
   return {
     title: ui.title.trim(),
     description: ui.description?.trim() || "",
-    time_limit_mins: mins,
-    time_limit: mins, // <-- mirror for APIs that expect time_limit
+    time_limit: mins,
     passing_score: Math.max(
       0,
       Math.min(100, Math.floor(Number(ui.passing_score || 0)))
@@ -326,7 +323,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     });
 
     // minutes + passing score sanity
-    if (!Number.isFinite(quiz.time_limit_mins) || quiz.time_limit_mins < 1) {
+    if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1) {
       next["time"] = "Time limit must be at least 1 minute";
     }
     if (
@@ -436,11 +433,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               <input
                 type="number"
                 min={1}
-                value={quiz.time_limit_mins}
+                value={quiz.time_limit}
                 onChange={(e) =>
                   setQuiz((p) => ({
                     ...p,
-                    time_limit_mins: Math.max(
+                    time_limit: Math.max(
                       1,
                       Math.floor(Number(e.target.value || 1))
                     ),
@@ -671,8 +668,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                           <input
                             type="number"
                             min={1}
-                            max={100}
-                            value={q.points}
+                            // max={100}
+                            value={q?.points}
                             onChange={(e) =>
                               updateQuestion(q.id, {
                                 points: Math.max(
@@ -768,7 +765,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             <div>
               <span className="text-blue-700">Time Limit:</span>
               <span className="font-semibold text-blue-900 ml-2">
-                {quiz.time_limit_mins}m
+                {quiz.time_limit}m
               </span>
             </div>
           </div>

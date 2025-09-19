@@ -1,113 +1,53 @@
 import { useState } from "react";
 import { Plus, Mail, Calendar, Filter, UserCheck, UserX } from "lucide-react";
+import Modal from "../../reusable-components/Modal";
 import Button from "../../reusable-components/Button";
 import SearchInput from "../../reusable-components/SearchInput";
 import UserAvatar from "../../reusable-components/UserAvatar";
-import Modal from "../../reusable-components/Modal";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 
-interface User {
+interface CourseUser {
   id: string;
-  name: string;
   email: string;
-  avatar?: string;
-  enrollmentDate: string;
-  progress: number;
-  status: "active" | "inactive" | "completed";
-  lastActivity: string;
+  progress: number | null;
+  full_name: string;
+  enrolled_at: string;
+  last_active: null | string;
+  profile_image: string;
 }
+export default function UserManagement({ courseId }: { courseId: string }) {
+  const { data, isLoading } = useCustomQuery(
+    `${API_ENDPOINTS.courseUsers}${courseId}`,
+    ["course-users", courseId],
+    undefined,
+    !!courseId
+  );
 
-export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      avatar:
-        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-      enrollmentDate: "2024-01-15",
-      progress: 75,
-      status: "active",
-      lastActivity: "2 hours ago",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      enrollmentDate: "2024-01-20",
-      progress: 100,
-      status: "completed",
-      lastActivity: "1 day ago",
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      email: "mike.johnson@example.com",
-      enrollmentDate: "2024-02-01",
-      progress: 45,
-      status: "active",
-      lastActivity: "5 hours ago",
-    },
-    {
-      id: "4",
-      name: "Sarah Wilson",
-      email: "sarah.wilson@example.com",
-      enrollmentDate: "2024-02-05",
-      progress: 20,
-      status: "inactive",
-      lastActivity: "3 days ago",
-    },
-  ]);
+  const users: CourseUser[] = data?.data?.students ?? [];
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || user.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    // const matchesStatus =
+    //   statusFilter === "all" || user.status === statusFilter;
+    return matchesSearch;
+    // && matchesStatus;
   });
 
   const handleAddUser = async () => {
-    if (!newUserEmail.trim()) return;
-
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: newUserEmail
-          .split("@")[0]
-          .replace(/[._]/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-        email: newUserEmail,
-        enrollmentDate: new Date().toISOString().split("T")[0],
-        progress: 0,
-        status: "active",
-        lastActivity: "Just enrolled",
-      };
-
-      setUsers([...users, newUser]);
-      setNewUserEmail("");
-      setIsAddUserModalOpen(false);
-      setIsLoading(false);
-    }, 1000);
+    //
   };
 
   const handleRemoveUser = (userId: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to remove this user from the course?"
-      )
-    ) {
-      setUsers(users.filter((user) => user.id !== userId));
-    }
+    console.log(userId);
   };
 
   const getStatusBadge = (status: string) => {
@@ -198,17 +138,20 @@ export default function UserManagement() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user?.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <UserAvatar name={user.name} avatar={user.avatar} />
+                      <UserAvatar
+                        name={user?.full_name}
+                        avatar={user?.profile_image}
+                      />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.name}
+                          {user?.full_name}
                         </div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <Mail className="w-3 h-3 mr-1" />
-                          {user.email}
+                          {user?.email}
                         </div>
                       </div>
                     </div>
@@ -218,30 +161,30 @@ export default function UserManagement() {
                       <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
                         <div
                           className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${user.progress}%` }}
+                          style={{ width: `${user?.progress ?? 0}%` }}
                         />
                       </div>
                       <span className="text-sm font-medium text-gray-900">
-                        {user.progress}%
+                        {user?.progress ?? 0}%
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(user.status)}
+                    {getStatusBadge("active")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 flex items-center">
                       <Calendar className="w-3 h-3 mr-1" />
-                      {new Date(user.enrollmentDate).toLocaleDateString()}
+                      {formatDateTimeSimple(user?.enrolled_at ?? new Date())}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.lastActivity}
+                    {user?.last_active ?? ""}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button
-                        onClick={() => handleRemoveUser(user.id)}
+                        onClick={() => handleRemoveUser(user?.id)}
                         className="text-red-600 hover:text-red-900 p-1"
                         title="Remove user"
                       >

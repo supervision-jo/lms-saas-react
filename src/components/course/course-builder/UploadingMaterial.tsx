@@ -5,6 +5,7 @@
 import React, { useMemo, useRef } from "react";
 import { Upload } from "lucide-react";
 import { fileToBase64 } from "../../../utils/courseBuilder";
+import toast from "react-hot-toast";
 
 type LessonLocal = Lesson & {
   parentId?: string;
@@ -51,7 +52,9 @@ export default function UploadingMaterial({
 
   const canSave =
     Boolean((les?.title || "").trim()) &&
-    (Boolean(les?.file) || Boolean((les as any)?.url));
+    (Boolean(les?.string_file) ||
+      Boolean(les?.file) ||
+      Boolean((les as any)?.url));
 
   const localPreviewUrl = useMemo(() => {
     if (les?.file instanceof File) return URL.createObjectURL(les.file);
@@ -111,21 +114,41 @@ export default function UploadingMaterial({
                   type="file"
                   accept=".pdf,.doc,.docx,.zip,.ppt,.pptx,.xls,.xlsx,application/zip,application/pdf"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    if (file) {
+                  onChange={async (e) => {
+                    const picked = e.target.files?.[0] || null;
+                    if (!picked) return;
+
+                    // 1) update immediately so filename shows and Save enables
+                    updateLesson(
+                      uploadingMaterial.moduleId,
+                      uploadingMaterial.lessonId,
+                      {
+                        file: picked, // transient; for UI
+                        url: null, // prefer upload path
+                        string_file: undefined, // will be populated below
+                      }
+                    );
+
+                    // 2) encode to base64 in background; then write only string_file
+                    try {
+                      const b64 = await fileToBase64(picked); // raw base64 recommended
                       updateLesson(
                         uploadingMaterial.moduleId,
                         uploadingMaterial.lessonId,
                         {
-                          file, // transient File; will be converted to base64 on Save
-                          url: null, // prefer base64 if uploaded
-                          string_file: undefined,
+                          string_file: b64,
                         }
                       );
+                    } catch {
+                      // optional: show a toast if encoding fails
+                      toast.error("Failed to read file");
                     }
+
+                    // 3) allow reselecting the same file later
+                    e.currentTarget.value = "";
                   }}
                 />
+
                 {(les?.file as any)?.name && (
                   <p className="text-sm text-gray-500 mt-2 truncate">
                     Selected: {(les?.file as any)?.name}
@@ -214,26 +237,20 @@ export default function UploadingMaterial({
                 (l) => l.id === uploadingMaterial.lessonId
               ) as any;
 
-              let string_file: string | undefined =
-                draft?.string_file ?? undefined;
-
-              let url: string | null = draft?.url ?? null;
-
-              if (draft.file instanceof File) {
-                // convert to base64 string and send as JSON under `string_file`
-                string_file = await fileToBase64(draft.file);
-                url = null; // prefer base64 if uploaded
-              }
+              // Prefer base64; otherwise use url
+              const string_file: string | null = draft?.string_file ?? null;
+              const url: string | null = string_file
+                ? null
+                : draft?.url ?? null;
 
               updateLesson(
                 uploadingMaterial.moduleId,
                 uploadingMaterial.lessonId,
                 {
-                  type: "material" as any,
                   content_type: "material" as any,
                   ...(string_file ? { string_file } : {}),
                   ...(url ? { url } : {}),
-                  file: null, // clear transient File
+                  file: null, // never send File to server
                 } as any
               );
 

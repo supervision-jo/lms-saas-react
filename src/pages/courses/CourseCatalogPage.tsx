@@ -11,6 +11,9 @@ import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "../../hooks/useDebounce";
 import CourseCardsSkeleton from "../../components/resource-stats/CourseLoading";
 import useMediaQuery from "../../hooks/useMediaQuery";
+import { readUserFromStorage } from "../../services/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import useAuth from "../../store/useAuth";
 
 type ViewMode = "grid" | "list";
 type PriceFilter = "all" | "free" | "paid";
@@ -194,6 +197,30 @@ const CourseCatalogPage: React.FC = () => {
     }
   }, [selectedCategory, categories]);
 
+  const [userId, setUserId] = useState<string | null>(
+    readUserFromStorage()?.id ?? null
+  );
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const id = readUserFromStorage()?.id ?? null;
+      setUserId(id);
+      queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
+    }
+  }, [isAuthenticated, queryClient]);
+
+  const enrolledCoursesData = useCustomQuery(
+    API_ENDPOINTS.enrolledCourses,
+    ["enrolledCourses", isAuthenticated, userId],
+    undefined,
+    !!isAuthenticated
+  );
+
+  const enrolledCourses: EnrolledCourse[] =
+    enrolledCoursesData?.data?.data ?? [];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -260,15 +287,19 @@ const CourseCatalogPage: React.FC = () => {
                     : "grid-cols-1"
                 }`}
               >
-                {courses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    // courseId={course.id}
-                    course={course}
-                    coursePic={course?.picture}
-                    isListView={effectiveView === "list"}
-                  />
-                ))}
+                {courses
+                  .filter((c) => !c?.is_published)
+                  .map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      enrolledCourses={enrolledCourses}
+                      // courseId={course.id}
+                      course={course}
+                      coursePic={course?.picture}
+                      isListView={effectiveView === "list"}
+                      isFetching={enrolledCoursesData.isFetching}
+                    />
+                  ))}
               </div>
             )}
 

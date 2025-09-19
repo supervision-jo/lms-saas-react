@@ -4,6 +4,8 @@ import { API_ENDPOINTS } from "../../utils/constants";
 import { useCustomRemove } from "../../hooks/useMutation";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import DeleteConfirmation from "../reusable-components/DeleteConfirmation";
 
 interface Props {
   navigate: NavigateFunction;
@@ -29,6 +31,8 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
       handleErrorAlerts(payload);
     }
   };
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   return (
     <>
@@ -99,7 +103,7 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDeleteCourse()}
+                  onClick={() => setIsDeleteModalOpen(true)}
                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                   title="Delete Course"
                 >
@@ -187,7 +191,7 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDeleteCourse()}
+                  onClick={() => setIsDeleteModalOpen(true)}
                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                   title="Delete Course"
                 >
@@ -198,6 +202,13 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
           </div>
         </div>
       </div>
+      <DeleteConfirmation
+        handleDelete={handleDeleteCourse}
+        isOpen={isDeleteModalOpen}
+        onClose={setIsDeleteModalOpen}
+        text="Once you delete this course, you will not be able to retrieve it again."
+        title={`Delete ${course?.title} course`}
+      />
     </>
   );
 }

@@ -1,5 +1,4 @@
-// components/course/CreateSectionsForm.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
   Edit,
@@ -12,8 +11,10 @@ import {
   Upload,
   Video,
 } from "lucide-react";
-import { useDrag, useDrop } from "react-dnd";
 import { useCustomQuery } from "../../../hooks/useQuery";
+import { useCustomPost } from "../../../hooks/useMutation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { patch, remove, get } from "../../../api";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
@@ -28,123 +29,25 @@ import {
   reindexOrders1Based,
   fetchAssessmentsForLessons,
   injectAssessmentsIntoModules,
+  invalidateAssessmentsCacheForLesson,
 } from "../../../utils/courseBuilder";
-import { useCustomPost } from "../../../hooks/useMutation";
-import { patch, remove, get } from "../../../api";
+import { makeKeyedDebouncer } from "../../../utils/netCoalesce";
 import QuizBuilder, { AssessmentDraft } from "../../quizes/QuizBuilder";
 import QuizPreview from "../../quizes/QuizPreview";
-import { useQueryClient } from "@tanstack/react-query";
+import { AxiosResponse } from "axios";
 
-const DND_TYPES = { MODULE: "MODULE", LESSON: "LESSON" } as const;
+// ⬇️ NEW imports (split files + helpers)
+import ModuleItem from "./ModuleItem";
+import LessonItem from "./LessonItem";
+import Modal from "../../reusable-components/Modal";
+import { buildLessonsPayload } from "../../../utils/lessonNormalize";
+import { useExamsByLesson } from "../../../hooks/useExamsByLesson";
+import { invalidateLessonExams } from "../../../utils/builderQueries";
+import { qk } from "../../../utils/builderQueries";
 
-type ModuleItemProps = {
-  module: Module;
-  index: number;
-  moveModule: (dragId: string, hoverId: string) => void;
-  onDragEnd: () => void;
-  children: React.ReactNode;
-};
-
-function ModuleItem({
-  module,
-  index,
-  moveModule,
-  onDragEnd,
-  children,
-}: ModuleItemProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [, drop] = useDrop({
-    accept: DND_TYPES.MODULE,
-    hover(item: { id: string; index: number }) {
-      if (!ref.current || item.id === module.id) return;
-      moveModule(item.id, module.id);
-      item.index = index;
-    },
-  });
-  const [{ isDragging }, drag] = useDrag({
-    type: DND_TYPES.MODULE,
-    item: { id: module.id, index },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-    end: () => onDragEnd(),
-  });
-  drag(drop(ref));
-  return (
-    <div ref={ref} style={{ opacity: isDragging ? 0.7 : 1 }}>
-      {children}
-    </div>
-  );
-}
-
-type LessonItemProps = {
-  moduleId: string;
-  lesson: Lesson;
-  index: number;
-  moveLesson: (moduleId: string, dragId: string, hoverId: string) => void;
-  onDragEnd: () => void;
-  canDrag?: boolean;
-  children: React.ReactNode;
-};
-
-function LessonItem({
-  moduleId,
-  lesson,
-  index,
-  moveLesson,
-  onDragEnd,
-  canDrag = true,
-  children,
-}: LessonItemProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [, drop] = useDrop({
-    accept: DND_TYPES.LESSON,
-    hover(item: { id: string; index: number; moduleId: string }) {
-      if (!ref.current || item.id === lesson.id || item.moduleId !== moduleId)
-        return;
-      moveLesson(moduleId, item.id, lesson.id);
-      item.index = index;
-    },
-  });
-  const [{ isDragging }, drag] = useDrag({
-    type: DND_TYPES.LESSON,
-    item: {
-      id: lesson.id,
-      index,
-      moduleId,
-      content_type: (lesson as any).content_type,
-    },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-    canDrag: () => !!canDrag,
-    end: () => onDragEnd(),
-  });
-  if (canDrag) {
-    drag(drop(ref));
-  } else {
-    drop(ref);
-  }
-  return (
-    <div ref={ref} style={{ opacity: isDragging ? 0.7 : 1 }}>
-      {children}
-    </div>
-  );
-}
-
-const Modal: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({
-  onClose,
-  children,
-}) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-label="Close modal overlay"
-      />
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        {children}
-      </div>
-    </div>
-  );
-};
+const debounceLessons = makeKeyedDebouncer(450);
+const debounceAssessments = makeKeyedDebouncer(450);
+const debounceCommit = makeKeyedDebouncer(450);
 
 export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
@@ -172,7 +75,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   // Prefill modules on load
   const { data: modulesData, isLoading } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
-    ["modules", courseId],
+    qk.modules(courseId),
     undefined,
     !!courseId
   );
@@ -217,79 +120,109 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     courseId!,
   ]);
 
-  /** =============== Normalization =============== */
-  const normalizeLessonForSave = (l: any) => {
-    // ⛔ assessments are saved via /exams APIs only
-    if (l?.content_type === "quiz" || l?.content_type === "exam") return null;
-    const common: any = {};
-    if (l?.id && !String(l.id).startsWith("tmp-")) common.id = l.id;
-    if (l?.content_type) common.content_type = l.content_type;
-    if (l?.order != null) common.order = Number(l.order);
-    if (typeof l?.free_preview === "boolean")
-      common.free_preview = l.free_preview;
-
-    if (l?.content_type === "video") {
-      return {
-        ...common,
-        title: l?.title ?? "",
-        description: l?.description ?? "",
-        url: l?.url || "",
-        duration_hours:
-          typeof l?.duration_hours === "number"
-            ? l.duration_hours
-            : l?.duration
-            ? Number(l.duration) || null
-            : null,
-      };
-    }
-
-    if (l?.content_type === "article") {
-      return {
-        ...common,
-        title: l?.title ?? "",
-        description_html:
-          l?.description_html != null
-            ? l.description_html
-            : l?.description ?? "",
-        duration_hours:
-          typeof l?.duration_hours === "number" ? l.duration_hours : null,
-      };
-    }
-
-    if (l?.content_type === "material") {
-      const out: any = {
-        ...common,
-        title: l?.title ?? "",
-        description: l?.description ?? "",
-      };
-      if (l?.string_file) out.string_file = l.string_file;
-      if (l?.url) out.url = l.url;
-      return out;
-    }
-
-    // fallback
-    return {
-      ...common,
-      title: l?.title ?? "",
-      description: l?.description ?? "",
-    };
+  type Values = {
+    id: any;
+    payload: any;
+    lessonIdHint?: string; // ⬅️ add hint for surgical invalidation
   };
 
-  const saveSectionLessons = async (moduleId: string) => {
+  const { mutateAsync: mutateSection } = useMutation<
+    AxiosResponse<any>,
+    any,
+    Values
+  >({
+    mutationFn: async ({ id, payload }: Values) => {
+      return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
+    },
+    onSuccess: () => {
+      toast.success(`Saved`);
+      queryClient.invalidateQueries({
+        queryKey: qk.modules(courseId),
+      });
+    },
+    onError: (e) => {
+      const error = e.response?.data?.error;
+      handleErrorAlerts(error);
+    },
+  });
+
+  const { mutateAsync: removeSection } = useMutation<
+    AxiosResponse<any>,
+    any,
+    Partial<Values>
+  >({
+    mutationFn: async ({ id }: Partial<Values>) => {
+      return remove(`${API_ENDPOINTS.deleteSection}${id}/`);
+    },
+    onSuccess: () => {
+      toast.success(`Saved`);
+      queryClient.invalidateQueries({
+        queryKey: qk.modules(courseId),
+      });
+    },
+    onError: (e) => {
+      const error = e.response?.data?.error;
+      handleErrorAlerts(error);
+    },
+  });
+
+  // ⬇️ exam update → invalidate only ["exams", lessonId]
+  const { mutateAsync: mutateExam } = useMutation<
+    AxiosResponse<any>,
+    any,
+    Values
+  >({
+    mutationFn: async ({ id, payload }: Values) => {
+      return patch(`${API_ENDPOINTS.updateExam}${id}/`, payload);
+    },
+    onSuccess: (res, vars) => {
+      const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
+      const lessonId = ex?.lesson ?? vars.lessonIdHint;
+      toast.success(`Saved`);
+      invalidateLessonExams(queryClient, lessonId);
+    },
+    onError: (e) => {
+      const error = e.response?.data?.error;
+      handleErrorAlerts(error);
+    },
+  });
+
+  // ⬇️ exam delete → invalidate only ["exams", lessonId]
+  const { mutateAsync: removeExam } = useMutation<
+    AxiosResponse<any>,
+    any,
+    Partial<Values>
+  >({
+    mutationFn: async ({ id }: Partial<Values>) => {
+      return remove(`${API_ENDPOINTS.updateExam}${id}/`);
+    },
+    onSuccess: (res, vars) => {
+      const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
+      const lessonId = (ex as any)?.lesson ?? (vars as any)?.lessonIdHint;
+      toast.success(`Saved`);
+      invalidateLessonExams(queryClient, lessonId);
+    },
+    onError: (e) => {
+      const error = e.response?.data?.error;
+      handleErrorAlerts(error);
+    },
+  });
+
+  /** =============== Normalization =============== */
+  const saveSectionLessons = async (
+    moduleId: string,
+    lessonsOverride?: any[]
+  ) => {
     const mod = modules.find((m) => m.id === moduleId);
     if (!mod) return;
 
-    const contentOnly = (mod.lessons || []).filter(
-      (x: any) =>
-        x?.content_type === "video" ||
-        x?.content_type === "article" ||
-        x?.content_type === "material"
+    const sourceLessons = lessonsOverride ?? mod.lessons ?? [];
+    const payload = buildLessonsPayload(sourceLessons);
+
+    // debounce by moduleId
+    return debounceLessons(moduleId, () =>
+      mutateSection({ id: moduleId, payload })
     );
-    const normalized = reindexOrders1Based(contentOnly);
-    const payload = {
-      lessons: normalized.map(normalizeLessonForSave).filter(Boolean), // drop nulls
-    };
-    await patch(`${API_ENDPOINTS.updateSection}${moduleId}/`, payload);
   };
 
   const patchModuleField = async (
@@ -297,10 +230,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     field: "title" | "description",
     value: string
   ) => {
-    const body: Record<string, any> = { [field]: value };
-    await patch(`${API_ENDPOINTS.updateSection}${id}/`, body);
+    const current = modules.find((m) => m.id === id)?.[field] ?? "";
+    if (String(current) === String(value)) return;
+    await mutateSection({ id, payload: { [field]: value } });
     toast.success("Saved");
-    await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+    await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
   };
 
   const getCachedAssessment = (id: string) => assessmentCacheRef.current[id];
@@ -337,7 +271,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       title: server?.title ?? "",
       description: server?.description ?? "",
       type: server?.type === "exam" ? "exam" : "quiz",
-      time_limit_mins: Math.max(1, Number(timeLimit) || 10),
+      time_limit: Math.max(1, Number(timeLimit) || 10),
       passing_score: Math.max(
         0,
         Math.min(100, Number(server?.passing_score ?? 70))
@@ -368,7 +302,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       (preferType ? list.find((x: any) => x?.type === preferType) : null) ||
       list[0];
     const full = normalizeAssessmentFromServer(server);
-    // Only accept if it actually has questions (to avoid wiping)
     if (!Array.isArray(full.questions) || full.questions.length === 0)
       return null;
     return full;
@@ -382,10 +315,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     anchorLessonId: string,
     preferType?: "quiz" | "exam"
   ) => {
-    // 1) prefer local cache
     let full = getCachedAssessment(id);
-
-    // 2) fallback: server fetch by anchor, but only if it has questions
     if (!full) {
       const fetched = await fetchAssessmentByAnchor(anchorLessonId, preferType);
       if (!fetched) {
@@ -396,18 +326,16 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       setCachedAssessment(id, full);
     }
 
-    const merged: any = {
-      ...full,
-      [field]: value,
-      lesson: anchorLessonId,
-    };
-    // some backends expect time_limit instead of *_mins
-    merged.time_limit = merged.time_limit_mins;
+    const merged: any = { ...full, [field]: value, lesson: anchorLessonId };
+    if (merged.time_limit_mins && !merged.time_limit) {
+      merged.time_limit = merged.time_limit_mins;
+    }
 
-    await patch(`${API_ENDPOINTS.updateExam}${id}/`, merged);
-    // keep cache in sync
-    setCachedAssessment(id, merged);
-    toast.success("Saved");
+    return debounceAssessments(String(id), async () => {
+      await mutateExam({ id, payload: merged, lessonIdHint: anchorLessonId });
+      setCachedAssessment(id, merged);
+      toast.success("Saved");
+    });
   };
 
   const addModule = async () => {
@@ -420,7 +348,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       };
       await createSection(body);
       toast.success("New module added!");
-      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
@@ -478,13 +406,8 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   }, [editingAssessment, modules]);
 
   // fetch exams/quiz list for the parent lesson, then pick the one we need
-  const { data: examsByLessonResp } = useCustomQuery(
-    anchorIdForEditingAssessment
-      ? `${API_ENDPOINTS.exams}?lesson=${anchorIdForEditingAssessment}`
-      : "",
-    ["exams-by-lesson", anchorIdForEditingAssessment],
-    undefined,
-    !!anchorIdForEditingAssessment
+  const { data: examsByLessonResp } = useExamsByLesson(
+    anchorIdForEditingAssessment ?? undefined
   );
 
   // Normalize returned list (array from the collection endpoint)
@@ -510,6 +433,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         const tempId = `tmp-${Date.now()}`;
         const stub: any = {
           id: tempId,
+          _draft: true,
           title:
             type === "video"
               ? "New Video"
@@ -526,11 +450,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           duration_hours: null,
         };
         const lessons = [...(m.lessons || []), stub];
-
-        // Immediately patch section (prev array + new lesson in lessons[])
-        setTimeout(() => {
-          saveSectionLessons(moduleId).catch(() => {});
-        }, 0);
 
         // Open editor
         setTimeout(() => {
@@ -592,7 +511,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         title,
         description: "",
         type,
-        time_limit_mins: 10,
+        time_limit: 10,
         passing_score: 70,
         questions: [
           {
@@ -628,6 +547,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       );
 
       toast.success(`${type === "quiz" ? "Quiz" : "Exam"} created`);
+      invalidateAssessmentsCacheForLesson(anchorId);
     } catch (e: any) {
       const payload = e?.response?.data?.error;
       handleErrorAlerts(payload);
@@ -650,8 +570,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     const ops = modules
       .map((m, idx) => {
         if (m.order === idx + 1) return null;
-        return patch(`${API_ENDPOINTS.updateSection}${m.id}/`, {
-          order: idx + 1,
+        return mutateSection({
+          id: m.id,
+          payload: {
+            order: idx + 1,
+          },
         });
       })
       .filter(Boolean) as Promise<any>[];
@@ -659,10 +582,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     try {
       await Promise.all(ops);
       toast.success("Module order updated");
-      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch {
       toast.error("Failed to update module order");
-      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
 
@@ -675,10 +598,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         let h = lessons.findIndex((l: any) => l.id === hoverId);
         if (d < 0 || h < 0 || d === h) return m;
 
-        // If dragging an assessment, convert to its anchor (content) so you can only move the group
+        // If dragging an assessment, convert to its anchor so you only move the group
         const dIsAssessment = isAssessment((lessons[d] as any)?.content_type);
         if (dIsAssessment) {
-          // find anchor above d
           for (let i = d - 1; i >= 0; i--) {
             if (isContent((lessons[i] as any)?.content_type)) {
               d = i;
@@ -729,48 +651,61 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   };
 
   const commitLessonOrderAndAnchors = async (moduleId: string) => {
-    const mod = modules.find((m) => m.id === moduleId);
-    if (!mod) return;
+    return debounceCommit(moduleId, async () => {
+      const mod = modules.find((m) => m.id === moduleId);
+      if (!mod) return;
 
-    try {
-      await saveSectionLessons(moduleId);
-    } catch {
-      toast.error("Failed to save lesson order");
-      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
-      return;
-    }
-
-    const patches: Promise<any>[] = [];
-    const nextLessons = [...(mod.lessons || [])];
-    nextLessons.forEach((l, idx) => {
-      if (!isAssessment((l as any).content_type)) return;
-      const newAnchor = anchorAbove(nextLessons as any, idx);
-      const oldAnchor = (l as any)._anchor; // set during inject
-      if (!newAnchor || newAnchor === oldAnchor) return; // no change => no PATCH
-      patches.push(
-        patch(`${API_ENDPOINTS.updateExam}${(l as any).id}/`, {
-          lesson: newAnchor,
-        })
-      );
-      (l as any)._anchor = newAnchor;
-    });
-
-    if (patches.length) {
       try {
-        await Promise.all(patches);
-        toast.success("Attachments updated");
+        await saveSectionLessons(moduleId);
       } catch {
-        toast.error("Failed to update some attachments");
+        toast.error("Failed to save lesson order");
+        await queryClient.invalidateQueries({
+          queryKey: qk.modules(courseId),
+        });
+        return;
       }
-    }
+
+      const patches: Promise<any>[] = [];
+      const affectedAnchors = new Set<string>();
+
+      const nextLessons = [...(mod.lessons || [])];
+      nextLessons.forEach((l, idx) => {
+        if (!isAssessment((l as any).content_type)) return;
+        const newAnchor = anchorAbove(nextLessons as any, idx);
+        const oldAnchor = (l as any)._anchor;
+        if (!newAnchor || newAnchor === oldAnchor) return;
+        patches.push(
+          mutateExam({
+            id: l.id,
+            payload: { lesson: newAnchor },
+            lessonIdHint: newAnchor,
+          })
+        );
+        if (oldAnchor) affectedAnchors.add(oldAnchor);
+        affectedAnchors.add(newAnchor);
+        (l as any)._anchor = newAnchor;
+      });
+
+      if (patches.length) {
+        try {
+          await Promise.allSettled(patches);
+          affectedAnchors.forEach((a) =>
+            invalidateAssessmentsCacheForLesson(a)
+          );
+          toast.success("Attachments updated");
+        } catch {
+          toast.error("Failed to update some attachments");
+        }
+      }
+    });
   };
 
   const deleteModule = async (id: string) => {
     try {
-      await remove(`${API_ENDPOINTS.deleteSection}${id}/`);
+      await removeSection({ id });
       toast.success("Module deleted");
       await queryClient.invalidateQueries({
-        queryKey: ["modules", courseId],
+        queryKey: qk.modules(courseId),
       });
     } catch (e: any) {
       const payload = e?.response?.data?.error;
@@ -797,13 +732,21 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       await commitLessonOrderAndAnchors(moduleId);
     } catch {
       toast.error("Failed to remove lesson");
-      await queryClient.invalidateQueries({ queryKey: ["modules", courseId] });
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
 
   const deleteExamOrQuiz = async (id: string, moduleId: string) => {
     try {
-      await remove(`${API_ENDPOINTS.updateExam}${id}/`);
+      const mod = modules.find((m) => m.id === moduleId);
+      let anchorIdForDeleted: string | null = null;
+      if (mod) {
+        const idx = mod.lessons.findIndex((l: any) => l.id === id);
+        if (idx >= 0) {
+          anchorIdForDeleted = anchorAbove(mod.lessons as any, idx);
+        }
+      }
+      await removeExam({ id, lessonIdHint: anchorIdForDeleted ?? undefined });
       setModules((prev) =>
         prev.map((m) =>
           m.id !== moduleId
@@ -811,6 +754,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
             : { ...m, lessons: m.lessons.filter((l) => l.id !== id) }
         )
       );
+      if (anchorIdForDeleted)
+        invalidateAssessmentsCacheForLesson(anchorIdForDeleted);
+
       toast.success("Assessment deleted");
     } catch (e: any) {
       const payload = e?.response?.data?.error;
@@ -1095,7 +1041,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                               (lesson as any).id,
                                               "title",
                                               e.target.value,
-                                              anchor ?? "", // API needs a string
+                                              anchor ?? "",
                                               (lesson as any).content_type as
                                                 | "quiz"
                                                 | "exam"
@@ -1276,15 +1222,22 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           }}
           onSave={async () => {
             try {
-              await saveSectionLessons(editingLesson.moduleId);
+              const mod = modules.find((m) => m.id === editingLesson.moduleId)!;
+              const nextLessons = (mod.lessons ?? []).map((l) =>
+                l.id === editingLesson.lessonId ? { ...l, _draft: false } : l
+              );
+
+              setModules((prev) =>
+                prev.map((m) =>
+                  m.id !== mod.id ? m : { ...m, lessons: nextLessons }
+                )
+              );
+
+              await saveSectionLessons(mod.id, nextLessons);
               toast.success("Video saved");
-              await queryClient.invalidateQueries({
-                queryKey: ["modules", courseId],
-              });
-            } catch {
-              //
+            } finally {
+              setEditingLesson(null);
             }
-            setEditingLesson(null);
           }}
         />
       )}
@@ -1319,15 +1272,24 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           }}
           onSave={async () => {
             try {
-              await saveSectionLessons(editingArticle.moduleId);
+              const mod = modules.find(
+                (m) => m.id === editingArticle.moduleId
+              )!;
+              const nextLessons = (mod.lessons ?? []).map((l) =>
+                l.id === editingArticle.lessonId ? { ...l, _draft: false } : l
+              );
+
+              setModules((prev) =>
+                prev.map((m) =>
+                  m.id !== mod.id ? m : { ...m, lessons: nextLessons }
+                )
+              );
+
+              await saveSectionLessons(mod.id, nextLessons);
               toast.success("Article saved");
-              await queryClient.invalidateQueries({
-                queryKey: ["modules", courseId],
-              });
-            } catch {
-              //
+            } finally {
+              setEditingArticle(null);
             }
-            setEditingArticle(null);
           }}
         />
       )}
@@ -1364,22 +1326,40 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           }}
           onSave={async () => {
             try {
-              await saveSectionLessons(uploadingMaterial.moduleId);
+              const mod = modules.find(
+                (m) => m.id === uploadingMaterial.moduleId
+              )!;
+              const nextLessons = (mod.lessons ?? []).map((l) =>
+                l.id === uploadingMaterial.lessonId
+                  ? { ...l, _draft: false }
+                  : l
+              );
+
+              setModules((prev) =>
+                prev.map((m) =>
+                  m.id !== mod.id ? m : { ...m, lessons: nextLessons }
+                )
+              );
+
+              await saveSectionLessons(mod.id, nextLessons);
               toast.success("Material saved");
-              await queryClient.invalidateQueries({
-                queryKey: ["modules", courseId],
-              });
-            } catch {
-              //
+            } finally {
+              setUploadingMaterial(null);
             }
-            setUploadingMaterial(null);
           }}
         />
       )}
 
       {/* Quiz / Exam Builder & Preview */}
       {editingAssessment && (
-        <Modal onClose={() => setEditingAssessment(null)}>
+        <Modal
+          isOpen={!!editingAssessment}
+          onClose={() => setEditingAssessment(null)}
+          title={
+            editingAssessment?.type === "exam" ? "Exam Builder" : "Quiz Builder"
+          }
+          size="xl"
+        >
           <QuizBuilder
             initialQuiz={assessmentDetail ?? { type: editingAssessment?.type }}
             onTitleChange={(t) =>
@@ -1391,15 +1371,16 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
             }
             onSave={async (draft) => {
               try {
-                await patch(
-                  `${API_ENDPOINTS.updateExam}${editingAssessment.id}/`,
-                  {
+                await mutateExam({
+                  id: editingAssessment.id,
+                  payload: {
                     ...draft,
                     type: editingAssessment.type,
                     lesson: anchorIdForEditingAssessment,
-                    time_limit: draft.time_limit_mins,
-                  }
-                );
+                    time_limit: draft.time_limit,
+                  },
+                  lessonIdHint: anchorIdForEditingAssessment ?? undefined,
+                });
                 // cache the full draft we just saved
                 setCachedAssessment(editingAssessment.id, draft);
 
@@ -1408,7 +1389,15 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                   editingAssessment.id,
                   { title: draft.title } as any
                 );
+
+                if (anchorIdForEditingAssessment) {
+                  invalidateAssessmentsCacheForLesson(
+                    anchorIdForEditingAssessment
+                  );
+                }
+
                 toast.success("Saved");
+                // if you still keep the old "exams-by-lesson" read somewhere, keep this too:
                 queryClient.invalidateQueries({
                   queryKey: ["exams-by-lesson", anchorIdForEditingAssessment],
                 });
@@ -1423,18 +1412,24 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       )}
 
       {previewDraft && (
-        <Modal onClose={() => setPreviewDraft(null)}>
+        <Modal
+          isOpen={!!previewDraft}
+          onClose={() => setPreviewDraft(null)}
+          title="Preview"
+          size="xl"
+        >
           <QuizPreview
             quiz={{
               title: previewDraft.title,
               description: previewDraft.description,
               questions: previewDraft.questions.map((q) => ({
                 text: q.text,
+                points: q.points,
                 question_type: q.question_type,
                 explanation: q.explanation,
                 choices: q.choices,
               })),
-              totalTimeLimit: (previewDraft.time_limit_mins || 0) * 60,
+              totalTimeLimit: (previewDraft.time_limit || 0) * 60,
             }}
             onEdit={() => setPreviewDraft(null)}
             onClose={() => setPreviewDraft(null)}

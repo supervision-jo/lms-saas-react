@@ -2,7 +2,7 @@ import { Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCustomPatch } from "../../../hooks/useMutation";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
@@ -50,27 +50,7 @@ export default function CourseInformationForm({ course }: Props) {
     },
   });
 
-  // Prefill on mount / when course prop changes
-  useEffect(() => {
-    if (!course) return;
-
-    // Map incoming course shape into form shape here:
-    const incoming: Partial<FormValues> = {
-      title: course?.title ?? "",
-      description: course?.description ?? "",
-      level: course?.level ?? "beginner",
-      price: typeof course?.price === "number" ? course?.price : "",
-      sub_category: course?.sub_category ?? "",
-      // category is UI-only, we will infer it when Hamed return it in course response so for now it will be empty after update but it behind scene it saved successfully
-      category: "",
-      picture: course?.picture ?? "",
-    };
-
-    reset(incoming, { keepDirtyValues: false });
-    setThumbPreview(incoming.picture || null);
-  }, [course, reset]);
-
-  // ---------- Dependent Sub-categories ----------
+  // Dependent Sub-categories
   const selectedCategory = watch("category");
   const { data: subCategoriesData, isLoading: subCatsLoading } = useCustomQuery(
     `${API_ENDPOINTS.subCategories}?category=${selectedCategory}`,
@@ -78,14 +58,43 @@ export default function CourseInformationForm({ course }: Props) {
     undefined,
     !!selectedCategory
   );
-  const subCategories: SubCategory[] = subCategoriesData?.data || [];
+  const subCategories: SubCategory[] = useMemo(
+    () => subCategoriesData?.data || [],
+    [subCategoriesData]
+  );
+
+  const { data: allSubCategoriesData } = useCustomQuery(
+    API_ENDPOINTS.subCategories,
+    ["all-sub-categories"]
+  );
+
+  const allSubCategories: SubCategory[] = useMemo(
+    () => allSubCategoriesData?.data || [],
+    [allSubCategoriesData]
+  );
 
   // When category changes, clear sub_category
   useEffect(() => {
-    setValue("sub_category", "");
-  }, [selectedCategory, setValue]);
+    if (!selectedCategory) return;
+    // Only react if the user actually changed category
+    if (!dirtyFields?.category) return;
 
-  // ---------- Patch (autosave) ----------
+    const currentSub = getValues("sub_category");
+    const currentSubObj = allSubCategories.find((sc) => sc.id === currentSub);
+
+    // Clear only if the current sub doesn't belong to the selected category
+    if (!currentSubObj || currentSubObj.category !== selectedCategory) {
+      setValue("sub_category", "", { shouldDirty: true });
+    }
+  }, [
+    selectedCategory,
+    dirtyFields?.category,
+    allSubCategories,
+    getValues,
+    setValue,
+  ]);
+
+  // Patch (autosave)
   const { mutateAsync: updateCourse } = useCustomPatch(
     `${API_ENDPOINTS.updateCourse}${course?.id}/`,
     ["course", course?.id] // lets parent/other tabs refetch fresh course
@@ -220,6 +229,30 @@ export default function CourseInformationForm({ course }: Props) {
     setThumbPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [thumbnailFile]);
+
+  // Pre fill info
+  useEffect(() => {
+    if (!course) return;
+    if (!allSubCategories || allSubCategories.length === 0) return;
+
+    // course may carry sub_category as id or object; cover both
+    const courseSubId = course?.sub_category;
+
+    const subCate = allSubCategories.find((sc) => sc.id === courseSubId);
+
+    const incoming: Partial<FormValues> = {
+      title: course?.title ?? "",
+      description: course?.description ?? "",
+      level: course?.level ?? "beginner",
+      price: typeof course?.price === "number" ? course?.price : "",
+      sub_category: subCate?.id ?? "",
+      category: subCate?.category ?? "",
+      picture: course?.picture ?? "",
+    };
+
+    reset(incoming, { keepDirtyValues: false });
+    setThumbPreview(incoming.picture || null);
+  }, [allSubCategories, course, reset, setThumbPreview]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-8">

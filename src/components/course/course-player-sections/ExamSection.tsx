@@ -1,58 +1,141 @@
 import { useMemo, useState } from "react";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { useCustomPost } from "../../../hooks/useMutation";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import toast from "react-hot-toast";
+import handleErrorAlerts from "../../../utils/showErrorMessages";
 
 interface ExamSectionProps {
-  exam: Exam; // API Exam
-  onClose: () => void; // called when learner clicks "Continue Learning"
+  exam: Exam;
+  onClose: () => void;
+}
+
+interface StudentAnswers {
+  id: string;
+  student: string;
+  quiz: string;
+  attempt: number;
+  score: number;
+  passed: boolean;
+  total_questions: number;
+  submitted_at: string;
+  count_correct: number;
+  count_incorrect: number;
 }
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
-  // normalize
-  const questions = useMemo(() => {
-    return Array.isArray(exam?.questions) ? exam.questions : [];
-  }, [exam.questions]);
+  const MAX_ATTEMPTS =
+    typeof (exam as any)?.max_attempts === "number"
+      ? (exam as any).max_attempts
+      : 3;
+
+  // Pull ALL previous attempts for this quiz (array)
+  const {
+    data: ansResp,
+    isFetching: isFetchingSummary,
+    refetch: refetchSummary,
+  } = useCustomQuery(
+    `${API_ENDPOINTS.getStudentAnswers}?quiz=${encodeURIComponent(exam.id)}`,
+    ["studentAnswers", exam.id]
+  );
+
+  const attempts: StudentAnswers[] = ansResp?.data ?? [];
+  const latest = attempts.length
+    ? [...attempts].sort((a, b) => a.attempt - b.attempt)[attempts.length - 1]
+    : undefined;
+
+  // Next attempt is based on how many we already have
+  const attemptsCount = attempts.length;
+  const nextAttempt = Math.min(attemptsCount + 1, MAX_ATTEMPTS);
+  const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
+
+  const questions = useMemo(
+    () => (Array.isArray(exam?.questions) ? exam.questions : []),
+    [exam.questions]
+  );
   const passing =
     typeof exam?.passing_score === "number" ? exam.passing_score : 0;
 
-  // answers keyed by question id -> set of choice ids (support multi-correct)
+  // local picks only
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  // display numbers come from server (latest attempt)
+  const totalQuestions = latest?.total_questions ?? questions.length;
+  const correct = latest?.count_correct ?? 0;
+  const incorrect = latest?.count_incorrect ?? 0;
+  const percent = latest
+    ? Math.round((correct / Math.max(1, totalQuestions)) * 100)
+    : 0;
+  const passed = latest?.passed ?? false;
 
   const toggleAnswer = (qId: string, choiceId: string, isMulti: boolean) => {
     if (submitted) return;
     setAnswers((prev) => {
       const curr = new Set(prev[qId] ?? []);
       if (isMulti) {
-        if (curr.has(choiceId)) curr.delete(choiceId);
-        else curr.add(choiceId);
+        if (curr.has(choiceId)) {
+          curr.delete(choiceId);
+        } else {
+          curr.add(choiceId);
+        }
         return { ...prev, [qId]: curr };
       }
-      const n = new Set<string>();
-      n.add(choiceId);
-      return { ...prev, [qId]: n };
+      return { ...prev, [qId]: new Set([choiceId]) };
     });
   };
 
-  const { totalScore, maxScore } = useMemo(() => {
-    if (!submitted) return { totalScore: 0, maxScore: questions.length };
-    let correctCount = 0;
-    for (const q of questions) {
-      const choices = Array.isArray(q.choices) ? q.choices : [];
-      const correctIds = new Set(
-        choices.filter((c) => c.is_correct).map((c) => c.id)
-      );
-      const picked = answers[q.id] ?? new Set<string>();
-      if (
-        picked.size === correctIds.size &&
-        [...picked].every((p) => correctIds.has(p))
-      ) {
-        correctCount += 1;
-      }
-    }
-    return { totalScore: correctCount, maxScore: questions.length };
-  }, [submitted, answers, questions]);
+  const allAnswered = useMemo(
+    () => questions.every((q) => (answers[q.id]?.size ?? 0) > 0),
+    [answers, questions]
+  );
 
-  const percent = Math.round((totalScore / Math.max(1, maxScore)) * 100);
-  const passed = percent >= passing;
+  // Build POST body [{question, choice, attempt}, ...] using nextAttempt
+  const buildSubmission = () => {
+    const rows: Array<{ question: string; choice: string; attempt: number }> =
+      [];
+    for (const q of questions) {
+      const picked = answers[q.id];
+      if (!picked?.size) continue;
+      for (const choiceId of picked)
+        rows.push({ question: q.id, choice: choiceId, attempt: nextAttempt });
+    }
+    return rows;
+  };
+
+  const { mutateAsync, isPending } = useCustomPost(API_ENDPOINTS.submitExam, [
+    "exam",
+  ]);
+
+  const submitExam = async () => {
+    if (!allAnswered || isPending) return;
+
+    // Guard: only 3 trials total (or MAX_ATTEMPTS)
+    if (attemptsCount >= MAX_ATTEMPTS) {
+      toast.error(`You only have ${MAX_ATTEMPTS} attempts.`);
+      return;
+    }
+
+    try {
+      const payload = buildSubmission();
+      await mutateAsync(payload); // server grades & stores attempt
+      setSubmitted(true);
+      await refetchSummary(); // refresh attempts array so UI shows latest server result
+      toast.success(`Submitted (attempt ${nextAttempt})`);
+    } catch (err: any) {
+      handleErrorAlerts(err?.response?.data?.error);
+    }
+  };
+
+  const retake = () => {
+    if (passed || attemptsCount >= MAX_ATTEMPTS) return;
+    setAnswers({});
+    setSubmitted(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submitDisabled =
+    !allAnswered || isPending || attemptsCount >= MAX_ATTEMPTS;
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-lg">
@@ -73,6 +156,9 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
             Time Limit: {exam.time_limit ?? 0} min
           </div>
           <div className="text-gray-500 text-sm">Passing Score: {passing}%</div>
+          <div className="text-gray-500 text-sm">
+            Attempt {Math.min(nextAttempt, MAX_ATTEMPTS)} of {MAX_ATTEMPTS}
+          </div>
         </div>
       </div>
 
@@ -83,12 +169,6 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
           const correctCount = choices.filter((c) => c.is_correct).length;
           const multi = correctCount > 1;
           const selected = answers[q.id] ?? new Set<string>();
-          const isCorrectNow =
-            submitted &&
-            selected.size === correctCount &&
-            [...selected].every(
-              (id) => choices.find((c) => c.id === id)?.is_correct
-            );
 
           return (
             <div
@@ -99,29 +179,14 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 <h4 className="text-gray-900 font-semibold">
                   {idx + 1}. {q.text}
                 </h4>
-                {submitted && (
-                  <span
-                    className={`text-sm font-semibold ${
-                      isCorrectNow ? "text-green-700" : "text-red-700"
-                    }`}
-                  >
-                    {isCorrectNow ? "Correct" : "Incorrect"}
-                  </span>
-                )}
               </div>
               <div className="space-y-2">
                 {choices.map((c, ci) => {
                   const checked = selected.has(c.id);
-                  const showAs =
-                    submitted && c.is_correct
-                      ? "border-green-500 bg-green-50"
-                      : submitted && checked && !c.is_correct
-                      ? "border-red-500 bg-red-50"
-                      : "border-gray-200 bg-white";
                   return (
                     <label
                       key={c.id}
-                      className={`flex items-center p-3 rounded border ${showAs} cursor-pointer`}
+                      className="flex items-center p-3 rounded border border-gray-200 bg-white cursor-pointer"
                     >
                       <input
                         type={multi ? "checkbox" : "radio"}
@@ -142,18 +207,6 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                   );
                 })}
               </div>
-
-              {submitted && q.explanation && (
-                <div className="mt-3 bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
-                  <strong>Explanation: </strong>
-                  {q.explanation}
-                </div>
-              )}
-              {multi && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Multiple answers may be correct.
-                </div>
-              )}
             </div>
           );
         })}
@@ -164,32 +217,53 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         {!submitted ? (
           <>
             <div className="text-gray-500 text-sm">
-              Answer all questions to submit.
+              {attemptsCount < MAX_ATTEMPTS
+                ? `Answer all questions to submit. Attempts left: ${attemptsLeft}`
+                : "No more attempts remaining."}
             </div>
             <button
-              onClick={() => setSubmitted(true)}
-              disabled={Object.keys(answers).length !== questions.length}
+              onClick={submitExam}
+              disabled={submitDisabled}
               className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
-              Submit {exam.type === "quiz" ? "Quiz" : "Exam"}
+              {isPending
+                ? "Submitting..."
+                : `Submit ${exam.type === "quiz" ? "Quiz" : "Exam"}`}
             </button>
           </>
         ) : (
           <div className="flex flex-col items-start justify-start gap-4 w-full">
+            <div className="text-sm text-gray-500">
+              {isFetchingSummary
+                ? "Loading results..."
+                : `Submitted at: ${latest?.submitted_at ?? "-"}`}
+            </div>
+
             <div
               className={`md:text-lg text-sm font-semibold ${
                 passed ? "text-green-700" : "text-red-700"
               }`}
             >
-              Score: {totalScore}/{maxScore} ({percent}%) —{" "}
+              Score: {correct}/{totalQuestions} ({percent}%) —{" "}
               {passed ? "Passed" : "Failed"} (pass {passing}%)
             </div>
+
+            <div className="text-sm text-gray-500">
+              Correct: {correct} · Incorrect: {incorrect} · Attempt #
+              {latest?.attempt ?? nextAttempt}
+            </div>
+
             <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
               <button
-                onClick={() => setSubmitted(false)}
-                className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                onClick={retake}
+                disabled={passed || attemptsCount >= MAX_ATTEMPTS}
+                className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Review Again
+                {passed
+                  ? "Passed — No Retake"
+                  : attemptsCount >= MAX_ATTEMPTS
+                  ? "No Attempts Left"
+                  : "Retake"}
               </button>
               <button
                 onClick={onClose}

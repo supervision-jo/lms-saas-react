@@ -329,7 +329,7 @@ const CourseBuilderPage: React.FC = () => {
 
             {activeTab === "users" && (
               <div className="bg-white rounded-xl shadow-sm p-8">
-                <UserManagement />
+                <UserManagement courseId={course?.id} />
               </div>
             )}
 

@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+.prose pre {
+  overflow-x: auto;
+}
+
+/* Make floats play nice with prose content */
+.prose img { height: auto; }
+
+/* Left & right floats with margins */
+.prose img[data-align="left"]  { display:block; float:left;  margin:0.25rem 1rem 0.5rem 0; }
+.prose img[data-align="right"] { display:block; float:right; margin:0.25rem 0 0.5rem 1rem; }
+
+/* Centered block image */
+.prose img[data-align="center"] { display:block; margin-left:auto; margin-right:auto; float:none; }
+
+/* Full width */
+.prose img[data-align="full"]   { display:block; width:100% !important; max-width:100%; float:none; margin:0.5rem 0; }
+
+/* Clear floats on the next paragraph/heading so text doesn’t wrap under large images */
+.prose p + *, .prose ul + *, .prose ol + *, .prose h1 + *, .prose h2 + *, .prose h3 + * { clear: both; }
+
+
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;

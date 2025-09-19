@@ -1,0 +1,16 @@
+import { QueryClient } from "@tanstack/react-query";
+import { invalidateAssessmentsCacheForLesson } from "./courseBuilder";
+
+export const qk = {
+  modules: (courseId: string) => ["modules", courseId] as const,
+  examsByLesson: (lessonId: string) => ["exams", lessonId] as const,
+};
+
+export function invalidateLessonExams(
+  queryClient: QueryClient,
+  lessonId?: string | null
+) {
+  if (!lessonId) return;
+  invalidateAssessmentsCacheForLesson(lessonId);
+  queryClient.invalidateQueries({ queryKey: qk.examsByLesson(lessonId) });
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Download, Sun, Moon } from "lucide-react";
+import { ChevronRight, Download } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
 
@@ -43,7 +43,6 @@ export default function LessonContentPlayer({
   );
 
   const [showAutoNext, setShowAutoNext] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [animateRing, setAnimateRing] = useState(false);
   const timeoutRef = useRef<number | null>(null);
 
@@ -92,6 +91,42 @@ export default function LessonContentPlayer({
       //
     }
     beginAutoNext();
+  };
+
+  // at top of the component
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadMaterial = async (rawUrl?: string) => {
+    if (!rawUrl) return;
+    try {
+      setDownloading(true);
+
+      // get a clean filename from the URL path, ignoring the query string
+      const u = new URL(rawUrl);
+      const pathname = u.pathname; // /shabab/media/lessons/files/upload_HROQAmu.pdf
+      const base = pathname.substring(pathname.lastIndexOf("/") + 1) || "file";
+      const filename = base.includes(".") ? base : `${base}.download`;
+
+      // fetch → blob → download
+      const res = await fetch(rawUrl, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e: any) {
+      // fallback: just open the signed URL
+      console.log(e);
+      window.open(rawUrl, "_blank");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const renderAssessment = () => {
@@ -145,270 +180,68 @@ export default function LessonContentPlayer({
             if (currentLessonData?.content_type?.toLowerCase() === "article") {
               return (
                 <div
-                  className={`rounded-lg p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 ${
-                    isDarkMode
-                      ? "bg-gray-800 text-gray-100"
-                      : "bg-white text-gray-900"
-                  }`}
+                  className={`rounded-lg flex flex-col items-start p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 bg-white text-gray-900`}
                 >
                   {/* Theme Toggle */}
                   <div className="flex justify-between items-center mb-6">
-                    <h1
-                      className={`text-3xl font-bold ${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                    >
+                    <h1 className={`text-3xl font-bold text-gray-900`}>
                       {currentLessonData?.title}
                     </h1>
-                    <button
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        isDarkMode
-                          ? "bg-gray-700 text-yellow-400 hover:bg-gray-600"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                      title={
-                        isDarkMode
-                          ? "Switch to light mode"
-                          : "Switch to dark mode"
-                      }
-                    >
-                      {isDarkMode ? (
-                        <Sun className="w-5 h-5" />
-                      ) : (
-                        <Moon className="w-5 h-5" />
-                      )}
-                    </button>
                   </div>
 
                   <div className="prose max-w-none">
-                    <div className="space-y-6">
-                      <p
-                        className={`text-lg leading-relaxed ${
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }`}
-                      >
-                        Welcome to this comprehensive article on React
-                        fundamentals. In this lesson, we'll explore the core
-                        concepts that make React such a powerful library for
-                        building user interfaces.
-                      </p>
+                    <div
+                      className="space-y-6"
+                      dangerouslySetInnerHTML={{
+                        __html: currentLessonData?.description_html,
+                      }}
+                    />
 
-                      <h2
-                        className={`text-2xl font-semibold mt-8 mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        What is React?
-                      </h2>
-                      <p
-                        className={`leading-relaxed ${
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }`}
-                      >
-                        React is a JavaScript library for building user
-                        interfaces, particularly web applications. It was
-                        developed by Facebook and is now maintained by Facebook
-                        and the community. React allows developers to create
-                        large web applications that can change data, without
-                        reloading the page.
-                      </p>
-
-                      <h2
-                        className={`text-2xl font-semibold mt-8 mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Key Features of React
-                      </h2>
-                      <ul className="list-disc pl-6 space-y-2">
-                        <li
-                          className={
-                            isDarkMode ? "text-gray-300" : "text-gray-700"
-                          }
-                        >
-                          <strong
-                            className={
-                              isDarkMode ? "text-white" : "text-gray-900"
-                            }
-                          >
-                            Component-Based:
-                          </strong>{" "}
-                          Build encapsulated components that manage their own
-                          state
-                        </li>
-                        <li
-                          className={
-                            isDarkMode ? "text-gray-300" : "text-gray-700"
-                          }
-                        >
-                          <strong
-                            className={
-                              isDarkMode ? "text-white" : "text-gray-900"
-                            }
-                          >
-                            Declarative:
-                          </strong>{" "}
-                          React makes it painless to create interactive UIs
-                        </li>
-                        <li
-                          className={
-                            isDarkMode ? "text-gray-300" : "text-gray-700"
-                          }
-                        >
-                          <strong
-                            className={
-                              isDarkMode ? "text-white" : "text-gray-900"
-                            }
-                          >
-                            Learn Once, Write Anywhere:
-                          </strong>{" "}
-                          Develop new features without rewriting existing code
-                        </li>
-                        <li
-                          className={
-                            isDarkMode ? "text-gray-300" : "text-gray-700"
-                          }
-                        >
-                          <strong
-                            className={
-                              isDarkMode ? "text-white" : "text-gray-900"
-                            }
-                          >
-                            Virtual DOM:
-                          </strong>{" "}
-                          Efficient updating and rendering of components
-                        </li>
-                      </ul>
-
-                      <h2
-                        className={`text-2xl font-semibold mt-8 mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Getting Started
-                      </h2>
-                      <p
-                        className={`leading-relaxed ${
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }`}
-                      >
-                        To get started with React, you'll need to have Node.js
-                        installed on your computer. Once you have Node.js, you
-                        can create a new React application using Create React
-                        App:
-                      </p>
-
+                    {currentLessonData?.description && (
                       <div
-                        className={`rounded-lg p-4 my-4 ${
-                          isDarkMode ? "bg-gray-900" : "bg-gray-100"
-                        }`}
+                        className={`mt-8 p-4 border-l-4 rounded bg-blue-50 border-blue-400 text-blue-800`}
                       >
-                        <code className="text-sm">
-                          npx create-react-app my-app
-                          <br />
-                          cd my-app
-                          <br />
-                          npm start
-                        </code>
+                        <p>{currentLessonData?.description}</p>
                       </div>
-
-                      <h2
-                        className={`text-2xl font-semibold mt-8 mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Your First Component
-                      </h2>
-                      <p
-                        className={`leading-relaxed ${
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }`}
-                      >
-                        Here's a simple example of a React component:
-                      </p>
-
-                      <div
-                        className={`rounded-lg p-4 my-4 ${
-                          isDarkMode ? "bg-gray-900" : "bg-gray-100"
-                        }`}
-                      >
-                        <pre className="text-sm overflow-x-auto">
-                          {`function Welcome(props) {
-                              return <h1>Hello, {props.name}</h1>;
-                            }
-
-                            function App() {
-                              return (
-                                <div>
-                                  <Welcome name="Sara" />
-                                  <Welcome name="Cahal" />
-                                  <Welcome name="Edite" />
-                                </div>
-                              );
-                            }`}
-                        </pre>
-                      </div>
-
-                      <h2
-                        className={`text-2xl font-semibold mt-8 mb-4 ${
-                          isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Conclusion
-                      </h2>
-                      <p
-                        className={`leading-relaxed ${
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
-                        }`}
-                      >
-                        React is a powerful tool for building modern web
-                        applications. Its component-based architecture and
-                        declarative nature make it easy to build and maintain
-                        complex user interfaces. In the next lessons, we'll dive
-                        deeper into React concepts like state, props, and
-                        lifecycle methods.
-                      </p>
-
-                      <div
-                        className={`mt-8 p-4 border-l-4 rounded ${
-                          isDarkMode
-                            ? "bg-blue-900 border-blue-400 text-blue-200"
-                            : "bg-blue-50 border-blue-400 text-blue-800"
-                        }`}
-                      >
-                        <p>
-                          <strong
-                            className={
-                              isDarkMode ? "text-blue-100" : "text-blue-900"
-                            }
-                          >
-                            Next Steps:
-                          </strong>{" "}
-                          Practice creating your own React components and
-                          experiment with different props and state
-                          configurations.
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
+                  <button
+                    onClick={handleComplete}
+                    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+                  >
+                    Mark as completed
+                  </button>
                 </div>
               );
             }
 
             if (currentLessonData?.content_type?.toLowerCase() === "material") {
+              const fileUrl = currentLessonData?.file ?? "";
+
               return (
                 <div className="bg-white rounded-lg p-8 shadow-lg">
                   <div className="max-w-4xl mx-auto text-center">
-                    <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <button
+                      onClick={() => downloadMaterial(fileUrl)}
+                      className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                      title={downloading ? "Downloading…" : "Download"}
+                    >
                       <Download className="w-10 h-10 text-orange-600" />
-                    </div>
+                    </button>
                     <h1 className="text-3xl font-bold text-gray-900 mb-4">
                       {currentLessonData?.title}
                     </h1>
                     <p className="text-gray-600 mb-8">
-                      Download essential files and resources for this course
+                      {currentLessonData?.description}
                     </p>
+                    {fileUrl && (
+                      <div className="text-sm text-gray-500 break-all">
+                        {/* show the basename to the user */}
+                        {decodeURIComponent(
+                          new URL(fileUrl).pathname.split("/").pop() || ""
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
