@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const invalidate = (qc: any, keys?: string[]) => {
   keys?.forEach((key) => {
-    qc.invalidateQueries({ queryKey: [key], exact: true });
+    qc.invalidateQueries({ queryKey: [key] });
   });
 };
 
