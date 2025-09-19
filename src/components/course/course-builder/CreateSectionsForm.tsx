@@ -52,6 +52,9 @@ const debounceCommit = makeKeyedDebouncer(450);
 export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const lastSavedRef = useRef<
+    Record<string, { title: string; description: string }>
+  >({});
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const setMenuRef =
     (id: string) =>
@@ -135,7 +138,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
     },
     onSuccess: () => {
-      toast.success(`Saved`);
       queryClient.invalidateQueries({
         queryKey: qk.modules(courseId),
       });
@@ -155,7 +157,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       return remove(`${API_ENDPOINTS.deleteSection}${id}/`);
     },
     onSuccess: () => {
-      toast.success(`Saved`);
       queryClient.invalidateQueries({
         queryKey: qk.modules(courseId),
       });
@@ -178,7 +179,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     onSuccess: (res, vars) => {
       const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
       const lessonId = ex?.lesson ?? vars.lessonIdHint;
-      toast.success(`Saved`);
       invalidateLessonExams(queryClient, lessonId);
     },
     onError: (e) => {
@@ -199,7 +199,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     onSuccess: (res, vars) => {
       const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
       const lessonId = (ex as any)?.lesson ?? (vars as any)?.lessonIdHint;
-      toast.success(`Saved`);
       invalidateLessonExams(queryClient, lessonId);
     },
     onError: (e) => {
@@ -225,16 +224,36 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     );
   };
 
+  useEffect(() => {
+    const map: Record<string, { title: string; description: string }> = {};
+    for (const m of serverModules || []) {
+      map[m.id] = { title: m.title ?? "", description: m.description ?? "" };
+    }
+    lastSavedRef.current = map;
+  }, [serverModules]);
+
   const patchModuleField = async (
     id: string,
     field: "title" | "description",
     value: string
   ) => {
-    const current = modules.find((m) => m.id === id)?.[field] ?? "";
-    if (String(current) === String(value)) return;
+    const last = lastSavedRef.current[id]?.[field] ?? "";
+    if (String(last) === String(value)) return; // only skip if same as server
+
     await mutateSection({ id, payload: { [field]: value } });
     toast.success("Saved");
-    await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+
+    // update last-saved snapshot so subsequent blurs don’t re-send
+    lastSavedRef.current[id] = {
+      title: field === "title" ? value : lastSavedRef.current[id]?.title ?? "",
+      description:
+        field === "description"
+          ? value
+          : lastSavedRef.current[id]?.description ?? "",
+    };
+
+    // invalidate if you still need a refetch to sync other fields
+    queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
   };
 
   const getCachedAssessment = (id: string) => assessmentCacheRef.current[id];

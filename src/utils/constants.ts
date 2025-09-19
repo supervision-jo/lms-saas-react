@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
   lessonProgress: "enrollments/create-lesson-progress/",
   lessonNotes: "enrollments/lesson-notes/",
   questions: "enrollments/question/",
+  toggleReaction: "enrollments/create-reaction/",
   createQuestion: "enrollments/create-question/",
   updateQuestion: "enrollments/update-question/",
   answers: "enrollments/answer/",

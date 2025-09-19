@@ -351,6 +351,20 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     onPreview(toAssessmentDraft(quiz));
   };
 
+  useEffect(() => {
+    if (!quiz.questions.length) return;
+
+    setExpandedQuestions((prev) => {
+      // if any previously expanded id still exists, keep it
+      const ids = new Set(quiz.questions.map((q) => q.id));
+      const hasValid = [...prev].some((id) => ids.has(id));
+      if (hasValid) return prev;
+
+      // otherwise ensure the first question is expanded
+      return new Set([quiz.questions[0].id]);
+    });
+  }, [quiz.questions]);
+
   /** ---- render ---- */
   return (
     <div className="bg-white rounded-xl md:p-8 p-4 max-w-6xl mx-auto">

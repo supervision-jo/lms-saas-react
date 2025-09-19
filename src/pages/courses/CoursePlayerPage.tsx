@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
-  BookOpen,
-  MessageSquare,
-  Star,
-  Award,
+  // BookOpen,
+  // MessageSquare,
+  // Star,
+  // Award,
   Users,
   X,
   ListVideo,
@@ -14,7 +14,7 @@ import CourseContent, {
   findNextLessonId,
 } from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { ACCESS_TOKEN_KEY, API_ENDPOINTS } from "../../utils/constants";
 import { useLocation, useNavigate, useParams } from "react-router";
 import NotesSection from "../../components/course/course-player-sections/NotesSection";
 import QASection from "../../components/course/course-player-sections/QASection";
@@ -24,9 +24,14 @@ import GroupsSection from "../../components/course/course-player-sections/Groups
 import ChatModal from "../../components/course/course-player-sections/ChatModal";
 import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { readUserFromStorage } from "../../services/auth";
+import { getCookie } from "../../services/cookies";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
+  const currentUser: User = readUserFromStorage();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation() as unknown as Location & {
     state?: { assessment?: Exam };
@@ -78,10 +83,17 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
+  const isStudent = !!(currentUser && currentUser.is_student);
+  const token = getCookie(ACCESS_TOKEN_KEY);
+
   const { data: modulesData } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}`,
     ["modules", courseId],
-    undefined,
+    {
+      headers: {
+        ...(isStudent && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
     !!courseId
   );
 
@@ -134,7 +146,15 @@ export default function CoursePlayerPage() {
 
     const allLessons = modules.flatMap((m) => m?.lessons ?? []);
 
-    if (lessonFromQS) {
+    const nonWatched = allLessons?.filter((l) => !l?.watched);
+
+    const firstNonWatchedLesson = nonWatched[0];
+
+    if (firstNonWatchedLesson) {
+      setCurrentLessonId(String(firstNonWatchedLesson.id));
+      setCurrentLesson(firstNonWatchedLesson);
+      return;
+    } else if (lessonFromQS) {
       const found = allLessons.find(
         (l) => String(l?.id) === String(lessonFromQS)
       );
@@ -284,11 +304,22 @@ export default function CoursePlayerPage() {
 
   const handleComplete = async () => {
     try {
-      const res = await createProgress({
-        lesson: currentLessonId,
-        watched: true,
-      });
-      if (res?.status) toast.success("Awesome! Lesson completed.");
+      if (!currentLesson?.watched && currentUser?.is_student) {
+        const res = await createProgress({
+          lesson: currentLessonId,
+          watched: true,
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["student-enrollements", courseId],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["modules", courseId],
+        });
+
+        if (res?.status) toast.success("Awesome! Lesson completed.");
+      }
     } catch (error: any) {
       toast.error(error?.message ?? "Something went wrong.");
     }
@@ -320,7 +351,7 @@ export default function CoursePlayerPage() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
-        <div className="flex items-center justify-between flex-col md:flex-row">
+        <div className="flex items-center justify-between flex-row">
           <div className="flex mb-2 md:mb-0 items-center space-x-4 md:justify-start justify-between md:w-fit w-full">
             <button
               onClick={() => navigate(`/catalog/${courseId}`)}
@@ -351,8 +382,9 @@ export default function CoursePlayerPage() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:justify-start justify-center sm:w-fit w-full">
-            <button
+          {/* <div className="flex items-center space-x-2 sm:justify-start justify-center sm:w-fit w-full"> */}
+          <div className="flex items-center justify-end w-fit">
+            {/* <button
               onClick={() => setShowNotes((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
                 showNotes ? "bg-purple-600" : "hover:bg-gray-700"
@@ -373,7 +405,7 @@ export default function CoursePlayerPage() {
             </button>
             <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
               <Award className="w-5 h-5" />
-            </button>
+            </button> */}
 
             {/* Mobile syllabus trigger */}
             <button
@@ -423,14 +455,14 @@ export default function CoursePlayerPage() {
           {!assessment && (
             <div className="bg-gray-800 border-b border-gray-700">
               <div className="max-w-5xl mx-auto px-6">
-                <div className="grid sm:grid-cols-3 grid-cols-1 items-center justify-items-center whitespace-nowrap">
+                <div className="grid grid-cols-3 items-center justify-items-center whitespace-nowrap">
                   <button
                     onClick={() => {
                       setShowNotes(true);
                       setShowQA(false);
                       setShowGroups(false);
                     }}
-                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                       showNotes
                         ? "border-purple-500 text-purple-400"
                         : "border-transparent text-gray-400 hover:text-gray-300"
@@ -445,7 +477,7 @@ export default function CoursePlayerPage() {
                       setShowNotes(false);
                       setShowGroups(false);
                     }}
-                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                       showQA
                         ? "border-purple-500 text-purple-400"
                         : "border-transparent text-gray-400 hover:text-gray-300"
@@ -460,7 +492,7 @@ export default function CoursePlayerPage() {
                       setShowNotes(false);
                       setShowQA(false);
                     }}
-                    className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                       showGroups
                         ? "border-purple-500 text-purple-400"
                         : "border-transparent text-gray-400 hover:text-gray-300"

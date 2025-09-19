@@ -1,4 +1,4 @@
-import { Heart, Reply, Send, ThumbsUp } from "lucide-react";
+import { Reply, Send } from "lucide-react";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useCustomPatch, useCustomPost } from "../../../hooks/useMutation";
 import { readUserFromStorage } from "../../../services/auth";
@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { useForm, FormProvider } from "react-hook-form";
 import QAListSkeleton from "../../resource-stats/QuestionsLoading";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
+import ReactionGroup from "./Reaction";
 
 // Answer Form (Create/Edit)
 const ReplyForm = React.memo(function ReplyForm({
@@ -325,10 +326,15 @@ export default function QASection({
 
                       {/* Actions */}
                       <div className="ml-11 mb-4 flex items-center space-x-4">
-                        <button className="flex items-center space-x-1 text-sm text-gray-400 hover:text-red-400 transition-colors">
-                          <Heart className="w-4 h-4" />
-                          <span>{qa?.count_likes ?? 0}</span>
-                        </button>
+                        <ReactionGroup
+                          subject={{ kind: "question", id: qa.id }}
+                          countsFromServer={{
+                            count_likes: qa.count_likes ?? 0,
+                            count_loves: qa.count_loves ?? 0,
+                            count_claps: qa.count_claps ?? 0,
+                          }}
+                          className="align-middle"
+                        />
                         <button
                           onClick={() => {
                             // Opening "create reply" must close any edit state
@@ -426,10 +432,14 @@ export default function QASection({
                                   </div>
 
                                   <div className="flex items-center space-x-4 mt-3">
-                                    <button className="flex items-center space-x-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
-                                      <ThumbsUp className="w-3 h-3" />
-                                      <span>{reply?.count_likes}</span>
-                                    </button>
+                                    <ReactionGroup
+                                      subject={{ kind: "answer", id: reply.id }}
+                                      countsFromServer={{
+                                        count_likes: reply.count_likes ?? 0,
+                                        count_loves: reply.count_loves ?? 0,
+                                        count_claps: reply.count_claps ?? 0,
+                                      }}
+                                    />
                                   </div>
                                 </div>
                               )}

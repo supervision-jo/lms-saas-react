@@ -111,6 +111,7 @@ interface Lesson {
   description?: string | null;
   description_html?: any;
   free_preview?: boolean;
+  watched?: boolean;
   order: number;
   url?: string | null;
   duration_hours?: number | null;

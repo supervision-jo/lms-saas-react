@@ -77,7 +77,20 @@ const CourseDetailPage: React.FC = () => {
   const cates: Category[] = catesData?.data?.data ?? [];
   // const subCategories: SubCategory[] = subCatesData?.data || [];
 
-  const currentCategory = cates?.find((c) => c.id === course?.sub_category);
+  const { data: subCategoriesData } = useCustomQuery(
+    `${API_ENDPOINTS.subCategories}`,
+    ["sub-categories"]
+  );
+  const subCategories: SubCategory[] = useMemo(
+    () => subCategoriesData?.data || [],
+    [subCategoriesData]
+  );
+
+  const currentSubCate = subCategories?.find(
+    (s) => s.id === course?.sub_category
+  );
+
+  const currentCategory = cates?.find((c) => c.id === currentSubCate?.category);
 
   const { data: instructorData } = useCustomQuery(
     `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
@@ -195,7 +208,11 @@ const CourseDetailPage: React.FC = () => {
             <div className="lg:col-span-2">
               <nav className="text-sm mb-4">
                 <span className="text-purple-400">
-                  {currentCategory?.name ?? "Development"}
+                  {currentCategory?.name ?? ""}
+                </span>
+                <span className="mx-2">›</span>
+                <span className="text-purple-400">
+                  {currentSubCate?.name ?? ""}
                 </span>
                 <span className="mx-2">›</span>
                 <span>{course?.title}</span>

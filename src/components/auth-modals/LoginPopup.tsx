@@ -71,9 +71,9 @@ export default function LoginPopup({
     }
   };
 
-  const handleGoogleLogin = () => {
-    return;
-  };
+  // const handleGoogleLogin = () => {
+  //   return;
+  // };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -224,7 +224,7 @@ export default function LoginPopup({
           </div>
 
           {/* Google Login */}
-          <button
+          {/* <button
             onClick={handleGoogleLogin}
             className="mt-6 w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
@@ -247,7 +247,7 @@ export default function LoginPopup({
               />
             </svg>
             Continue with Google
-          </button>
+          </button> */}
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">

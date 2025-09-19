@@ -9,6 +9,7 @@ import {
   Award,
   Download,
   HelpCircle,
+  CheckCircle,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
@@ -190,6 +191,16 @@ const CourseContent: React.FC<CourseContentProps> = ({
   const getLessonIcon = (lesson: Lesson, isCurrentLesson: boolean) => {
     if (!isEnrolled && !lesson?.free_preview)
       return <Lock className="w-4 h-4 text-gray-500" />;
+
+    if (lesson.watched) {
+      return (
+        <CheckCircle
+          className={`w-4 h-4 ${
+            isCurrentLesson ? "text-white" : "text-green-700"
+          }`}
+        />
+      );
+    }
     switch (lesson?.content_type?.toLowerCase()) {
       case "video":
         return (
@@ -292,7 +303,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           onClick={() => handleLessonClick(lesson)}
                           disabled={!canAccess}
                           className={`w-full flex items-start flex-col gap-2 py-3 sm:px-4 px-2 rounded-lg transition-all duration-200 text-left ${
-                            isCurrentLesson
+                            !isCurrentLesson && lesson?.watched
+                              ? "bg-green-50"
+                              : isCurrentLesson
                               ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
                               : canAccess
                               ? "hover:bg-white hover:shadow-md bg-white"

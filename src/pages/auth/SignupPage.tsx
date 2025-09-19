@@ -45,7 +45,7 @@ const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
 
   const agreeToTerms = useWatch({
     control,
@@ -107,24 +107,24 @@ const SignupPage: React.FC = () => {
   };
 
   // Simulate Google signup
-  const handleGoogleSignup = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const user = {
-        name: "John Doe",
-        email: "john.doe@gmail.com",
-        avatar:
-          "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-        joinDate: "August 2025",
-        location: "",
-        phone: "",
-        bio: "",
-      };
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-      navigate("/");
-      setIsLoading(false);
-    }, 2000);
-  };
+  // const handleGoogleSignup = () => {
+  //   setIsLoading(true);
+  //   setTimeout(() => {
+  //     const user = {
+  //       name: "John Doe",
+  //       email: "john.doe@gmail.com",
+  //       avatar:
+  //         "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
+  //       joinDate: "August 2025",
+  //       location: "",
+  //       phone: "",
+  //       bio: "",
+  //     };
+  //     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  //     navigate("/");
+  //     setIsLoading(false);
+  //   }, 2000);
+  // };
 
   useEffect(() => {
     if (getValues("c_password")) trigger("c_password");
@@ -402,7 +402,7 @@ const SignupPage: React.FC = () => {
           </div>
 
           {/* Google Signup */}
-          <button
+          {/* <button
             onClick={handleGoogleSignup}
             disabled={isLoading}
             className="mt-6 w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -426,7 +426,7 @@ const SignupPage: React.FC = () => {
               />
             </svg>
             Continue with Google
-          </button>
+          </button> */}
 
           {/* Login Link */}
           <div className="mt-6 text-center">

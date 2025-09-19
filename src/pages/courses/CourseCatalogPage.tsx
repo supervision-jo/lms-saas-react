@@ -287,19 +287,17 @@ const CourseCatalogPage: React.FC = () => {
                     : "grid-cols-1"
                 }`}
               >
-                {courses
-                  .filter((c) => !c?.is_published)
-                  .map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      enrolledCourses={enrolledCourses}
-                      // courseId={course.id}
-                      course={course}
-                      coursePic={course?.picture}
-                      isListView={effectiveView === "list"}
-                      isFetching={enrolledCoursesData.isFetching}
-                    />
-                  ))}
+                {courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    enrolledCourses={enrolledCourses}
+                    // courseId={course.id}
+                    course={course}
+                    coursePic={course?.picture}
+                    isListView={effectiveView === "list"}
+                    isFetching={enrolledCoursesData.isFetching}
+                  />
+                ))}
               </div>
             )}
 
