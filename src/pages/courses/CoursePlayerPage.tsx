@@ -146,15 +146,7 @@ export default function CoursePlayerPage() {
 
     const allLessons = modules.flatMap((m) => m?.lessons ?? []);
 
-    const nonWatched = allLessons?.filter((l) => !l?.watched);
-
-    const firstNonWatchedLesson = nonWatched[0];
-
-    if (firstNonWatchedLesson) {
-      setCurrentLessonId(String(firstNonWatchedLesson.id));
-      setCurrentLesson(firstNonWatchedLesson);
-      return;
-    } else if (lessonFromQS) {
+    if (lessonFromQS) {
       const found = allLessons.find(
         (l) => String(l?.id) === String(lessonFromQS)
       );
