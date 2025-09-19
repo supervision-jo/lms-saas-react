@@ -315,7 +315,7 @@ const CourseBuilderPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Main content */}
+          {/* Main contentss */}
           <div className="col-span-12 lg:col-span-9 space-y-6">
             {activeTab === "course-info" && (
               <CourseInformationForm course={course} />
