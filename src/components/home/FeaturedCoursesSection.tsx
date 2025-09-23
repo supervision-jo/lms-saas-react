@@ -1,5 +1,6 @@
 import { Clock, Star, Users } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { formatDuration } from "../../utils/formatDuration";
@@ -7,6 +8,7 @@ import CourseCardsSkeleton from "../resource-stats/CourseLoading";
 
 export default function FeaturedCoursesSection() {
   const navigate = useNavigate();
+  const { t } = useTranslation("home");
 
   const {
     data: featuredCoursesData,
@@ -23,11 +25,10 @@ export default function FeaturedCoursesSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Featured Courses
+            {t("featuredCourses")}
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Hand-picked courses by our experts to help you learn the most
-            in-demand skills
+            {t("featuredCoursesDescription")}
           </p>
         </div>
 
@@ -53,7 +54,7 @@ export default function FeaturedCoursesSection() {
                   {course?.is_best_seller && (
                     <div className="absolute top-4 left-4">
                       <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
-                        Bestseller
+                        {t("bestseller")}
                       </span>
                     </div>
                   )}
@@ -66,7 +67,7 @@ export default function FeaturedCoursesSection() {
                         }}
                         className="w-full bg-white text-gray-900 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
                       >
-                        Preview Course
+                        {t("previewCourse")}
                       </button>
                     </div>
                   </div>
@@ -100,7 +101,7 @@ export default function FeaturedCoursesSection() {
                         ))}
                       </div>
                       <span className="text-gray-500 text-sm ml-2">
-                        ({course?.total_reviews ?? 0} reviews)
+                        ({course?.total_reviews ?? 0} {t("reviews")})
                       </span>
                     </div>
                   </div>

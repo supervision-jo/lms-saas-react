@@ -5,13 +5,17 @@ import { initReactI18next } from "react-i18next";
 
 import translationEN from "../locales/en/translation.json";
 import translationAR from "../locales/ar/translation.json";
+import homeEN from "../locales/en/home.json";
+import homeAR from "../locales/ar/home.json";
 
 const resources = {
   en: {
     translation: translationEN,
+    home: homeEN,
   },
   ar: {
     translation: translationAR,
+    home: homeAR,
   },
 };
 
@@ -27,7 +31,7 @@ i18n
     resources,
     lng: localStorage.getItem("i18nextLng") || "en",
     fallbackLng: "en",
-    ns: ["translation"],
+    ns: ["translation", "home"],
     defaultNS: "translation",
     supportedLngs: Object.keys(supportedLngs),
     // debug: import.meta.env.DEV,

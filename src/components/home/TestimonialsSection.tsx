@@ -1,30 +1,30 @@
 import { Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function TestimonialsSection() {
+  const { t } = useTranslation("home");
+
   const testimonials = [
     {
       name: "Sarah Johnson",
-      role: "Software Engineer at Google",
+      role: t("roles.softwareEngineerGoogle"),
       image:
         "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100",
-      quote:
-        "The courses here transformed my career. The quality of instruction is exceptional.",
+      quote: t("quotes.sarahQuote"),
     },
     {
       name: "Michael Chen",
-      role: "Data Scientist at Microsoft",
+      role: t("roles.dataScientistMicrosoft"),
       image:
         "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100",
-      quote:
-        "I went from beginner to landing my dream job in just 6 months of learning.",
+      quote: t("quotes.michaelQuote"),
     },
     {
       name: "Emily Rodriguez",
-      role: "UX Designer at Apple",
+      role: t("roles.uxDesignerApple"),
       image:
         "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100",
-      quote:
-        "The practical projects and real-world applications made all the difference.",
+      quote: t("quotes.emilyQuote"),
     },
   ];
 
@@ -33,10 +33,10 @@ export default function TestimonialsSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            What Our Students Say
+            {t("title")}
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Join thousands of successful learners who transformed their careers
+            {t("subtitle")}
           </p>
         </div>
 
