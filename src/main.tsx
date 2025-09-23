@@ -24,6 +24,8 @@ const queryClient = new QueryClient({
   },
 });
 
+document.body.dir = localStorage.getItem("i18nextLng") === "ar" ? "rtl" : "ltr";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
