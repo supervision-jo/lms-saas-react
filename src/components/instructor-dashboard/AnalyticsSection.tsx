@@ -1,6 +1,7 @@
 import { Star, Users } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { useTranslation } from "react-i18next";
 
 type Analytics = {
   monthlyRevenue: number[];
@@ -19,6 +20,7 @@ type Analytics = {
 };
 
 export default function AnalyticsSection() {
+  const { t } = useTranslation("instructorDashboard");
   const { data } = useCustomQuery(API_ENDPOINTS.instructorCourseStats, [
     "instructor-courses",
   ]);
@@ -51,7 +53,7 @@ export default function AnalyticsSection() {
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">
-          Course Performance
+          {t("analytics.coursePerformance")}
         </h3>
         <div className="space-y-4">
           {analytics.coursePerformance.map((course, index) => (
@@ -64,7 +66,7 @@ export default function AnalyticsSection() {
                 <div className="flex items-center text-sm text-gray-600 mt-1">
                   <Users className="w-4 h-4 mr-1" />
                   <span className="mr-4">
-                    {course.students.toLocaleString()} students
+                    {course.students.toLocaleString()} {t("courses.students")}
                   </span>
                   <Star className="w-4 h-4 mr-1 text-yellow-400" />
                   <span>{course.rating}</span>
@@ -74,7 +76,7 @@ export default function AnalyticsSection() {
                 <p className="text-lg font-bold text-gray-900">
                   ${course.revenue.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-600">Revenue</p>
+                <p className="text-sm text-gray-600">{t("courses.revenue")}</p>
               </div>
             </div>
           ))}

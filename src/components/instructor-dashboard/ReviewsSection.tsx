@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type RecentReview = {
   id: string;
@@ -36,11 +37,12 @@ const recentReviewsData = [
 ];
 
 export default function ReviewsSection() {
+  const { t } = useTranslation("instructorDashboard");
   const recentReviews: RecentReview[] = recentReviewsData ?? [];
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-6">
-        Recent Reviews
+        {t("recentReviews.title")}
       </h3>
       <div className="space-y-4">
         {recentReviews.map((review) => (

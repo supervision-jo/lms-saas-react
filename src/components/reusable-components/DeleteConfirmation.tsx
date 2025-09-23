@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 import Modal from "./Modal";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   text: string;
@@ -16,6 +17,7 @@ export default function DeleteConfirmation({
   onClose,
   handleDelete,
 }: Props) {
+  const { t } = useTranslation("instructorDashboard");
   return (
     <Modal
       isOpen={isOpen}
@@ -23,7 +25,7 @@ export default function DeleteConfirmation({
         onClose(false);
       }}
       size="lg"
-      title="Delete Course"
+      title={t("courses.deleteCourse")}
     >
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <h4 className="font-medium text-yellow-900 mb-2">{title}</h4>
@@ -36,7 +38,7 @@ export default function DeleteConfirmation({
               }}
               className="bg-white text-gray-600 px-6 py-3 w-full rounded-lg border border-gray-200 transition-colors flex items-center justify-center"
             >
-              Cancel
+              {t("createCourseModal.cancel")}
             </button>
 
             <button
@@ -44,7 +46,7 @@ export default function DeleteConfirmation({
               className="bg-yellow-600 text-white px-6 py-3 w-full rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center"
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+              {t("courses.delete")}
             </button>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from "../../utils/constants";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
+import { useTranslation } from "react-i18next";
 
 type FormValues = {
   title: string;
@@ -21,7 +22,7 @@ const InstructorPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("courses");
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
-
+  const { t } = useTranslation("instructorDashboard");
   const {
     register,
     handleSubmit,
@@ -62,11 +63,9 @@ const InstructorPage: React.FC = () => {
         <div className="flex sm:items-center items-start sm:flex-row flex-col sm:justify-between justify-start gap-4 sm:gap-0 mb-8">
           <div>
             <h1 className="sm:text-3xl text-xl font-bold text-gray-900 mb-2">
-              Instructor Dashboard
+              {t("mainTitle")}
             </h1>
-            <p className="text-gray-600">
-              Manage your courses and track your teaching success.
-            </p>
+            <p className="text-gray-600">{t("subTitle")}</p>
           </div>
           <button
             onClick={() => {
@@ -75,7 +74,7 @@ const InstructorPage: React.FC = () => {
             className="bg-purple-600 text-white sm:px-6 px-3 py-2 sm:py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Create Course
+            {t("createCourse")}
           </button>
         </div>
 
@@ -87,9 +86,9 @@ const InstructorPage: React.FC = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: "courses", label: "My Courses" },
-                { id: "analytics", label: "Analytics" },
-                { id: "reviews", label: "Reviews" },
+                { id: "courses", label: `${t("tabs.myCourses")}` },
+                { id: "analytics", label: `${t("tabs.analytics")}` },
+                { id: "reviews", label: `${t("tabs.reviews")}` },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -127,7 +126,7 @@ const InstructorPage: React.FC = () => {
           setIsCreateCourseModalOpen(false);
           reset();
         }}
-        title="Create New Course"
+        title={t("createCourseModal.title")}
       >
         <form
           onSubmit={handleSubmit(handleCreateCourseSubmit)}
@@ -135,14 +134,14 @@ const InstructorPage: React.FC = () => {
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course Title *
+              {t("createCourseModal.label")}
             </label>
             <input
               type="text"
               {...register("title", {
-                required: "Title is required",
+                required: `${t("createCourseModal.error")}`,
               })}
-              placeholder="Enter your course name (e.g., Complete React Developer Course)"
+              placeholder={t("createCourseModal.placeholder")}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base ${
                 errors.title ? "border-red-300" : "border-gray-300"
               }`}
@@ -154,21 +153,20 @@ const InstructorPage: React.FC = () => {
               </p>
             ) : (
               <p className="text-sm text-gray-500 mt-2">
-                Choose a clear, descriptive name that tells students what
-                they'll learn.
+                {t("createCourseModal.errorFallback")}
               </p>
             )}
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 mb-2">
-              What happens next?
+              {t("createCourseModal.description.title")}
             </h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• You'll be taken to the course builder</li>
-              <li>• Add course description and details</li>
-              <li>• Create your curriculum and lessons</li>
-              <li>• Set pricing and publish when ready</li>
+              <li>{t("createCourseModal.description.item0")}</li>
+              <li>{t("createCourseModal.description.item1")}</li>
+              <li>{t("createCourseModal.description.item2")}</li>
+              <li>{t("createCourseModal.description.item3")}</li>
             </ul>
           </div>
 
@@ -181,7 +179,7 @@ const InstructorPage: React.FC = () => {
               className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               disabled={isSubmitting}
             >
-              Cancel
+              {t("createCourseModal.cancel")}
             </button>
             <button
               type="submit"
@@ -190,12 +188,12 @@ const InstructorPage: React.FC = () => {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Creating...
+                  {t("createCourseModal.creating")}
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Course
+                  {t("createCourse")}
                 </>
               )}
             </button>

@@ -6,6 +6,7 @@ import handleErrorAlerts from "../../utils/showErrorMessages";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import DeleteConfirmation from "../reusable-components/DeleteConfirmation";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   navigate: NavigateFunction;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function InstructorCourseCard({ course, navigate }: Props) {
+  const { t } = useTranslation("instructorDashboard");
+
   const { mutateAsync: deleteCourse } = useCustomRemove(
     `${API_ENDPOINTS.deleteCourse}${course?.id}`,
     ["instructor-courses"]
@@ -59,16 +62,20 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                 <div className="flex items-center text-sm text-gray-600 mb-2">
                   <Users className="w-4 h-4 mr-1" />
                   <span className="mr-4">
-                    {course?.total_students ?? 0} students
+                    {course?.total_students ?? 0} {t("courses.students")}
                   </span>
                   <Star className="w-4 h-4 mr-1 text-yellow-400" />
                   <span className="mr-1">{course?.average_rating ?? 0}</span>
-                  <span>({course?.total_reviews ?? 0} reviews)</span>
+                  <span>
+                    ({course?.total_reviews ?? 0} {t("courses.reviews")})
+                  </span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 mb-2">
-                  <span className="mr-4">Revenue: {course?.revenue ?? 0}</span>
                   <span className="mr-4">
-                    Completion: {course?.completion ?? 0}%
+                    {t("courses.revenue")}: {course?.revenue ?? 0}
+                  </span>
+                  <span className="mr-4">
+                    {t("courses.completion")}: {course?.completion ?? 0}%
                   </span>
                   <span
                     className={`px-2 py-1 rounded-full text-xs ${
@@ -77,7 +84,9 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {course?.is_published ? "Published" : "Draft"}
+                    {course?.is_published
+                      ? t("courses.publish")
+                      : t("courses.draft")}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -91,21 +100,21 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                 <button
                   onClick={() => navigate(`/catalog/${course?.id}`)}
                   className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                  title="View Course"
+                  title={t("courses.viewCourse")}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => navigate(`/course-builder/${course?.id}`)}
                   className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
-                  title="Edit Course"
+                  title={t("courses.editCourse")}
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                  title="Delete Course"
+                  title={t("courses.deleteCourse")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -142,20 +151,24 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   </span>
                   <Star className="w-4 h-4 mr-1 text-yellow-400" />
                   <span className="text-gray-500 text-sm ml-2">
-                    ({course?.total_reviews ?? 0} reviews)
+                    ({course?.total_reviews ?? 0} {t("courses.reviews")})
                   </span>
                 </div>
 
                 <div className="flex items-center text-sm text-gray-600">
                   <Users className="w-4 h-4 mr-1" />
-                  <span>{course?.total_students ?? 0} students</span>
+                  <span>
+                    {course?.total_students ?? 0} {t("courses.students")}
+                  </span>
                 </div>
               </div>
 
               <div className="flex md:items-center items-start md:flex-row flex-col gap-4 text-sm text-gray-600 w-full">
-                <span className="mr-4">Revenue: {course?.revenue ?? 0}</span>
                 <span className="mr-4">
-                  Completion: {course?.completion ?? 0}%
+                  {t("courses.revenue")}: {course?.revenue ?? 0}
+                </span>
+                <span className="mr-4">
+                  {t("courses.completion")}: {course?.completion ?? 0}%
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
@@ -164,7 +177,9 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
-                  {course?.is_published ? "Published" : "Draft"}
+                  {course?.is_published
+                    ? t("courses.publish")
+                    : t("courses.draft")}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -177,7 +192,7 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                 <button
                   onClick={() => navigate(`/catalog/${course?.id}`)}
                   className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                  title="View Course"
+                  title={t("courses.viewCourse")}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
@@ -186,14 +201,14 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                     navigate(`/course-builder/${course?.id}`);
                   }}
                   className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
-                  title="Edit Course"
+                  title={t("courses.editCourse")}
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                  title="Delete Course"
+                  title={t("courses.deleteCourse")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -206,8 +221,9 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
         handleDelete={handleDeleteCourse}
         isOpen={isDeleteModalOpen}
         onClose={setIsDeleteModalOpen}
-        text="Once you delete this course, you will not be able to retrieve it again."
-        title={`Delete ${course?.title} course`}
+        text={t("courses.delConfirmText")}
+        // title={`Delete ${course?.title} course`}
+        title={t("courses.delConfirmTitle", { title: course?.title ?? "" })}
       />
     </>
   );
