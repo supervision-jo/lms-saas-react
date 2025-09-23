@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, Earth } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { readUserFromStorage } from "../../services/auth";
+import i18n from "../../i18n/config";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -129,6 +130,17 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Right side */}
           <div className="flex items-center gap-0">
+            <button
+              onClick={() => {
+                i18n.changeLanguage(i18n.language === "en" ? "ar" : "en");
+                localStorage.setItem("i18nextLng", i18n.language);
+                document.body.dir = i18n.language === "ar" ? "rtl" : "ltr";
+              }}
+              className="relative cursor-pointer text-[24px] text-gray-400 hover:text-gray-500"
+            >
+              <Earth className="h-6 w-6" />
+            </button>
+
             <button
               type="button"
               className="sm:hidden p-2 text-gray-500 hover:text-gray-700"

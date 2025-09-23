@@ -1,8 +1,11 @@
 import { Play } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 export default function HeroSection() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
   return (
     <section className="relative bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -17,6 +20,7 @@ export default function HeroSection() {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
+                {t("home")}
                 Learn
                 <span className="block text-yellow-400">Without</span>
                 <span className="block">Limits</span>
