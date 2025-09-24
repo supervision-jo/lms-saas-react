@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 
 export default function HeroSection() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation("home");
 
   return (
     <section className="relative bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 text-white overflow-hidden">
@@ -20,14 +20,12 @@ export default function HeroSection() {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-                {t("home")}
-                Learn
-                <span className="block text-yellow-400">Without</span>
-                <span className="block">Limits</span>
+                {t("learn")}
+                <span className="block text-yellow-400">{t("without")}</span>
+                <span className="block">{t("limits")}</span>
               </h1>
               <p className="text-xl lg:text-2xl text-gray-200 max-w-lg">
-                Master new skills with expert-led courses. Join millions of
-                learners worldwide.
+                {t("description")}
               </p>
             </div>
 
@@ -36,28 +34,28 @@ export default function HeroSection() {
                 onClick={() => navigate("/catalog")}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                Start Learning Today
+                {t("startLearningToday")}
               </button>
               <button
                 onClick={() => navigate("/catalog")}
                 className="border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300"
               >
-                Explore Courses
+                {t("exploreCourses")}
               </button>
             </div>
 
-            <div className="flex items-center space-x-8 pt-8">
+            <div className="flex items-center gap-8 pt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold">50M+</div>
-                <div className="text-gray-300">Students</div>
+                <div className="text-gray-300">{t("students")}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">190K+</div>
-                <div className="text-gray-300">Courses</div>
+                <div className="text-gray-300">{t("courses")}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">70+</div>
-                <div className="text-gray-300">Languages</div>
+                <div className="text-gray-300">{t("languages")}</div>
               </div>
             </div>
           </div>
@@ -65,21 +63,19 @@ export default function HeroSection() {
           <div className="relative">
             <div className="relative bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 border border-white border-opacity-20">
               <div className="space-y-6">
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                     <Play className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Featured Course</h3>
-                    <p className="text-gray-300">
-                      Complete React Developer Course
-                    </p>
+                    <h3 className="font-semibold">{t("featuredCourse")}</h3>
+                    <p className="text-gray-300">{t("completeReactCourse")}</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Progress</span>
+                    <span className="text-gray-300">{t("progress")}</span>
                     <span className="text-white font-semibold">68%</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
@@ -88,8 +84,10 @@ export default function HeroSection() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-300">
-                  <span>12 of 18 lessons completed</span>
-                  <span>6h 32m remaining</span>
+                  <span>
+                    {t("lessonsCompleted", { completed: 12, total: 18 })}
+                  </span>
+                  <span>{t("timeRemaining", { hours: 6, minutes: 32 })}</span>
                 </div>
               </div>
             </div>
