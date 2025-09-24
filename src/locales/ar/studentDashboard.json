@@ -1,0 +1,71 @@
+{
+  "header": {
+    "welcome": "مرحبًا بعودتك، {{name}}! 👋",
+    "subtitle": "واصِل رحلتك التعليمية وحقِّق أهدافك.",
+    "overallProgress": "إجمالي التقدّم"
+  },
+
+  "tabs": {
+    "myCourses": "دوراتي",
+    "achievements": "الإنجازات"
+  },
+
+  "coursesSection": {
+    "title": "دوراتي",
+    "exploreMore": "استكشف المزيد من الدورات"
+  },
+
+  "quickActions": {
+    "title": "إجراءات سريعة",
+    "browseNew": "تصفّح دورات جديدة",
+    "viewCerts": "عرض الشهادات",
+    "updateProfile": "تحديث الملف الشخصي"
+  },
+
+  "thisMonth": {
+    "title": "هذا الشهر",
+    "newCourses": "دورات جديدة",
+    "hoursLearned": "ساعات التعلّم",
+    "certificates": "الشهادات",
+    "streakDays": "أيام السلسلة"
+  },
+
+  "achievementsSection": {
+    "title": "الإنجازات",
+    "items": {
+      "1": {
+        "title": "أول دورة مُكتمل",
+        "desc": "أتممتَ دورةك الأول"
+      },
+      "2": {
+        "title": "سلسلة أسبوع",
+        "desc": "تعلّمتَ لسبعة أيام متتالية"
+      },
+      "3": {
+        "title": "متعلّم سريع",
+        "desc": "أنهيتَ 3 دورات في شهر واحد"
+      },
+      "4": {
+        "title": "متقن الاختبارات",
+        "desc": "حصلتَ على 100٪ في 5 اختبارات"
+      },
+      "5": {
+        "title": "مُعين المجتمع",
+        "desc": "ساعدتَ 10 طلاب"
+      },
+      "6": {
+        "title": "طالب مُثابر",
+        "desc": "قضيتَ أكثر من 100 ساعة في التعلّم"
+      }
+    }
+  },
+  "headerStats": {
+    "coursesEnrolled": "الدورات المُسجَّل بها",
+    "hoursLearned": "ساعات التعلّم",
+    "certificates": "الشهادات",
+    "streakDays": "أيام السلسلة"
+  },
+  "enrolledCourses": {
+    "continue": "استمرار"
+  }
+}

@@ -4,6 +4,7 @@ import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { formatDuration } from "../../utils/formatDuration";
+import { useTranslation } from "react-i18next";
 
 export default function EnrolledCourses({
   item,
@@ -13,6 +14,7 @@ export default function EnrolledCourses({
   isStudent: boolean;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation("studentDashboard");
 
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
@@ -149,7 +151,7 @@ export default function EnrolledCourses({
                   }
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
-                  Continue
+                  {t("enrolledCourses.continue")}
                 </button>
               </div>
             </div>

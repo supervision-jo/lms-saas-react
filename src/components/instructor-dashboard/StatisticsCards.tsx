@@ -1,6 +1,7 @@
 import { DollarSign, Eye, LucideIcon, Star, Users } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { useTranslation } from "react-i18next";
 
 const ICONS = {
   Users,
@@ -21,6 +22,7 @@ type DisplayedStats = {
 };
 
 export default function StatisticsCards() {
+  const { t } = useTranslation("instructorDashboard");
   const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
     "instructor-stats",
   ]);
@@ -29,7 +31,7 @@ export default function StatisticsCards() {
 
   const items = [
     {
-      label: "Total Students",
+      label: t("statisticsCards.totalStudents"),
       value: stats?.total_students ?? 0,
       icon: "Users",
       color: "text-blue-600",
@@ -37,7 +39,7 @@ export default function StatisticsCards() {
       change: stats?.new_students ?? 0,
     },
     {
-      label: "Total Revenue",
+      label: t("statisticsCards.totalRevenue"),
       value: stats?.revenue ?? 0,
       icon: "DollarSign",
       color: "text-green-600",
@@ -45,7 +47,7 @@ export default function StatisticsCards() {
       // change: "+8%",
     },
     {
-      label: "Average Rating",
+      label: t("statisticsCards.averageRating"),
       value: stats?.average_rating ?? 0,
       icon: "Star",
       color: "text-yellow-600",
@@ -53,7 +55,7 @@ export default function StatisticsCards() {
       // change: "+0.2",
     },
     {
-      label: "Total Reviews",
+      label: t("statisticsCards.totalReviews"),
       value: stats?.total_reviews,
       icon: "Eye",
       color: "text-purple-600",
@@ -90,7 +92,9 @@ export default function StatisticsCards() {
                 <span className="text-sm font-medium text-green-600">
                   +{stat?.change}
                 </span>
-                <p className="text-xs text-gray-500">vs last month</p>
+                <p className="text-xs text-gray-500">
+                  {t("statisticsCards.vsLastMonth")}
+                </p>
               </div>
             ) : null}
           </div>
