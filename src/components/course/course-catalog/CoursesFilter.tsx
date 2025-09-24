@@ -2,6 +2,7 @@ import { Filter, X } from "lucide-react";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useEffect, useRef, useId } from "react";
+import { useTranslation } from "react-i18next";
 
 type PriceFilter = "all" | "free" | "paid";
 
@@ -39,6 +40,8 @@ export default function CoursesFilter({
   onCloseMobile,
   returnFocusRef,
 }: Props) {
+  const { t } = useTranslation("courseCatalog");
+
   const { data } = useCustomQuery(API_ENDPOINTS.categories, ["categories"]);
   const categories: Category[] = data?.data?.data;
 
@@ -67,13 +70,15 @@ export default function CoursesFilter({
   const Body = ({ group }: { group: string }) => (
     <>
       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-        <Filter className="w-5 h-5 mr-2" />
-        Filters
+        <Filter className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
+        {t("filters.title")}
       </h3>
 
       {/* Categories */}
       <div className="mb-6">
-        <h4 className="font-medium text-gray-900 mb-3">Category</h4>
+        <h4 className="font-medium text-gray-900 mb-3">
+          {t("filters.category.title")}
+        </h4>
         <div className="space-y-2">
           <label className="flex items-center cursor-pointer">
             <input
@@ -85,7 +90,9 @@ export default function CoursesFilter({
               className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               aria-checked={selectedCategory === "all"}
             />
-            <span className="ml-3 text-sm text-gray-700 flex-1">All</span>
+            <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700 flex-1">
+              {t("filters.category.all")}
+            </span>
           </label>
           {categories?.map((category) => (
             <label
@@ -100,7 +107,7 @@ export default function CoursesFilter({
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               />
-              <span className="ml-3 text-sm text-gray-700 flex-1">
+              <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700 flex-1">
                 {category.name}
               </span>
               <span className="text-xs text-gray-500">
@@ -113,13 +120,15 @@ export default function CoursesFilter({
 
       {/* Level */}
       <div className="mb-6">
-        <h4 className="font-medium text-gray-900 mb-3">Level</h4>
+        <h4 className="font-medium text-gray-900 mb-3">
+          {t("filters.level.title")}
+        </h4>
         <div className="space-y-2">
           {[
-            { id: "all", label: "All Levels" },
-            { id: "beginner", label: "Beginner" },
-            { id: "intermediate", label: "Intermediate" },
-            { id: "advanced", label: "Advanced" },
+            { id: "all", label: t("filters.level.all") },
+            { id: "beginner", label: t("filters.level.beginner") },
+            { id: "intermediate", label: t("filters.level.intermediate") },
+            { id: "advanced", label: t("filters.level.advanced") },
           ].map((level) => (
             <label key={level.id} className="flex items-center cursor-pointer">
               <input
@@ -130,7 +139,9 @@ export default function CoursesFilter({
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               />
-              <span className="ml-3 text-sm text-gray-700">{level.label}</span>
+              <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700">
+                {level.label}
+              </span>
             </label>
           ))}
         </div>
@@ -138,12 +149,14 @@ export default function CoursesFilter({
 
       {/* Price */}
       <div className="mb-6">
-        <h4 className="font-medium text-gray-900 mb-3">Price</h4>
+        <h4 className="font-medium text-gray-900 mb-3">
+          {t("filters.price.title")}
+        </h4>
         <div className="space-y-2">
           {[
-            { id: "all", label: "All Prices" },
-            { id: "free", label: "Free" },
-            { id: "paid", label: "Paid" },
+            { id: "all", label: t("filters.price.all") },
+            { id: "free", label: t("filters.price.free") },
+            { id: "paid", label: t("filters.price.paid") },
           ].map((price) => (
             <label key={price.id} className="flex items-center cursor-pointer">
               <input
@@ -154,7 +167,9 @@ export default function CoursesFilter({
                 onChange={(e) => setPriceFilter(e.target.value as PriceFilter)}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               />
-              <span className="ml-3 text-sm text-gray-700">{price.label}</span>
+              <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700">
+                {price.label}
+              </span>
             </label>
           ))}
         </div>
@@ -164,7 +179,7 @@ export default function CoursesFilter({
         onClick={onClearFilters}
         className="w-full text-purple-600 hover:text-purple-700 text-sm font-medium"
       >
-        Clear all filters
+        {t("filters.clear")}
       </button>
     </>
   );
@@ -200,7 +215,7 @@ export default function CoursesFilter({
           aria-label="Filters"
         >
           <div className="flex items-center justify-between p-4 border-b">
-            <span className="font-semibold">Filters</span>
+            <span className="font-semibold">{t("filters.title")}</span>
             <button
               ref={closeBtnRef}
               type="button"

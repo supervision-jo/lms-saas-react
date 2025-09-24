@@ -10,11 +10,13 @@ import {
   Download,
   HelpCircle,
   CheckCircle,
+  ChevronLeft,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { useTranslation } from "react-i18next";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function findNextLessonId(
@@ -44,11 +46,13 @@ function AssessmentList({
   isEnrolled,
   onOpen,
   currentAssessmentId,
+  t,
 }: {
   lesson: Lesson;
   isEnrolled: boolean;
   onOpen: (assessment: Exam) => void;
   currentAssessmentId?: string;
+  t: (key: string) => string;
 }) {
   const { data } = useCustomQuery(
     `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
@@ -83,7 +87,11 @@ function AssessmentList({
                 ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
                 : "hover:bg-white hover:shadow-md bg-white"
             }`}
-            title={a.type === "exam" ? "Open Exam" : "Open Quiz"}
+            title={
+              a.type === "exam"
+                ? t("courseContent.openExam")
+                : t("courseContent.openQuiz")
+            }
           >
             <div className="flex items-center gap-2">
               <Icon className={`w-4 h-4 ${isActive ? "text-white" : accent}`} />
@@ -92,7 +100,10 @@ function AssessmentList({
                   isActive ? "text-white" : "text-gray-700"
                 }`}
               >
-                {a.title || (a.type === "exam" ? "Exam" : "Quiz")}
+                {a.title ||
+                  (a.type === "exam"
+                    ? t("courseContent.exam")
+                    : t("courseContent.quiz"))}
               </span>
             </div>
             <div
@@ -100,7 +111,9 @@ function AssessmentList({
                 isActive ? "text-purple-200" : "text-gray-500"
               }`}
             >
-              {a.time_limit}m • pass {a.passing_score}%
+              {a.time_limit}
+              {t("courseContent.m")} • {t("courseContent.pass")}{" "}
+              {a.passing_score}%
             </div>
           </button>
         );
@@ -118,6 +131,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
   className,
   onOpenAssessment,
 }) => {
+  const { t, i18n } = useTranslation("courseDetails");
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
   const { pathname } = useLocation();
 
@@ -247,11 +261,11 @@ const CourseContent: React.FC<CourseContentProps> = ({
       }`}
     >
       <div className="sm:p-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
-        <h3 className="text-xl font-bold">Course Content</h3>
+        <h3 className="text-xl font-bold">{t("courseContent.title")}</h3>
         <p className="text-purple-100 mt-1 text-sm">
-          {safeModules.length} modules •{" "}
+          {safeModules.length} {t("courseContent.modules")} •{" "}
           {safeModules.reduce((acc, m) => acc + (m?.lessons?.length ?? 0), 0)}{" "}
-          lessons
+          {t("courseContent.lessons")}
         </p>
       </div>
 
@@ -270,7 +284,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
               >
                 <div className="flex items-center">
                   {isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-purple-600 mr-3 transition-transform duration-200" />
+                    <ChevronDown className="w-5 h-5 text-purple-600 ltr:mr-3 rtl:ml-3 transition-transform duration-200" />
+                  ) : i18n.language === "ar" ? (
+                    <ChevronLeft className="w-5 h-5 text-gray-500 ml-3 transition-transform duration-200" />
                   ) : (
                     <ChevronRight className="w-5 h-5 text-gray-500 mr-3 transition-transform duration-200" />
                   )}
@@ -279,8 +295,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
                       {module?.title}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {module?.lessons?.length} lessons •{" "}
-                      {formatDuration(sumModuleHours(module))}
+                      {module?.lessons?.length} {t("courseContent.lessons")} •{" "}
+                      {formatDuration(sumModuleHours(module), i18n.language)}
                     </p>
                   </div>
                 </div>
@@ -330,12 +346,15 @@ const CourseContent: React.FC<CourseContentProps> = ({
                                   : "text-gray-600"
                               }`}
                             >
-                              <Clock className="w-3 h-3 mr-1" />
-                              {formatDuration(lesson?.duration_hours)}
+                              <Clock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                              {formatDuration(
+                                lesson?.duration_hours,
+                                i18n.language
+                              )}
                             </div>
                             {lesson?.free_preview && !isEnrolled && (
-                              <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
-                                Free
+                              <span className="ltr:ml-2 rtl:mr-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
+                                {t("courseContent.free")}
                               </span>
                             )}
                           </div>
@@ -349,6 +368,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           onOpen={(a) =>
                             onOpenAssessment?.(String(lesson.id), a)
                           }
+                          t={t}
                         />
                       </div>
                     );

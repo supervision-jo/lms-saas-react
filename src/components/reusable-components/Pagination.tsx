@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 type PaginationProps = {
   total: number;
   page: number;
@@ -69,6 +71,7 @@ export default function Pagination({
   siblingCount = 1,
   boundaryCount = 1,
 }: PaginationProps) {
+  const { t } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
   const current = Math.min(Math.max(1, page), totalPages);
 
@@ -94,7 +97,7 @@ export default function Pagination({
           onClick={() => onPageChange(current - 1)}
           disabled={current <= 1}
         >
-          Previous
+          {t("previous")}
         </button>
 
         {/* Page items */}
@@ -132,7 +135,7 @@ export default function Pagination({
               onClick={() => onPageChange(current - 1)}
               disabled={current <= 1}
             >
-              Previous
+              {t("previous")}
             </button>
 
             <button
@@ -143,7 +146,7 @@ export default function Pagination({
               }}
               disabled={current >= totalPages}
             >
-              Next
+              {t("next")}
             </button>
           </div>
         </div>
@@ -157,7 +160,7 @@ export default function Pagination({
           }}
           disabled={current >= totalPages}
         >
-          Next
+          {t("next")}
         </button>
       </nav>
     </div>

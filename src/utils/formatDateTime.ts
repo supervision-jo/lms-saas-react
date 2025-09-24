@@ -1,72 +1,73 @@
-export function formatDateTimeSimple(isoString: string): string {
+// utils/formatDateTimeSimple.ts
+export function formatDateTimeSimple(
+  isoString: string,
+  opts?: {
+    locale?: string; // e.g., "en", "ar", "ar-EG"
+    now?: Date; // for testing
+    t?: (key: string) => string; // i18n translator (optional)
+    absolute?: Intl.DateTimeFormatOptions; // override absolute format
+  }
+): string {
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return "";
 
-  const absFormat = (d: Date) => {
-    const MONTHS = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const month = MONTHS[d.getMonth()];
-    const day = d.getDate();
-    const year = d.getFullYear();
-    let hours = d.getHours();
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-    return `${month} ${day}, ${year} at ${hours}:${minutes} ${ampm}`;
-  };
+  const locale =
+    opts?.locale ??
+    (typeof navigator !== "undefined" ? navigator.language : "en");
+  const now = opts?.now ?? new Date();
 
-  const now = new Date();
+  // Absolute format (localized)
+  const absFmt = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    ...opts?.absolute,
+  });
+
   const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 0) {
+    // future -> show absolute localized date/time
+    return absFmt.format(date);
+  }
 
-  if (diffMs < 0) return absFormat(date);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
   const MINUTE = 60_000;
   const HOUR = 60 * MINUTE;
   const DAY = 24 * HOUR;
   const WEEK = 7 * DAY;
-  const MONTH = 30 * DAY;
-  const YEAR = 365 * DAY;
+  const MONTH = 30 * DAY; // approximation
+  const YEAR = 365 * DAY; // approximation
 
   if (diffMs < MINUTE) {
-    return "Now";
+    // “Now” via i18n if provided, else fallback to rtf seconds
+    return opts?.t ? opts.t("time.now") : rtf.format(0, "second");
   }
 
   if (diffMs < HOUR) {
-    const mins = Math.max(1, Math.floor(diffMs / MINUTE));
-    return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+    const mins = Math.floor(diffMs / MINUTE);
+    return rtf.format(-mins, "minute"); // past => negative
   }
 
   if (diffMs < DAY) {
     const hrs = Math.floor(diffMs / HOUR);
-    return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+    return rtf.format(-hrs, "hour");
   }
 
   if (diffMs < WEEK) {
     const days = Math.floor(diffMs / DAY);
-    return `${days} day${days === 1 ? "" : "s"} ago`;
+    return rtf.format(-days, "day");
   }
 
   if (diffMs < MONTH) {
     const weeks = Math.floor(diffMs / WEEK);
-    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+    return rtf.format(-weeks, "week");
   }
 
   if (diffMs < YEAR) {
-    const months = Math.min(11, Math.max(1, Math.floor(diffMs / MONTH)));
-    return `${months} month${months === 1 ? "" : "s"} ago`;
+    const months = Math.floor(diffMs / MONTH);
+    return rtf.format(-months, "month");
   }
 
-  return absFormat(date);
+  // a year or more -> absolute localized format
+  return absFmt.format(date);
 }

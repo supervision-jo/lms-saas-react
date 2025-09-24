@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomPost } from "../../hooks/useMutation";
 import { storeTokens } from "../../services/auth";
+import { useTranslation } from "react-i18next";
 
 interface FormValues {
   email: string;
@@ -15,6 +16,7 @@ interface FormValues {
 }
 
 const LoginPage: React.FC = () => {
+  const { t, i18n } = useTranslation("auth");
   const { setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -45,7 +47,7 @@ const LoginPage: React.FC = () => {
       const res = await login.mutateAsync(formData);
 
       if (res.status) {
-        toast.success("Logged in successfully!");
+        toast.success(t("Login.success"));
 
         const tokens = res?.data?.tokens;
         const user = res?.data?.user;
@@ -79,9 +81,7 @@ const LoginPage: React.FC = () => {
           <div className="text-3xl font-bold text-purple-600 mb-2">
             LearnHub
           </div>
-          <p className="text-gray-600">
-            Welcome back! Please sign in to your account.
-          </p>
+          <p className="text-gray-600">{t("Login.welcome")}</p>
         </div>
 
         {/* Login Form */}
@@ -90,7 +90,7 @@ const LoginPage: React.FC = () => {
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                {t("Login.email.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -99,16 +99,16 @@ const LoginPage: React.FC = () => {
                 <input
                   type="email"
                   {...register("email", {
-                    required: "Email is required",
+                    required: t("Login.email.error.required"),
                     pattern: {
                       value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: "Please enter a valid email.",
+                      message: t("Login.email.error.valid"),
                     },
                   })}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Enter your email"
+                  placeholder={t("Login.email.placeholder")}
                 />
               </div>
               {errors.email && (
@@ -121,7 +121,7 @@ const LoginPage: React.FC = () => {
             {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t("Login.password.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -130,10 +130,10 @@ const LoginPage: React.FC = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   {...register("password", {
-                    required: "Password is required",
+                    required: t("Login.password.error.required"),
                   })}
                   className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your password"
+                  placeholder={t("Login.password.placeholder")}
                 />
                 <button
                   type="button"
@@ -166,16 +166,16 @@ const LoginPage: React.FC = () => {
                 />
                 <label
                   htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-700"
+                  className="ltr:ml-2 rtl:mr-2 block text-sm text-gray-700"
                 >
-                  Remember me
+                  {t("Login.rememberMe")}
                 </label>
               </div>
               <button
                 type="button"
                 className="text-sm text-purple-600 hover:text-purple-700 font-medium"
               >
-                Forgot password?
+                {t("Login.forgotPass")}
               </button>
             </div>
 
@@ -189,26 +189,30 @@ const LoginPage: React.FC = () => {
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  Sign In
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  {t("Login.signin")}
+                  {i18n.language === "ar" ? (
+                    <ArrowLeft className="w-5 h-5 mr-2" />
+                  ) : (
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  )}
                 </>
               )}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  Or continue with
+                  {t("Login.continue")}
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Google Login */}
           {/* <button
@@ -239,12 +243,12 @@ const LoginPage: React.FC = () => {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Don't have an account?{" "}
+              {t("Login.dontHaveAcc")}{" "}
               <button
                 onClick={() => navigate("/sign-up")}
                 className="text-purple-600 hover:text-purple-700 font-semibold"
               >
-                Sign up
+                {t("Login.signup")}
               </button>
             </p>
           </div>

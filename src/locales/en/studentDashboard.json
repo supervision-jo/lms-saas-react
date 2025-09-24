@@ -66,6 +66,10 @@
     "streakDays": "Streak Days"
   },
   "enrolledCourses": {
-    "continue": "Continue"
+    "continue": "Continue",
+    "lastAccessed": "Last accessed"
+  },
+  "time": {
+    "now": "Now"
   }
 }

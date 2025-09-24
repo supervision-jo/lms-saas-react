@@ -69,5 +69,8 @@
     "tipUpdateDesc": "Keep your courses current and relevant",
     "tipPromoteTitle": "Promote Courses",
     "tipPromoteDesc": "Share on social media and networks"
+  },
+  "time": {
+    "now": "Now"
   }
 }

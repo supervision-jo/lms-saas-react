@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import toast from "react-hot-toast";
 import { useCustomPost } from "../../hooks/useMutation";
+import { useTranslation } from "react-i18next";
 
 type Role = "instructor" | "student";
 
@@ -42,6 +51,7 @@ const SignupPage: React.FC = () => {
     },
   });
 
+  const { t, i18n } = useTranslation("auth");
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -84,7 +94,7 @@ const SignupPage: React.FC = () => {
       const res = await signUp.mutateAsync(formData);
 
       if (res?.status) {
-        toast.success("Signed up successfully!");
+        toast.success(t("Signup.success"));
         const user = res.data.user;
         localStorage.setItem(USER_KEY, JSON.stringify(user));
 
@@ -138,9 +148,7 @@ const SignupPage: React.FC = () => {
           <div className="text-3xl font-bold text-purple-600 mb-2">
             LearnHub
           </div>
-          <p className="text-gray-600">
-            Create your account and start learning today!
-          </p>
+          <p className="text-gray-600">{t("Signup.welcome")}</p>
         </div>
 
         {/* Signup Form */}
@@ -150,7 +158,7 @@ const SignupPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
+                  {t("Signup.fn.label")}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -159,12 +167,12 @@ const SignupPage: React.FC = () => {
                   <input
                     type="text"
                     {...register("first_name", {
-                      required: "First name required",
+                      required: t("Signup.fn.error"),
                     })}
                     className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                       errors.first_name ? "border-red-300" : "border-gray-300"
                     }`}
-                    placeholder="First name"
+                    placeholder={t("Signup.fn.placeholder")}
                   />
                 </div>
                 {errors.first_name && (
@@ -176,15 +184,15 @@ const SignupPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
+                  {t("Signup.ln.label")}
                 </label>
                 <input
                   type="text"
-                  {...register("last_name", { required: "Last name required" })}
+                  {...register("last_name", { required: t("Signup.ln.error") })}
                   className={`block w-full px-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.last_name ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Last name"
+                  placeholder={t("Signup.ln.placeholder")}
                 />
                 {errors.last_name && (
                   <p className="mt-1 text-sm text-red-600">
@@ -197,7 +205,7 @@ const SignupPage: React.FC = () => {
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                {t("Signup.email.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -206,16 +214,16 @@ const SignupPage: React.FC = () => {
                 <input
                   type="email"
                   {...register("email", {
-                    required: "Email is required",
+                    required: t("Signup.email.error.required"),
                     pattern: {
                       value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: "Please enter a valid email.",
+                      message: t("Signup.email.error.valid"),
                     },
                   })}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Enter your email"
+                  placeholder={t("Signup.email.placeholder")}
                 />
               </div>
               {errors.email && (
@@ -228,20 +236,24 @@ const SignupPage: React.FC = () => {
             {/* Role Field (required, default Instructor) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose your role
+                {t("Signup.role.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <select
-                  {...register("role", { required: "Please choose a role" })}
+                  {...register("role", { required: t("Signup.role.error") })}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.role ? "border-red-300" : "border-gray-300"
                   }`}
                 >
-                  <option value="instructor">Instructor</option>
-                  <option value="student">Student</option>
+                  <option value="instructor">
+                    {t("Signup.role.values.instructor")}
+                  </option>
+                  <option value="student">
+                    {t("Signup.role.values.student")}
+                  </option>
                 </select>
               </div>
               {errors.role && (
@@ -254,7 +266,7 @@ const SignupPage: React.FC = () => {
             {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t("Signup.password.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -263,12 +275,12 @@ const SignupPage: React.FC = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   {...register("password", {
-                    required: "Password is required",
+                    required: t("Signup.password.error"),
                   })}
                   className={`block w-full pl-10 pr-12 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.password ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Create a password"
+                  placeholder={t("Signup.password.label")}
                 />
                 <button
                   type="button"
@@ -292,7 +304,7 @@ const SignupPage: React.FC = () => {
             {/* Confirm Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                {t("Signup.cPassword.label")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -301,14 +313,15 @@ const SignupPage: React.FC = () => {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   {...register("c_password", {
-                    required: "Confirmation password is required",
+                    required: t("Signup.cPassword.error.required"),
                     validate: (val) =>
-                      val === getValues("password") || "Passwords do not match",
+                      val === getValues("password") ||
+                      t("Signup.cPassword.error.match"),
                   })}
                   className={`block w-full pl-10 pr-12 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.c_password ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Confirm your password"
+                  placeholder={t("Signup.cPassword.placeholder")}
                 />
                 <button
                   type="button"
@@ -338,27 +351,26 @@ const SignupPage: React.FC = () => {
                     type="checkbox"
                     {...register("terms", {
                       validate: (v) =>
-                        v === true ||
-                        "Please read the Terms and Privacy Policy and agree.",
+                        v === true || t("Signup.agreeTerms.error"),
                     })}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                   />
                 </div>
-                <div className="ml-3 text-sm">
+                <div className="ltr:ml-3 rtl:mr-3 text-sm">
                   <label htmlFor="agree-terms" className="text-gray-700">
-                    I agree to the{" "}
+                    {t("Signup.agreeTerms.label")}{" "}
                     <button
                       type="button"
                       className="text-purple-600 hover:text-purple-700 font-medium"
                     >
-                      Terms of Service
+                      {t("Signup.agreeTerms.terms")}
                     </button>{" "}
-                    and{" "}
+                    {t("Signup.agreeTerms.and")}{" "}
                     <button
                       type="button"
                       className="text-purple-600 hover:text-purple-700 font-medium"
                     >
-                      Privacy Policy
+                      {t("Signup.agreeTerms.privacy")}
                     </button>
                   </label>
                 </div>
@@ -380,26 +392,30 @@ const SignupPage: React.FC = () => {
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  Create Account
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  {t("Signup.create")}
+                  {i18n.language === "ar" ? (
+                    <ArrowLeft className="w-5 h-5 mr-2" />
+                  ) : (
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  )}
                 </>
               )}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  Or continue with
+                  {t("Signup.continue")}
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Google Signup */}
           {/* <button
@@ -431,12 +447,12 @@ const SignupPage: React.FC = () => {
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{" "}
+              {t("Signup.alreadyHaveAcc")}{" "}
               <button
                 onClick={() => navigate("/login")}
                 className="text-purple-600 hover:text-purple-700 font-semibold"
               >
-                Sign in
+                {t("Signup.signin")}
               </button>
             </p>
           </div>

@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from "../../utils/constants";
 import { readUserFromStorage } from "../../services/auth";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 interface CourseCardProps {
   course: Course;
@@ -28,6 +29,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
   enrolledCourses,
   isFetching,
 }) => {
+  const { t, i18n } = useTranslation("courseCatalog");
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -86,7 +88,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
-      toast.error("Please login first!");
+      toast.error(t("card.handleEnroll.authError"));
       setShowLoginModal(true);
       return;
     }
@@ -94,21 +96,26 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
     try {
       if (currentUser?.is_instructor) {
-        toast.error("Please sign in as student!");
+        toast.error(t("card.handleEnroll.roleError"));
         return;
       }
       setEnrolledOptimistic(true);
       const res = await createEnroll.mutateAsync({ course: course?.id });
       if (res?.status) {
-        toast.success("You have been enrolled successfully!");
+        toast.success(t("card.handleEnroll.success"));
         queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
       } else {
         setEnrolledOptimistic(false);
-        toast.error(res?.error?.non_field_errors?.[0] ?? "Failed to enroll");
+        toast.error(
+          res?.error?.non_field_errors?.[0] ??
+            t("card.handleEnroll.failFallback")
+        );
       }
     } catch (error: any) {
       setEnrolledOptimistic(false);
-      handleErrorAlerts(error?.response?.data?.message ?? "Unexpected error");
+      handleErrorAlerts(
+        error?.response?.data?.message ?? t("card.handleEnroll.errorFallback")
+      );
     }
   };
 
@@ -143,7 +150,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
         {course?.is_best_seller && (
           <div className="absolute top-4 left-4">
             <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded-full">
-              Bestseller
+              {t("card.bestseller")}
             </span>
           </div>
         )}
@@ -155,8 +162,8 @@ const CourseCard: React.FC<CourseCardProps> = ({
             }}
             className="bg-white text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition-colors flex items-center"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Preview
+            <Play className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+            {t("card.preview")}
           </button>
         </div>
       </div>
@@ -173,10 +180,10 @@ const CourseCard: React.FC<CourseCardProps> = ({
                 <img
                   src={course?.instructor?.profile_image}
                   alt={course?.instructor?.first_name}
-                  className="w-6 h-6 rounded-full mr-2"
+                  className="w-6 h-6 rounded-full ltr:mr-2 rtl:ml-2"
                 />
               ) : (
-                <div className="w-6 h-6 bg-purple-600 mr-2 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-purple-600 ltr:mr-2 rtl:ml-2 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
                     {course?.instructor?.first_name?.charAt(0).toUpperCase()}
                   </span>
@@ -196,7 +203,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
             <div className="flex items-center mb-4">
               <div className="flex items-center">
-                <span className="text-yellow-500 font-bold mr-1">
+                <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
                   {Math.floor(+course?.average_rating) ?? 0}
                 </span>
                 <div className="flex">
@@ -211,7 +218,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                     />
                   ))}
                 </div>
-                <span className="text-gray-500 text-sm ml-2">
+                <span className="text-gray-500 text-sm ltr:ml-2 rtl:mr-2">
                   ({course?.total_reviews?.toLocaleString() ?? 0})
                 </span>
               </div>
@@ -219,11 +226,13 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
               <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                <span>{formatDuration(course?.total_hours)}</span>
+                <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                <span>
+                  {formatDuration(course?.total_hours, i18n.language)}
+                </span>
               </div>
               <div className="flex items-center">
-                <Users className="w-4 h-4 mr-1" />
+                <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                 <span>{course?.total_students?.toLocaleString() ?? 0}</span>
               </div>
               <span className="bg-gray-100 px-2 py-1 rounded text-xs">
@@ -234,7 +243,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
             {isListView && course?.objectives?.length > 0 && (
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-2">
-                  What you'll learn:
+                  {t("card.whatYouLearn")}
                 </h4>
                 <ul className="space-y-1">
                   {course?.objectives?.map((item: TextLists) => (
@@ -242,7 +251,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                       key={item?.id}
                       className="flex items-start text-sm text-gray-700"
                     >
-                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mr-2 mt-2 flex-shrink-0"></div>
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full ltr:mr-2 rtl:ml-2 mt-2 flex-shrink-0"></div>
                       {item?.text}
                     </li>
                   ))}
@@ -264,7 +273,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                   ${course?.price}
                 </span>
                 {course?.old_price && (
-                  <span className="text-gray-500 line-through ml-2">
+                  <span className="text-gray-500 line-through ltr:ml-2 rtl:mr-2">
                     ${course?.old_price}
                   </span>
                 )}
@@ -273,7 +282,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
               <span
                 className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
               >
-                Free
+                {t("card.free")}
               </span>
             )}
 
@@ -288,7 +297,9 @@ const CourseCard: React.FC<CourseCardProps> = ({
                     disabled={isFetching || createEnroll?.isPending}
                     className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                   >
-                    {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
+                    {createEnroll?.isPending
+                      ? t("card.enrolling")
+                      : t("card.enrollNow")}
                   </button>
                 ) : (
                   <div className="text-center mb-4">
@@ -306,8 +317,8 @@ const CourseCard: React.FC<CourseCardProps> = ({
                       className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
                     >
                       {isInstructorCourse
-                        ? "View your course"
-                        : "Start Learning"}
+                        ? t("card.viewCourse")
+                        : t("card.startLearning")}
                     </button>
                   </div>
                 )}

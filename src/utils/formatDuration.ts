@@ -1,23 +1,26 @@
-export function formatDuration(val: unknown): string {
-  if (val == null) return "0h 0m";
+export function formatDuration(val: unknown, locale?: string): string {
+  const hours = locale === "ar" ? "س" : "h";
+  const minutes = locale === "ar" ? "د" : "m";
+
+  if (val == null) return `0${hours} 0${minutes}`;
 
   if (typeof val === "number") {
-    if (!Number.isFinite(val)) return "0h 0m";
+    if (!Number.isFinite(val)) return `0${hours} 0${minutes}`;
     if (val >= 20) {
       const h = Math.floor(val / 60);
       const m = Math.round(val % 60);
       if (h > 0) {
-        return `${h}h ${m}m`;
+        return `${h}${hours} ${m}${minutes}`;
       } else {
-        return `${m}m`;
+        return `${m}${minutes}`;
       }
     } else {
       const h = Math.floor(val);
       const m = Math.round((val - h) * 60);
       if (h > 0) {
-        return `${h}h ${m}m`;
+        return `${h}${hours} ${m}${minutes}`;
       } else {
-        return `${m}m`;
+        return `${m}${minutes}`;
       }
     }
   }
@@ -31,9 +34,9 @@ export function formatDuration(val: unknown): string {
       const m = parseInt(mStr ?? "0", 10);
       if (!Number.isNaN(h) && !Number.isNaN(m)) {
         if (h > 0) {
-          return `${h}h ${m}m`;
+          return `${h}${hours} ${m}${minutes}`;
         } else {
-          return `${m}m`;
+          return `${m}${minutes}`;
         }
       }
     }
@@ -44,9 +47,9 @@ export function formatDuration(val: unknown): string {
       const h = hMatch ? parseInt(hMatch[1], 10) : 0;
       const m = mMatch ? parseInt(mMatch[1], 10) : 0;
       if (h > 0) {
-        return `${h}h ${m}m`;
+        return `${h}${hours} ${m}${minutes}`;
       } else {
-        return `${m}m`;
+        return `${m}${minutes}`;
       }
     }
 
@@ -56,21 +59,21 @@ export function formatDuration(val: unknown): string {
         const h = Math.floor(n / 60);
         const m = Math.round(n % 60);
         if (h > 0) {
-          return `${h}h ${m}m`;
+          return `${h}${hours} ${m}${minutes}`;
         } else {
-          return `${m}m`;
+          return `${m}${minutes}`;
         }
       } else {
         const h = Math.floor(n);
         const m = Math.round((n - h) * 60);
         if (h > 0) {
-          return `${h}h ${m}m`;
+          return `${h}${hours} ${m}${minutes}`;
         } else {
-          return `${m}m`;
+          return `${m}${minutes}`;
         }
       }
     }
   }
 
-  return "0h 0m";
+  return `0${hours} 0${minutes}`;
 }

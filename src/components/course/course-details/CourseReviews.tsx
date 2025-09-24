@@ -2,8 +2,10 @@ import { Star } from "lucide-react";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
+import { useTranslation } from "react-i18next";
 
 export default function CourseReviews({ courseId }: { courseId: string }) {
+  const { t, i18n } = useTranslation("courseDetails");
   const { data, isLoading } = useCustomQuery(
     `${API_ENDPOINTS.courseReviews}?course=${courseId}`,
     ["course-reviews", courseId],
@@ -46,7 +48,10 @@ export default function CourseReviews({ courseId }: { courseId: string }) {
             </div>
             <p className="text-gray-700 mb-2">{review.comment}</p>
             <p className="text-sm text-gray-500">
-              {formatDateTimeSimple(review.created_at)}
+              {formatDateTimeSimple(review.created_at, {
+                locale: i18n.language,
+                t,
+              })}
             </p>
           </div>
         );

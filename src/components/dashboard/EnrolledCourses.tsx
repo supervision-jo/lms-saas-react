@@ -15,6 +15,7 @@ export default function EnrolledCourses({
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation("studentDashboard");
+  const { t: y, i18n } = useTranslation();
 
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
@@ -49,7 +50,7 @@ export default function EnrolledCourses({
   return (
     <div
       key={item?.course?.id}
-      className="group bg-gradient-to-r from-gray-50 to-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg"
+      className="group ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-gray-50 to-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg"
     >
       <div className="flex items-start">
         <div className="relative">
@@ -70,7 +71,7 @@ export default function EnrolledCourses({
             <Play className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         </div>
-        <div className="ml-6 flex-1">
+        <div className="ltr:ml-6 rtl:mr-6 flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h4 className="text-xl font-bold text-gray-900 mb-2">
@@ -81,10 +82,10 @@ export default function EnrolledCourses({
                   <img
                     src={instructor?.instructor?.profile_image}
                     alt={instructor?.instructor?.first_name}
-                    className="w-6 h-6 rounded-full mr-2"
+                    className="w-6 h-6 rounded-full ltr:mr-2 rtl:ml-2"
                   />
                 ) : (
-                  <div className="w-6 h-6 bg-purple-600 mr-2 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-purple-600 ltr:mr-2 rtl:ml-2 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
                       {instructor?.instructor?.first_name
                         ?.charAt(0)
@@ -99,39 +100,46 @@ export default function EnrolledCourses({
               </div>
               <div className="flex items-center text-sm text-gray-500 mb-4">
                 {currentCategory && (
-                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium mr-4">
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium ltr:mr-4 rtl:ml-4">
                     {currentCategory?.name}
                   </span>
                 )}
-                <Clock className="w-4 h-4 mr-1" />
-                <span className="mr-4">
-                  {formatDuration(currentEnrollStat?.total_hours)}
+                <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                <span className="ltr:mr-4 rtl:ml-4">
+                  {formatDuration(
+                    currentEnrollStat?.total_hours,
+                    i18n.language
+                  )}
                 </span>
                 {Array.from({ length: 5 }).map((_, i) =>
                   i < (currentEnrollStat?.average_rating ?? 0) ? (
                     <Star
                       key={i + 9000}
-                      className="w-4 h-4 mr-1 text-yellow-400 fill-current"
+                      className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
                     />
                   ) : (
                     <Star
                       key={i + 9050}
-                      className="text-gray-300 w-4 h-4 mr-1"
+                      className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
                     />
                   )
                 )}
-                <span className="mr-4">
+                <span className="ltr:mr-4 rtl:ml-4">
                   ({currentEnrollStat?.average_rating ?? 0})
                 </span>
                 <span className="text-gray-400">
-                  Last accessed{" "}
+                  {t("enrolledCourses.lastAccessed")}{" "}
                   {formatDateTimeSimple(
-                    currentEnrollStat?.last_accessed ?? item?.date_enrolled
+                    currentEnrollStat?.last_accessed ?? item?.date_enrolled,
+                    {
+                      locale: i18n.language,
+                      t: y,
+                    }
                   )}
                 </span>
               </div>
               <div className="flex items-center justify-between mb-3">
-                <div className="flex-1 mr-6">
+                <div className="flex-1 ltr:mr-6 rtl:ml-6">
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                     <span className="font-medium">
                       {currentEnrollStat?.progress} %

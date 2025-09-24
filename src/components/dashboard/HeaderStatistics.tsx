@@ -15,7 +15,7 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           <div className="p-4 rounded-xl bg-blue-50">
             <BookOpen className="w-6 h-6 text-blue-600" />
           </div>
-          <div className="ml-4">
+          <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
               {stats?.courses_completed ?? 0}
             </p>
@@ -31,7 +31,7 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           <div className="p-4 rounded-xl bg-green-50">
             <Clock className="w-6 h-6 text-green-600" />
           </div>
-          <div className="ml-4">
+          <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
               {stats?.hours_learned ?? 0}
             </p>
@@ -47,7 +47,7 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           <div className="p-4 rounded-xl bg-purple-50">
             <Award className="w-6 h-6 text-purple-600" />
           </div>
-          <div className="ml-4">
+          <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
               {stats?.certificates_earned ?? 0}
             </p>
@@ -63,7 +63,7 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           <div className="p-4 rounded-xl bg-orange-50">
             <TrendingUp className="w-6 h-6 text-orange-600" />
           </div>
-          <div className="ml-4">
+          <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
               {stats?.current_streak ?? 0}
             </p>

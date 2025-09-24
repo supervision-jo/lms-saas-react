@@ -9,50 +9,15 @@ import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomQuery } from "../../hooks/useQuery";
 import LearningStats from "../../components/userProfile/LearningStats";
+import { useTranslation } from "react-i18next";
 
-const achievementsData = [
-  {
-    id: "1",
-    title: "First Course Completed",
-    icon: "🎓",
-    date: "2024-01-15",
-    description: "Completed your first course",
-  },
-  {
-    id: "2",
-    title: "Week Streak",
-    icon: "🔥",
-    date: "2024-01-20",
-    description: "Learned for 7 consecutive days",
-  },
-  {
-    id: "3",
-    title: "Fast Learner",
-    icon: "⚡",
-    date: "2024-01-25",
-    description: "Completed 3 courses in one month",
-  },
-  {
-    id: "4",
-    title: "Quiz Master",
-    icon: "🧠",
-    date: "2024-02-01",
-    description: "Scored 100% on 5 quizzes",
-  },
-  {
-    id: "5",
-    title: "Community Helper",
-    icon: "🤝",
-    date: "2024-02-05",
-    description: "Helped 10 fellow students",
-  },
-  {
-    id: "6",
-    title: "Dedicated Student",
-    icon: "📚",
-    date: "2024-02-10",
-    description: "Spent 100+ hours learning",
-  },
+const achievements = [
+  { id: "1", icon: "🎓", date: "2024-01-15" },
+  { id: "2", icon: "🔥", date: "2024-01-20" },
+  { id: "3", icon: "⚡", date: "2024-01-25" },
+  { id: "4", icon: "🧠", date: "2024-02-01" },
+  { id: "5", icon: "🤝", date: "2024-02-05" },
+  { id: "6", icon: "📚", date: "2024-02-10" },
 ];
 
 const certificatesData = [
@@ -83,6 +48,8 @@ const certificatesData = [
 ];
 
 const ProfilePage: React.FC = () => {
+  const { t, i18n } = useTranslation("profile");
+  const { t: y } = useTranslation("studentDashboard");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -93,8 +60,6 @@ const ProfilePage: React.FC = () => {
     profileData?.profile_image
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const achievements: Acheivement[] = achievementsData ?? [];
 
   const certificates: Certificate[] = certificatesData ?? [];
 
@@ -107,7 +72,7 @@ const ProfilePage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Certificate download started!");
+    toast.success(t("downloadDone"));
   };
 
   const { data: studentStatsData } = useCustomQuery(
@@ -127,7 +92,7 @@ const ProfilePage: React.FC = () => {
   const handleChangeImage = async (file: File) => {
     try {
       if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file.");
+        toast.error(t("picError"));
         return;
       }
 
@@ -141,7 +106,7 @@ const ProfilePage: React.FC = () => {
         setProfileImage(newUrl);
         const user = { ...profileData, profile_image: newUrl };
         localStorage.setItem(USER_KEY, JSON.stringify(user));
-        toast.success("Profile image updated successfully!");
+        toast.success(t("picSuccess"));
       } else {
         toast.error(res?.profile_image?.[0] || "There is an error");
       }
@@ -160,9 +125,9 @@ const ProfilePage: React.FC = () => {
   };
 
   const TABS = [
-    { id: "profile", label: "Profile Settings" },
-    { id: "achievements", label: "Achievements" },
-    { id: "certificates", label: "Certificates", studentOnly: true },
+    { id: "profile", label: t("tabs.profileSettings") },
+    { id: "achievements", label: t("tabs.achievements") },
+    { id: "certificates", label: t("tabs.certificates"), studentOnly: true },
   ];
 
   const visibleTabs = TABS.filter((t) => !(t.studentOnly && !isStudent));
@@ -172,8 +137,11 @@ const ProfilePage: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
         <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-          <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-            <div className="relative">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
+            <div
+              className="relative cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
               {profileImage ? (
                 <img
                   src={profileImage}
@@ -190,10 +158,9 @@ const ProfilePage: React.FC = () => {
               <button
                 type="button"
                 className="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors disabled:opacity-60"
-                onClick={() => fileInputRef.current?.click()}
                 disabled={isPending}
                 aria-label="Change profile photo"
-                title="Change profile photo"
+                title={t("changePic")}
               >
                 {isPending ? (
                   <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -211,7 +178,7 @@ const ProfilePage: React.FC = () => {
               />
             </div>
 
-            <div className="flex-1 text-center md:text-left">
+            <div className="flex-1 text-center ltr:md:text-left rtl:md:text-right">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">
                   {profileData.first_name} {profileData.last_name}
@@ -220,29 +187,33 @@ const ProfilePage: React.FC = () => {
                   onClick={() => setIsEditing(!isEditing)}
                   className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
                 >
-                  <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? "Cancel" : "Edit Profile"}
+                  <Edit className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  {isEditing ? t("cancel") : t("editProfile")}
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600 mb-4">
                 <div className="flex items-center justify-center md:justify-start">
-                  <Mail className="w-4 h-4 mr-2" />
+                  <Mail className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   <span>{profileData?.email || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
-                  <Phone className="w-4 h-4 mr-2" />
+                  <Phone className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   <span>{profileData?.phone || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
-                  <MapPin className="w-4 h-4 mr-2" />
+                  <MapPin className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   <span>{profileData?.location || "--"}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start">
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <Calendar className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   {/* <span>Joined {profileData.created_at || "--"}</span> */}
                   <span>
-                    Joined {formatDateTimeSimple(profileData?.data_joined)}
+                    {t("joined")}{" "}
+                    {formatDateTimeSimple(profileData?.data_joined, {
+                      locale: i18n.language,
+                      t,
+                    })}
                   </span>
                 </div>
               </div>
@@ -260,7 +231,7 @@ const ProfilePage: React.FC = () => {
         {/* Tabs */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex gap-8">
               {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -282,17 +253,17 @@ const ProfilePage: React.FC = () => {
         {activeTab === "profile" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Profile Settings
+              {t("tabs.profileSettings")}
             </h3>
 
             {isEditing ? (
               <EditUserProfile setIsEditing={setIsEditing} />
             ) : (
-              <div className="space-y-6">
+              <div className="gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name
+                      {t("editForm.fn")}
                     </label>
                     <p className="text-gray-900">
                       {profileData?.first_name || "--"}
@@ -300,7 +271,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
+                      {t("editForm.ln")}
                     </label>
                     <p className="text-gray-900">
                       {profileData.first_name || "--"}{" "}
@@ -309,7 +280,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
+                      {t("editForm.email")}
                     </label>
                     <p className="text-gray-900">
                       {profileData?.email || "--"}
@@ -317,7 +288,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone
+                      {t("editForm.phone")}
                     </label>
                     <p className="text-gray-900">
                       {profileData?.phone || "--"}
@@ -325,7 +296,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Location
+                      {t("editForm.location")}
                     </label>
                     <p className="text-gray-900">
                       {profileData?.location || "--"}
@@ -333,8 +304,8 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio
+                  <label className="block text-sm font-medium text-gray-700 mt-8">
+                    {t("editForm.bio")}
                   </label>
                   <p className="text-gray-900">{profileData?.bio || "--"}</p>
                 </div>
@@ -346,7 +317,7 @@ const ProfilePage: React.FC = () => {
         {activeTab === "achievements" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Achievements
+              {t("tabs.achievements")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {achievements.map((achievement) => (
@@ -354,14 +325,16 @@ const ProfilePage: React.FC = () => {
                   key={achievement.id}
                   className="border border-gray-200 rounded-lg p-6 text-center hover:border-purple-300 transition-colors"
                 >
-                  <div className="text-4xl mb-3">{achievement.icon}</div>
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    {achievement.title}
+                  <div className="text-5xl mb-4">{achievement.icon}</div>
+                  <h4 className="text-lg font-bold text-gray-900 mb-2">
+                    {y(`achievementsSection.items.${achievement.id}.title`)}
                   </h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {achievement.description}
+                  <p className="text-gray-600 text-sm mb-3">
+                    {y(`achievementsSection.items.${achievement.id}.desc`)}
                   </p>
-                  <p className="text-xs text-gray-500">{achievement.date}</p>
+                  <p className="text-xs text-purple-600 font-medium bg-purple-100 px-3 py-1 rounded-full inline-block">
+                    {achievement.date}
+                  </p>
                 </div>
               ))}
             </div>
@@ -371,7 +344,7 @@ const ProfilePage: React.FC = () => {
         {isStudent && activeTab === "certificates" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Certificates
+              {t("tabs.certificates")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {certificates.map((certificate) => (
@@ -401,7 +374,7 @@ const ProfilePage: React.FC = () => {
                       onClick={() => handleDownloadCertificate(certificate)}
                       className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors"
                     >
-                      Download Certificate
+                      {t("download")}
                     </button>
                   </div>
                 </div>

@@ -12,6 +12,7 @@ import {
 import { readUserFromStorage, roleOf } from "../../services/auth";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
+import { useTranslation } from "react-i18next";
 
 interface LearningStatsProps {
   stats: StudentStats;
@@ -38,6 +39,8 @@ type DisplayedStats = {
 export default function LearningStats({ stats }: LearningStatsProps) {
   const profileData: User = readUserFromStorage();
   const isStudent = roleOf(profileData) === "student";
+  const { t: y } = useTranslation("studentDashboard");
+  const { t } = useTranslation("instructorDashboard");
 
   const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
     "instructor-stats",
@@ -47,7 +50,7 @@ export default function LearningStats({ stats }: LearningStatsProps) {
 
   const items = [
     {
-      label: "Total Students",
+      label: t("statisticsCards.totalStudents"),
       value: insStats?.total_students ?? 0,
       icon: "Users",
       color: "text-blue-600",
@@ -55,7 +58,7 @@ export default function LearningStats({ stats }: LearningStatsProps) {
       change: insStats?.new_students ?? 0,
     },
     {
-      label: "Total Revenue",
+      label: t("statisticsCards.totalRevenue"),
       value: insStats?.revenue ?? 0,
       icon: "DollarSign",
       color: "text-green-600",
@@ -63,7 +66,7 @@ export default function LearningStats({ stats }: LearningStatsProps) {
       // change: "+8%",
     },
     {
-      label: "Average Rating",
+      label: t("statisticsCards.averageRating"),
       value: insStats?.average_rating ?? 0,
       icon: "Star",
       color: "text-yellow-600",
@@ -71,7 +74,7 @@ export default function LearningStats({ stats }: LearningStatsProps) {
       // change: "+0.2",
     },
     {
-      label: "Total Reviews",
+      label: t("statisticsCards.totalReviews"),
       value: insStats?.total_reviews,
       icon: "Eye",
       color: "text-purple-600",
@@ -97,7 +100,9 @@ export default function LearningStats({ stats }: LearningStatsProps) {
             <p className="text-2xl font-bold text-gray-900 mb-1">
               {stats?.courses_completed ?? 0}
             </p>
-            <p className="text-sm text-gray-600">Courses Enrolled</p>
+            <p className="text-sm text-gray-600">
+              {y("headerStats.coursesEnrolled")}
+            </p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 text-center">
@@ -108,7 +113,9 @@ export default function LearningStats({ stats }: LearningStatsProps) {
             <p className="text-2xl font-bold text-gray-900 mb-1">
               {stats?.hours_learned ?? 0}
             </p>
-            <p className="text-sm text-gray-600">Hours Learned</p>
+            <p className="text-sm text-gray-600">
+              {y("headerStats.hoursLearned")}
+            </p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 text-center">
@@ -119,7 +126,10 @@ export default function LearningStats({ stats }: LearningStatsProps) {
             <p className="text-2xl font-bold text-gray-900 mb-1">
               {stats?.certificates_earned ?? 0}
             </p>
-            <p className="text-sm text-gray-600">Certificates</p>
+            <p className="text-sm text-gray-600">
+              {" "}
+              {y("headerStats.certificates")}
+            </p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 text-center">
@@ -130,7 +140,9 @@ export default function LearningStats({ stats }: LearningStatsProps) {
             <p className="text-2xl font-bold text-gray-900 mb-1">
               {stats?.current_streak ?? 0}
             </p>
-            <p className="text-sm text-gray-600">Streak Days</p>
+            <p className="text-sm text-gray-600">
+              {y("headerStats.streakDays")}
+            </p>
           </div>
         </div>
       </div>

@@ -26,8 +26,11 @@ import useAuth from "../../store/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import CourseRatingModal from "../../components/course/course-details/CourseRatingModal";
 import CourseReviews from "../../components/course/course-details/CourseReviews";
+import { useTranslation } from "react-i18next";
 
 const CourseDetailPage: React.FC = () => {
+  const { t: y } = useTranslation("courseCatalog");
+  const { t, i18n } = useTranslation("courseDetails");
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
@@ -136,7 +139,7 @@ const CourseDetailPage: React.FC = () => {
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
-      toast.error("Please login first!");
+      toast.error(y("card.handleEnroll.authError"));
       setShowLoginModal(true);
       return;
     }
@@ -144,21 +147,26 @@ const CourseDetailPage: React.FC = () => {
 
     try {
       if (currentUser?.is_instructor) {
-        toast.error("Please sign in as student!");
+        toast.error(y("card.handleEnroll.roleError"));
         return;
       }
       setEnrolledOptimistic(true);
       const res = await createEnroll.mutateAsync({ course: course?.id });
       if (res?.status) {
-        toast.success("You have been enrolled successfully!");
+        toast.success(y("card.handleEnroll.success"));
         queryClient.invalidateQueries({ queryKey: ["enrolledCourses"] });
       } else {
         setEnrolledOptimistic(false);
-        toast.error(res?.error?.non_field_errors?.[0] ?? "Failed to enroll");
+        toast.error(
+          res?.error?.non_field_errors?.[0] ??
+            y("card.handleEnroll.failFallback")
+        );
       }
     } catch (error: any) {
       setEnrolledOptimistic(false);
-      handleErrorAlerts(error?.response?.data?.message ?? "Unexpected error");
+      handleErrorAlerts(
+        error?.response?.data?.message ?? y("card.handleEnroll.errorFallback")
+      );
     }
   };
 
@@ -207,14 +215,22 @@ const CourseDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <nav className="text-sm mb-4">
-                <span className="text-purple-400">
-                  {currentCategory?.name ?? ""}
-                </span>
-                <span className="mx-2">›</span>
-                <span className="text-purple-400">
-                  {currentSubCate?.name ?? ""}
-                </span>
-                <span className="mx-2">›</span>
+                {currentCategory?.name && (
+                  <>
+                    <span className="text-purple-400">
+                      {currentCategory?.name}
+                    </span>
+                    <span className="mx-2">›</span>
+                  </>
+                )}
+                {currentSubCate?.name && (
+                  <>
+                    <span className="text-purple-400">
+                      {currentSubCate?.name ?? ""}
+                    </span>
+                    <span className="mx-2">›</span>
+                  </>
+                )}
                 <span>{course?.title}</span>
               </nav>
 
@@ -226,11 +242,11 @@ const CourseDetailPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-4 mb-6">
                 {course?.is_best_seller && (
                   <span className="bg-yellow-400 text-yellow-900 px-3 py-1 text-sm font-bold rounded">
-                    Bestseller
+                    {y("card.bestseller")}
                   </span>
                 )}
                 <div className="flex items-center">
-                  <span className="text-yellow-400 font-bold mr-2">
+                  <span className="text-yellow-400 font-bold ltr:mr-2 rtl:ml-2">
                     {course?.average_rating ?? 0}
                   </span>
                   <div className="flex">
@@ -245,32 +261,42 @@ const CourseDetailPage: React.FC = () => {
                       />
                     ))}
                   </div>
-                  <span className="text-gray-300 ml-2">
-                    ({course?.total_reviews?.toLocaleString() ?? 0} ratings)
+                  <span className="text-gray-300 ltr:ml-2 rtl:mr-2">
+                    {t("ratings", {
+                      reviews: course?.total_reviews?.toLocaleString() ?? 0,
+                    })}
                   </span>
                 </div>
                 <span className="text-gray-300">
-                  {course?.total_students?.toLocaleString() ?? 0} students
+                  {t("students", {
+                    students: course?.total_students?.toLocaleString() ?? 0,
+                  })}
                 </span>
               </div>
 
               <div className="flex items-center text-gray-300 mb-6">
                 <span>
-                  Created by {course?.instructor?.first_name}{" "}
-                  {course?.instructor?.last_name}
+                  {t("createdBy", {
+                    instructor: `${course?.instructor?.first_name} ${course?.instructor?.last_name}`,
+                  })}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300">
                 <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-2" />
+                  <Clock className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   <span>
-                    Last updated {formatDateTimeSimple(course?.updated_at)}
+                    {t("lastUpdated", {
+                      lastUpdated: formatDateTimeSimple(course?.updated_at, {
+                        locale: i18n.language,
+                        t,
+                      }),
+                    })}
                   </span>
                 </div>
                 {course?.language && (
                   <div className="flex items-center">
-                    <Globe className="w-4 h-4 mr-2" />
+                    <Globe className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                     <span>{course?.language}</span>
                   </div>
                 )}
@@ -300,14 +326,14 @@ const CourseDetailPage: React.FC = () => {
                             goToPlayer(); // fallback
                           }
                         } else {
-                          toast.error("Please enroll first.");
+                          toast.error(t("enrollError"));
                         }
                       }}
                       className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center"
-                      title="Start / Preview"
+                      title={t("enrollBtnTitle")}
                       aria-label="Start / Preview"
                     >
-                      <Play className="w-6 h-6 text-white ml-1" />
+                      <Play className="w-6 h-6 text-white ltr:ml-1 rtl:mr-1" />
                     </button>
                   </div>
                 </div>
@@ -320,18 +346,17 @@ const CourseDetailPage: React.FC = () => {
                           ${course?.price ?? 0}
                         </span>
                         {course?.old_price && (
-                          <span className="text-gray-500 line-through ml-3">
+                          <span className="text-gray-500 line-through ltr:ml-3 rtl:mr-3">
                             ${course?.old_price ?? 0}
                           </span>
                         )}
                       </div>
                     ) : (
                       <span className="px-4 py-1 rounded-lg font-semibold bg-green-100 text-green-800">
-                        Free
+                        {y("card.free")}
                       </span>
                     )}
                   </div>
-
                   {!isEnrolled ? (
                     <button
                       onClick={handleEnroll}
@@ -341,14 +366,16 @@ const CourseDetailPage: React.FC = () => {
                       }
                       className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors mb-4"
                     >
-                      {createEnroll?.isPending ? "Enrolling..." : "Enroll Now"}
+                      {createEnroll?.isPending
+                        ? y("card.enrolling")
+                        : y("card.enrollNow")}
                     </button>
                   ) : (
                     <div className="text-center mb-4">
                       {!isInstructorCourse && (
                         <div className="flex items-center justify-center text-green-600 mb-2">
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          <span className="font-medium">Enrolled</span>
+                          <CheckCircle className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
+                          <span className="font-medium">{t("enrolled")}</span>
                         </div>
                       )}
                       <button
@@ -362,41 +389,44 @@ const CourseDetailPage: React.FC = () => {
                         className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold mb-2 hover:bg-purple-700 transition-colors"
                       >
                         {isInstructorCourse
-                          ? "View your course"
-                          : "Start Learning"}
+                          ? y("card.viewCourse")
+                          : y("card.startLearning")}
                       </button>
                       {!isInstructorCourse && (
                         <button
                           onClick={() => setShowRatingModal(true)}
                           className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
                         >
-                          Rate This Course
+                          {t("rate")}
                         </button>
                       )}
                     </div>
                   )}
-
                   <div className="text-center text-sm text-gray-600 mb-6">
-                    30-Day Money-Back Guarantee
+                    {t("details.guarantee")}
                   </div>
-
                   <div className="space-y-3 text-sm">
                     <h4 className="font-semibold text-gray-900">
-                      This course includes:
+                      {t("details.includes")}
                     </h4>
                     <div className="flex items-center text-gray-700">
-                      <Clock className="w-4 h-4 mr-3" />
+                      <Clock className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
                       <span>
-                        {formatDuration(course?.total_hours)} on-demand video
+                        {t("details.time", {
+                          hours: formatDuration(
+                            course?.total_hours,
+                            i18n.language
+                          ),
+                        })}
                       </span>
                     </div>
                     <div className="flex items-center text-gray-700">
-                      <Smartphone className="w-4 h-4 mr-3" />
-                      <span>Access on mobile and TV</span>
+                      <Smartphone className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
+                      <span>{t("details.access")}</span>
                     </div>
                     <div className="flex items-center text-gray-700">
-                      <Trophy className="w-4 h-4 mr-3" />
-                      <span>Certificate of completion</span>
+                      <Trophy className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
+                      <span>{t("details.certificate")}</span>
                     </div>
                   </div>
                 </div>
@@ -416,10 +446,10 @@ const CourseDetailPage: React.FC = () => {
               <div className="border-b border-gray-200">
                 <nav className="-mb-px grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
                   {[
-                    { id: "overview", label: "Overview" },
-                    { id: "curriculum", label: "Curriculum" },
-                    { id: "instructor", label: "Instructor" },
-                    { id: "reviews", label: "Reviews" },
+                    { id: "overview", label: t("tabs.overview") },
+                    { id: "curriculum", label: t("tabs.curriculum") },
+                    { id: "instructor", label: t("tabs.instructor") },
+                    { id: "reviews", label: t("tabs.reviews") },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -444,12 +474,12 @@ const CourseDetailPage: React.FC = () => {
                   {course?.objectives && course?.objectives?.length > 0 && (
                     <>
                       <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                        What you'll learn
+                        {y("card.whatYouLearn")}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                         {course?.objectives.map((item) => (
                           <div key={item?.id} className="flex items-start">
-                            <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <CheckCircle className="w-5 h-5 text-green-500 ltr:mr-3 rtl:ml-3 mt-0.5 flex-shrink-0" />
                             <span className="text-gray-700">{item?.text}</span>
                           </div>
                         ))}
@@ -460,12 +490,12 @@ const CourseDetailPage: React.FC = () => {
                   {course?.requirements && course?.requirements?.length > 0 && (
                     <>
                       <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                        Requirements
+                        {t("requirements")}
                       </h3>
                       <ul className="space-y-2 mb-8">
                         {course?.requirements.map((req) => (
                           <li key={req?.id} className="flex items-start">
-                            <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 mt-2.5 flex-shrink-0"></span>
+                            <span className="w-2 h-2 bg-gray-400 rounded-full ltr:mr-3 rtl:ml-3 mt-2.5 flex-shrink-0"></span>
                             <span className="text-gray-700">{req?.text}</span>
                           </li>
                         ))}
@@ -474,7 +504,7 @@ const CourseDetailPage: React.FC = () => {
                   )}
 
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Description
+                    {t("description")}
                   </h3>
                   <div className="prose max-w-none text-gray-700">
                     {course?.description
@@ -491,7 +521,7 @@ const CourseDetailPage: React.FC = () => {
               {activeTab === "curriculum" && (
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Course Content
+                    {t("content")}
                   </h3>
                   <CourseContent
                     modules={modulesData}
@@ -505,17 +535,17 @@ const CourseDetailPage: React.FC = () => {
               {activeTab === "instructor" && (
                 <div className="w-full flex-col items-start flex">
                   <h3 className="sm:text-2xl text-lg font-bold text-gray-900 mb-6">
-                    Instructor
+                    {t("tabs.instructor")}
                   </h3>
                   <div className="sm:flex-row flex-col w-full flex items-start mb-6">
                     {instructor?.instructor?.profile_image ? (
                       <img
                         src={instructor?.instructor?.profile_image}
                         alt={instructor?.instructor?.first_name}
-                        className="w-16 self-center sm:self-start h-16 rounded-full mr-4"
+                        className="w-16 self-center sm:self-start h-16 rounded-full ltr:mr-3 rtl:ml-3"
                       />
                     ) : (
-                      <div className="w-16 h-16 bg-purple-600 mr-4 self-center sm:self-start rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-purple-600 ltr:mr-4 rtl:ml-4 self-center sm:self-start rounded-full flex items-center justify-center">
                         <span className="text-white text-sm font-medium">
                           {course?.instructor?.first_name
                             ?.charAt(0)
@@ -537,27 +567,33 @@ const CourseDetailPage: React.FC = () => {
                             i < +instructor?.average_rating?.toFixed(0) ? (
                               <Star
                                 key={i + 3000}
-                                className="w-4 h-4 mr-1 text-yellow-400 fill-current"
+                                className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
                               />
                             ) : (
                               <Star
                                 key={i + 4000}
-                                className="text-gray-300 w-4 h-4 mr-1"
+                                className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
                               />
                             )
                           )}
                           ({instructor?.total_reviews ?? 0})
                         </div>
                         <div className="flex items-center">
-                          <Users className="w-4 h-4 mr-1" />
+                          <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                           <span>
-                            {instructor?.total_students?.toLocaleString()}{" "}
-                            Students
+                            {t("students", {
+                              students:
+                                instructor?.total_students?.toLocaleString(),
+                            })}
                           </span>
                         </div>
                         <div className="flex items-center">
-                          <Award className="w-4 h-4 mr-1" />
-                          <span>{instructor?.total_courses} Courses</span>
+                          <Award className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                          <span>
+                            {t("courses", {
+                              courses: instructor?.total_courses,
+                            })}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -568,7 +604,7 @@ const CourseDetailPage: React.FC = () => {
               {activeTab === "reviews" && (
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Student Reviews
+                    {t("studentReviews")}
                   </h3>
                   <CourseReviews courseId={course?.id} />
                 </div>

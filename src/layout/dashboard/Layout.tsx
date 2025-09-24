@@ -3,6 +3,7 @@ import { Home, Users, Library, GraduationCap, LucideIcon } from "lucide-react";
 import Header from "../../components/navigations/Header";
 import useAuth from "../../store/useAuth";
 import { removeTokens } from "../../services/auth";
+import { useTranslation } from "react-i18next";
 
 export interface NavItems {
   id: string;
@@ -14,32 +15,33 @@ const Layout = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
+  const { t } = useTranslation();
 
   const mainNavigationItems: NavItems[] = [
-    { id: "", label: "Home", icon: Home },
-    { id: "catalog", label: "Courses", icon: GraduationCap },
+    { id: "", label: t("header.home"), icon: Home },
+    { id: "catalog", label: t("header.courses"), icon: GraduationCap },
     {
       id: !isAuthenticated ? "login" : "dashboard",
-      label: "My Learning",
+      label: t("header.myLearning"),
       icon: Users,
     },
     {
       id: !isAuthenticated ? "login" : "instructor",
-      label: "Teach",
+      label: t("header.teach"),
       icon: Library,
     },
   ];
 
   const userNavigationItems: NavItems[] = [
-    { id: "profile", label: "Profile Settings", icon: Home },
-    { id: "dashboard", label: "My Learning", icon: Users },
-    { id: "instructor", label: "Instructor Dashboard", icon: Library },
-    { id: "logout", label: "Sign Out", icon: GraduationCap },
+    { id: "profile", label: t("header.profileSettings"), icon: Home },
+    { id: "dashboard", label: t("header.myLearning"), icon: Users },
+    { id: "instructor", label: t("header.instructorDashboard"), icon: Library },
+    { id: "logout", label: t("header.signout"), icon: GraduationCap },
   ];
 
   const authNavigationItems: NavItems[] = [
-    { id: "login", label: "Log in", icon: Home },
-    { id: "sign-up", label: "Sign up", icon: Users },
+    { id: "login", label: t("header.signin"), icon: Home },
+    { id: "sign-up", label: t("header.signup"), icon: Users },
   ];
 
   const handleLogout = () => {

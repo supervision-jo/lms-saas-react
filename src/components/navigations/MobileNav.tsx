@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { Home } from "lucide-react";
 import { readUserFromStorage } from "../../services/auth";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   setIsMenuOpen: (s: boolean) => void;
@@ -17,13 +18,16 @@ export default function MobileNav({
   onLogout,
 }: Props) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const currentUser = readUserFromStorage();
   return (
     <div className="lg:hidden">
       <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
         {mainNavigationItems
-          .concat([{ id: "profile", label: "Profile Settings", icon: Home }])
+          .concat([
+            { id: "profile", label: t("header.profileSettings"), icon: Home },
+          ])
           .map((i, idx) => {
             const path = i.id ? `/${i.id}` : "/";
             if (
@@ -74,10 +78,10 @@ export default function MobileNav({
           </>
         )}
         <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
-          Notifications
+          {t("header.notifications")}
         </button>
         <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
-          Shopping Cart
+          {t("header.cart")}
         </button>
         {currentUser && onLogout && (
           <button
@@ -87,7 +91,7 @@ export default function MobileNav({
             }}
             className="block w-full text-left px-3 py-2 text-red-600 hover:text-red-700"
           >
-            Sign Out
+            {t("header.signout")}
           </button>
         )}
       </div>

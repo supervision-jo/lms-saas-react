@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Search, Menu, X, Earth } from "lucide-react";
+import { Search, Menu, X, Globe } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { readUserFromStorage } from "../../services/auth";
 import i18n from "../../i18n/config";
+import { useTranslation } from "react-i18next";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -22,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({
   authNavigationItems,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,8 +73,8 @@ const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Navigation */}
-            <nav className="hidden lg:block ml-10">
-              <div className="flex items-center space-x-8">
+            <nav className="hidden lg:block ltr:ml-10 rtl:mr-10">
+              <div className="flex items-center gap-8">
                 {mainNavigationItems.map((i, idx) => {
                   const path = i.id ? `/${i.id}` : "/";
                   if (
@@ -119,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 <input
                   type="text"
-                  placeholder="Search for anything"
+                  placeholder={t("header.search")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -129,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-0">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => {
                 i18n.changeLanguage(i18n.language === "en" ? "ar" : "en");
@@ -137,8 +139,9 @@ const Header: React.FC<HeaderProps> = ({
                 document.body.dir = i18n.language === "ar" ? "rtl" : "ltr";
               }}
               className="relative cursor-pointer text-[24px] text-gray-400 hover:text-gray-500"
+              title={t("header.lang")}
             >
-              <Earth className="h-6 w-6" />
+              <Globe className="h-6 w-6" />
             </button>
 
             <button
@@ -170,10 +173,10 @@ const Header: React.FC<HeaderProps> = ({
                         "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                       }
                       alt={currentUser?.first_name}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-8 h-8 rounded-full object-cover rtl:ml-2"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center rtl:ml-2">
                       <span className="text-white text-sm font-medium">
                         {currentUser?.first_name?.charAt(0).toUpperCase()}
                       </span>
@@ -294,7 +297,7 @@ const Header: React.FC<HeaderProps> = ({
                   <input
                     ref={mobileInputRef}
                     type="text"
-                    placeholder="Search for anything"
+                    placeholder={t("header.search")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onBlur={(e) => {

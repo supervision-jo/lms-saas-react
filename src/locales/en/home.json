@@ -40,5 +40,8 @@
   "title2": "Ready to Start Your Learning Journey?",
   "subtitle2": "Join millions of learners worldwide and unlock your potential with our expert-led courses",
   "getStartedFree": "Get Started Free",
-  "browseCourses": "Browse Courses"
+  "browseCourses": "Browse Courses",
+  "time": {
+    "now": "Now"
+  }
 }

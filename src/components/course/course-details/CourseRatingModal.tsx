@@ -9,6 +9,7 @@ import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { readUserFromStorage } from "../../../services/auth";
 import ReviewReasonsSkeleton from "../../resource-stats/ReviewReasonsLoading";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 interface CourseRatingProps {
   courseTitle: string;
@@ -37,6 +38,7 @@ export default function CourseRatingModal({
   courseTitle,
   onClose,
 }: CourseRatingProps) {
+  const { t, i18n } = useTranslation("courseDetails");
   const queryClient = useQueryClient();
   const { courseId } = useParams();
   const currentUser = readUserFromStorage();
@@ -96,11 +98,24 @@ export default function CourseRatingModal({
     lastReview?.anonymous ?? false
   );
 
-  const headerTitle = isEdit ? "Update Your Review" : "Rate This Course";
-  const primaryBtnLabel = isEdit ? "Update Review" : "Submit Review";
-  const loadingLabel = isEdit ? "Updating..." : "Submitting...";
+  const headerTitle = isEdit
+    ? t("rateModal.updateReview")
+    : t("rateModal.rate");
+  const primaryBtnLabel = isEdit
+    ? t("rateModal.update")
+    : t("rateModal.submit");
+  const loadingLabel = isEdit
+    ? t("rateModal.updating")
+    : t("rateModal.submitting");
 
-  const ratingLabels = ["", "Terrible", "Poor", "Average", "Good", "Excellent"];
+  const ratingLabels = [
+    "",
+    t("rateModal.labels.terrible"),
+    t("rateModal.labels.poor"),
+    t("rateModal.labels.average"),
+    t("rateModal.labels.good"),
+    t("rateModal.labels.excellent"),
+  ];
 
   const reasons: Reason[] = useMemo(
     () => reasonsData?.data ?? [],
@@ -152,28 +167,30 @@ export default function CourseRatingModal({
         // include id for PATCH body as you requested
         const res = await editReview({ ...basePayload, id: lastReview.id });
         if (res?.status) {
-          toast.success("Your review has been updated.");
+          toast.success(t("rateModal.handleSubmit.success"));
         } else {
-          toast.success("Updated.");
+          toast.success(t("rateModal.handleSubmit.updated"));
         }
         onClose();
       } else {
         const res = await createReview(basePayload);
         if (res?.status) {
-          toast.success("Your review has been sent.");
+          toast.success(t("rateModal.handleSubmit.sent"));
           queryClient.invalidateQueries({
             queryKey: ["course", courseId],
           });
         } else {
-          toast.success("Submitted.");
+          toast.success(t("rateModal.handleSubmit.submit"));
         }
         onClose();
       }
     } catch (error: any) {
       const payloadErr = error?.response?.data ||
         error?.data ||
-        error?.message || { message: "Something went wrong!" };
-      handleErrorAlerts(payloadErr.message ?? "Something went wrong!");
+        error?.message || { message: t("rateModal.handleSubmit.error") };
+      handleErrorAlerts(
+        payloadErr.message ?? t("rateModal.handleSubmit.error")
+      );
     }
   };
 
@@ -212,7 +229,7 @@ export default function CourseRatingModal({
           {/* Star Rating */}
           <div className="text-center">
             <h3 className="sm:text-lg font-semibold text-gray-900 mb-4">
-              How would you rate this course?
+              {t("rateModal.title")}
             </h3>
             <div className="flex items-center justify-center gap-2 mb-2">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -235,7 +252,13 @@ export default function CourseRatingModal({
             </div>
             {rating > 0 && (
               <p className="sm:text-lg font-medium text-gray-700">
-                {ratingLabels[rating]} ({rating} star{rating !== 1 ? "s" : ""})
+                {i18n.language === "ar"
+                  ? `${ratingLabels[rating]} (${rating} ${
+                      rating !== 1 ? "نجوم" : "نجمة"
+                    })`
+                  : `${ratingLabels[rating]} (${rating} star${
+                      rating !== 1 ? "s" : ""
+                    })`}
               </p>
             )}
           </div>
@@ -244,8 +267,11 @@ export default function CourseRatingModal({
           {rating > 0 && (
             <div>
               <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
-                What did you {rating >= 4 ? "like" : "dislike"} about this
-                course?
+                {t("rateModal.reasons.title")}{" "}
+                {rating >= 4
+                  ? t("rateModal.reasons.like")
+                  : t("rateModal.reasons.dislike")}{" "}
+                {t("rateModal.reasons.subTitle")}
               </h4>
               {isLoading ? (
                 <ReviewReasonsSkeleton count={currentReasons?.length ?? 8} />
@@ -277,19 +303,19 @@ export default function CourseRatingModal({
           {rating > 0 && (
             <div>
               <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
-                Tell others about your experience (optional)
+                {t("rateModal.review.title")}
               </h4>
               <textarea
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
-                placeholder="Share your thoughts about the course content, instructor, and overall experience..."
+                placeholder={t("rateModal.review.placeholder")}
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none placeholder:text-xs sm:placeholder:text-base"
                 maxLength={500}
               />
               <div className="flex justify-between items-center mt-2">
                 <span className="text-sm text-gray-500">
-                  {review.length}/500 characters
+                  {t("rateModal.review.length", { length: review.length })}
                 </span>
               </div>
             </div>
@@ -299,7 +325,7 @@ export default function CourseRatingModal({
           {rating > 0 && (
             <div>
               <h4 className="sm:text-lg font-semibold text-gray-900 mb-4">
-                Would you recommend this course to others?
+                {t("rateModal.recommend.wouldRecommend")}
               </h4>
               <div className="flex gap-4 sm:flex-row flex-col">
                 <button
@@ -310,8 +336,8 @@ export default function CourseRatingModal({
                       : "border-gray-200 hover:border-green-300 text-gray-700"
                   }`}
                 >
-                  <ThumbsUp className="w-5 h-5 mr-2" />
-                  Yes, I recommend it
+                  <ThumbsUp className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
+                  {t("rateModal.recommend.yes")}
                 </button>
                 <button
                   onClick={() => setWouldRecommend(false)}
@@ -321,8 +347,8 @@ export default function CourseRatingModal({
                       : "border-gray-200 hover:border-red-300 text-gray-700"
                   }`}
                 >
-                  <ThumbsDown className="w-5 h-5 mr-2" />
-                  No, I don't recommend it
+                  <ThumbsDown className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
+                  {t("rateModal.recommend.no")}
                 </button>
               </div>
             </div>
@@ -338,13 +364,12 @@ export default function CourseRatingModal({
                   onChange={(e) => setAnonymous(e.target.checked)}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
-                <span className="ml-3 text-sm text-gray-700">
-                  Submit this review anonymously
+                <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700">
+                  {t("rateModal.privacy.submit")}
                 </span>
               </label>
               <p className="text-xs text-gray-500 mt-2">
-                Your review will be public, but your name won't be shown if you
-                choose anonymous.
+                {t("rateModal.privacy.explain")}
               </p>
             </div>
           )}
@@ -357,7 +382,7 @@ export default function CourseRatingModal({
               onClick={onClose}
               className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              Cancel
+              {t("rateModal.cancel")}
             </button>
             <button
               onClick={handleSubmit}
@@ -365,9 +390,9 @@ export default function CourseRatingModal({
               className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isPending || editPending ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ltr:mr-2 rtl:ml-2"></div>
               ) : (
-                <Send className="w-5 h-5 mr-2" />
+                <Send className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
               )}
               {isPending || editPending ? loadingLabel : primaryBtnLabel}
             </button>

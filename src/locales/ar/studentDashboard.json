@@ -66,6 +66,10 @@
     "streakDays": "أيام السلسلة"
   },
   "enrolledCourses": {
-    "continue": "استمرار"
+    "continue": "استمرار",
+    "lastAccessed": "آخر دخول"
+  },
+  "time": {
+    "now": "الآن"
   }
 }

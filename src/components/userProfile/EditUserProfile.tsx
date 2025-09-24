@@ -5,6 +5,7 @@ import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomPatch } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
 import { readUserFromStorage } from "../../services/auth";
+import { useTranslation } from "react-i18next";
 
 interface FormValues {
   first_name: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function EditUserProfile({ setIsEditing }: Props) {
+  const { t } = useTranslation("profile");
   const currentUser: User = readUserFromStorage();
 
   const {
@@ -57,7 +59,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
       const res = await editUser.mutateAsync(formData);
 
       if (res?.status) {
-        toast.success("Changes saved successfully!");
+        toast.success(t("editForm.success"));
         const user = {
           ...currentUser,
           first_name: res?.data?.first_name,
@@ -100,86 +102,76 @@ export default function EditUserProfile({ setIsEditing }: Props) {
         {/* First Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            First Name
+            {t("editForm.fn")}
           </label>
           <input
             type="text"
-            {...register("first_name", { required: "First Name is required" })}
+            {...register("first_name", { required: t("editForm.fnError") })}
             className={inputClass(!!errors.first_name)}
           />
           {errors.first_name && (
             <p className="mt-1 text-sm text-red-600">
-              {String(errors.first_name.message ?? "First Name is required")}
+              {String(errors.first_name.message ?? t("editForm.fnError"))}
             </p>
           )}
         </div>
         {/* Last Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fisrt Name
+            {t("editForm.ln")}
           </label>
           <input
             type="text"
-            {...register("first_name", { required: "First name is required" })}
-            className={inputClass(!!errors.first_name)}
-          />
-          {errors.first_name && (
-            <p className="mt-1 text-sm text-red-600">
-              {String(errors.first_name.message ?? "First name is required")}
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name
-          </label>
-          <input
-            type="text"
-            {...register("last_name", { required: "Last name is required" })}
+            {...register("last_name", { required: t("editForm.lnError") })}
             className={inputClass(!!errors.last_name)}
           />
           {errors.last_name && (
             <p className="mt-1 text-sm text-red-600">
-              {String(errors.last_name.message ?? "Last name is required")}
+              {String(errors.last_name.message ?? t("editForm.lnError"))}
             </p>
           )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email
+            {t("editForm.email")}
           </label>
           <input
             type="email"
             {...register("email", {
-              required: "Email is required",
+              required: t("editForm.emailError.required"),
               pattern: {
                 value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                message: "Please enter a valid email.",
+                message: t("editForm.emailError.valid"),
               },
             })}
             className={inputClass(!!errors.email)}
           />
+          {errors.email && (
+            <span className="text-sm text-red-500 mt-1 block">
+              {errors.email.message as string}
+            </span>
+          )}
         </div>
         {/* Phone */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone
+            {t("editForm.phone")}
           </label>
           <input
             type="tel"
             {...register("phone", {
               pattern: {
                 value: /^07\d{8}$/,
-                message: "Phone must starts with 07 and consists of 10 digits",
+                message: t("editForm.phoneError.pattern"),
               },
               minLength: {
                 value: 10,
-                message: "Phone must consists of 10 digits",
+                message: t("editForm.phoneError.length"),
               },
               maxLength: {
                 value: 10,
-                message: "Phone must consists of 10 digits",
+                message: t("editForm.phoneError.length"),
               },
             })}
             onInput={(e) => {
@@ -200,7 +192,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
         {/* Location */}
         <div className="md:col-span-2 ">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location
+            {t("editForm.location")}
           </label>
           <input
             type="text"
@@ -212,7 +204,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
       {/* Bio */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Bio
+          {t("editForm.bio")}
         </label>
         <textarea
           rows={4}
@@ -221,12 +213,12 @@ export default function EditUserProfile({ setIsEditing }: Props) {
         />
       </div>
       {/* Actions */}
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end gap-4">
         <button
           onClick={() => setIsEditing(false)}
           className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          Cancel
+          {t("cancel")}
         </button>
         <button
           type="submit"
@@ -237,8 +229,8 @@ export default function EditUserProfile({ setIsEditing }: Props) {
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              <Save className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {t("editForm.save")}
             </>
           )}
         </button>

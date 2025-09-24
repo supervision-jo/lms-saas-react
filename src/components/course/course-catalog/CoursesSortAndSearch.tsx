@@ -6,6 +6,7 @@ import {
   Filter as FilterIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type SortKey =
   | "most_popular"
@@ -104,23 +105,30 @@ export default function CoursesSortAndSearch({
   onOpenFilters,
   filterButtonRef,
 }: Props) {
+  const { t } = useTranslation("courseCatalog");
   const sortOptions: { value: SortKey; label: string }[] = [
-    { value: "most_popular", label: "Most Popular" },
-    { value: "high_rating", label: "Highest Rated" },
-    { value: "newest", label: "Newest" },
-    { value: "price_low_to_high", label: "Price: Low to High" },
-    { value: "price_high_to_low", label: "Price: High to Low" },
+    { value: "most_popular", label: t("sort.sortOptions.most_popular") },
+    { value: "high_rating", label: t("sort.sortOptions.high_rating") },
+    { value: "newest", label: t("sort.sortOptions.newest") },
+    {
+      value: "price_low_to_high",
+      label: t("sort.sortOptions.price_low_to_high"),
+    },
+    {
+      value: "price_high_to_low",
+      label: t("sort.sortOptions.price_high_to_low"),
+    },
   ];
   return (
     <>
       {/* Desktop */}
-      <div className="hidden lg:flex flex-col lg:flex-row items-stretch lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
+      <div className="hidden lg:flex flex-col lg:flex-row items-stretch lg:items-center space-y-4 lg:space-y-0 lg:gap-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder={t("sort.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent w-full sm:w-64"
@@ -180,7 +188,7 @@ export default function CoursesSortAndSearch({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder={t("sort.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"

@@ -14,6 +14,7 @@ import useMediaQuery from "../../hooks/useMediaQuery";
 import { readUserFromStorage } from "../../services/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import useAuth from "../../store/useAuth";
+import { useTranslation } from "react-i18next";
 
 type ViewMode = "grid" | "list";
 type PriceFilter = "all" | "free" | "paid";
@@ -28,6 +29,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 6;
 
 const CourseCatalogPage: React.FC = () => {
+  const { t } = useTranslation("courseCatalog");
   const [searchParams, setSearchParams] = useSearchParams();
   // Read search params from URL
   const searchQuery = searchParams.get("search") ?? "";
@@ -228,9 +230,9 @@ const CourseCatalogPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">All Courses</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>
               <p className="text-gray-600 mt-1">
-                {totalCount ?? 0} courses available
+                {t("subTitle", { totalCount: totalCount ?? 0 })}
               </p>
             </div>
 
@@ -273,11 +275,9 @@ const CourseCatalogPage: React.FC = () => {
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No courses found
+                  {t("emptyState.title")}
                 </h3>
-                <p className="text-gray-600">
-                  Try adjusting your filters or search terms
-                </p>
+                <p className="text-gray-600">{t("emptyState.subTitle")}</p>
               </div>
             ) : (
               <div
