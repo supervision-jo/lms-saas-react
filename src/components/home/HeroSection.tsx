@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 
 export default function HeroSection() {
   const navigate = useNavigate();
-  const { t } = useTranslation("home");
+  const { t, i18n } = useTranslation("home");
 
   return (
     <section className="relative bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 text-white overflow-hidden">
@@ -19,7 +19,11 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
+              <h1
+                className={`text-5xl lg:text-7xl font-bold leading-tight ${
+                  i18n.language === "ar" ? "flex gap-2" : ""
+                }`}
+              >
                 {t("learn")}
                 <span className="block text-yellow-400">{t("without")}</span>
                 <span className="block">{t("limits")}</span>

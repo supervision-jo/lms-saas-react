@@ -113,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Desktop Search */}
-          <div className="flex-1 max-w-lg mx-8 sm:block hidden">
+          {/* <div className="flex-1 max-w-lg mx-8 sm:block hidden">
             <form onSubmit={handleSearchSubmit} className="relative">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -128,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({
                 />
               </div>
             </form>
-          </div>
+          </div> */}
 
           {/* Right side */}
           <div className="flex items-center gap-4">
