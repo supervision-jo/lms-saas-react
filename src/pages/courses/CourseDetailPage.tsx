@@ -28,7 +28,7 @@ import CourseRatingModal from "../../components/course/course-details/CourseRati
 import CourseReviews from "../../components/course/course-details/CourseReviews";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
-import { useFeatureFlag } from "../../hooks/useSettings";
+import { useFeatureFlag, useSettings } from "../../hooks/useSettings";
 
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
@@ -42,6 +42,7 @@ const CourseDetailPage: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(
     readUserFromStorage()?.id ?? null
   );
+
   const currentUser: User = readUserFromStorage();
 
   useEffect(() => {
@@ -413,7 +414,7 @@ const CourseDetailPage: React.FC = () => {
                           ? y("card.viewCourse")
                           : y("card.startLearning")}
                       </button>
-                      {!isInstructorCourse && (
+                      {!isInstructorCourse && reviewsEnabled && (
                         <button
                           onClick={() => setShowRatingModal(true)}
                           className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
