@@ -28,7 +28,7 @@ import CourseRatingModal from "../../components/course/course-details/CourseRati
 import CourseReviews from "../../components/course/course-details/CourseReviews";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
-import { useFeatureFlag, useSettings } from "../../hooks/useSettings";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
