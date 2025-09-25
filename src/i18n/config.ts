@@ -5,27 +5,39 @@ import { initReactI18next } from "react-i18next";
 
 import translationEN from "../locales/en/translation.json";
 import translationAR from "../locales/ar/translation.json";
+import translationES from "../locales/es/translation.json";
 
 import homeEN from "../locales/en/home.json";
 import homeAR from "../locales/ar/home.json";
+import homeES from "../locales/es/home.json";
 
 import instructorDashboardEN from "../locales/en/instructorDashboard.json";
 import instructorDashboardAR from "../locales/ar/instructorDashboard.json";
+import instructorDashboardES from "../locales/es/instructorDashboard.json";
 
 import studentDashboardEN from "../locales/en/studentDashboard.json";
 import studentDashboardAR from "../locales/ar/studentDashboard.json";
+import studentDashboardES from "../locales/es/studentDashboard.json";
 
 import profileEN from "../locales/en/profile.json";
 import profileAR from "../locales/ar/profile.json";
+import profileES from "../locales/es/profile.json";
 
 import authEN from "../locales/en/auth.json";
 import authAR from "../locales/ar/auth.json";
+import authES from "../locales/es/auth.json";
 
 import courseCatalogEN from "../locales/en/courseCatalog.json";
 import courseCatalogAR from "../locales/ar/courseCatalog.json";
+import courseCatalogES from "../locales/es/courseCatalog.json";
 
 import courseDetailsEN from "../locales/en/courseDetails.json";
 import courseDetailsAR from "../locales/ar/courseDetails.json";
+import courseDetailsES from "../locales/es/courseDetails.json";
+
+import coursePlayerEN from "../locales/en/coursePlayer.json";
+import coursePlayerAR from "../locales/ar/coursePlayer.json";
+import coursePlayerES from "../locales/es/coursePlayer.json";
 
 const resources = {
   en: {
@@ -37,6 +49,7 @@ const resources = {
     auth: authEN,
     courseCatalog: courseCatalogEN,
     courseDetails: courseDetailsEN,
+    coursePlayer: coursePlayerEN,
   },
   ar: {
     translation: translationAR,
@@ -47,12 +60,25 @@ const resources = {
     auth: authAR,
     courseCatalog: courseCatalogAR,
     courseDetails: courseDetailsAR,
+    coursePlayer: coursePlayerAR,
+  },
+  es: {
+    translation: translationES,
+    home: homeES,
+    instructorDashboard: instructorDashboardES,
+    studentDashboard: studentDashboardES,
+    profile: profileES,
+    auth: authES,
+    courseCatalog: courseCatalogES,
+    courseDetails: courseDetailsES,
+    coursePlayer: coursePlayerES,
   },
 };
 
 export const supportedLngs = {
   en: "English",
   ar: "Arabic (العربية)",
+  es: "Español",
 };
 
 i18n
@@ -71,6 +97,7 @@ i18n
       "auth",
       "courseCatalog",
       "courseDetails",
+      "coursePlayer",
     ],
     defaultNS: "translation",
     supportedLngs: Object.keys(supportedLngs),

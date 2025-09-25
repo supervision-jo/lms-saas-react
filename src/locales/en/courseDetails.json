@@ -21,8 +21,8 @@
     "instructor": "Instructor",
     "reviews": "Reviews"
   },
-  "requirements": "Requirements",
-  "description": "Description",
+  "requirements": "Requirements:",
+  "description": "Description:",
   "content": "Course Content",
   "studentReviews": "Student Reviews",
   "rateModal": {

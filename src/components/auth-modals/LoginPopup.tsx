@@ -8,6 +8,7 @@ import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, X } from "lucide-react";
 import { storeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../settings/FeatureGate";
 
 interface FormValues {
   email: string;
@@ -250,20 +251,26 @@ export default function LoginPopup({
           </button> */}
 
           {/* Sign Up Link */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              {t("Login.dontHaveAcc")}{" "}
-              <button
-                onClick={() => {
-                  onClose();
-                  setShowSignupModal(true);
-                }}
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-              >
-                {t("Login.signup")}
-              </button>
-            </p>
-          </div>
+          <FeatureGate
+            flag="is_registration_enabled"
+            loadingFallback={null}
+            fallback={null}
+          >
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                {t("Login.dontHaveAcc")}{" "}
+                <button
+                  onClick={() => {
+                    onClose();
+                    setShowSignupModal(true);
+                  }}
+                  className="text-purple-600 hover:text-purple-700 font-semibold"
+                >
+                  {t("Login.signup")}
+                </button>
+              </p>
+            </div>
+          </FeatureGate>
         </div>
       </div>
     </div>

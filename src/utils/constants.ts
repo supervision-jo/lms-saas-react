@@ -49,4 +49,5 @@ export const API_ENDPOINTS = {
   login: "users/login/",
   refreshToken: "users/refresh-token/",
   updateProfile: "users/update-profile/",
+  settings: "tenant/settings",
 };

@@ -53,7 +53,7 @@ export default function TestimonialsSection() {
                     "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                   }
                   alt={testimonial.name}
-                  className="w-12 h-12 rounded-full mr-4"
+                  className="w-12 h-12 rounded-full ltr:mr-4 rtl:ml-4"
                 />
                 <div>
                   <h4 className="font-semibold text-gray-900">

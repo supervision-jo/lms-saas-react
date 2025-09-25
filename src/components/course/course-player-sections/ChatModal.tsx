@@ -1,4 +1,5 @@
 import { MessageCircle, Search, Send, Users, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ChatModalProps {
   handleSendGroupMessage: any;
@@ -15,6 +16,7 @@ export default function ChatModal({
   groupMessage,
   setGroupMessage,
 }: ChatModalProps) {
+  const { t } = useTranslation("coursePlayer");
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex">
@@ -25,14 +27,19 @@ export default function ChatModal({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <div
-                  className={`w-5 h-5 rounded-full ${activeChatGroup.color} mr-3`}
+                  className={`w-5 h-5 rounded-full ${activeChatGroup.color} ltr:mr-3 rtl:ml-3`}
                 />
                 <div>
                   <h3 className="text-xl font-bold text-white">
                     {activeChatGroup.name}
                   </h3>
                   <p className="text-gray-400 text-sm">
-                    {activeChatGroup.members.length} members
+                    {t(
+                      activeChatGroup.members.length === 1
+                        ? "chats.groupHeader.membersCount_one"
+                        : "chats.groupHeader.membersCount_other",
+                      { count: activeChatGroup.members.length }
+                    )}
                   </p>
                 </div>
               </div>
@@ -51,14 +58,15 @@ export default function ChatModal({
           {/* Members List */}
           <div className="flex-1 p-6 overflow-y-auto">
             <h4 className="text-white font-semibold mb-4 flex items-center">
-              <Users className="w-4 h-4 mr-2" />
-              Members ({activeChatGroup.members.length})
+              <Users className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {t("chats.sidebar.membersTitle")} (
+              {activeChatGroup.members.length})
             </h4>
             <div className="space-y-3">
               {activeChatGroup.members.map((member: any) => (
                 <div
                   key={member.id}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   <div className="relative">
                     <img
@@ -75,7 +83,9 @@ export default function ChatModal({
                       {member.name}
                     </div>
                     <div className="text-gray-400 text-xs">
-                      {member.isOnline ? "Online" : "Offline"}
+                      {member.isOnline
+                        ? t("chats.sidebar.online")
+                        : t("chats.sidebar.offline")}
                     </div>
                   </div>
                 </div>
@@ -86,7 +96,7 @@ export default function ChatModal({
           {/* Group Actions */}
           <div className="p-6 border-t border-gray-700">
             <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors text-sm">
-              Leave Group
+              {t("chats.sidebar.leaveGroup")}
             </button>
           </div>
         </div>
@@ -97,16 +107,18 @@ export default function ChatModal({
           <div className="p-6 border-b border-gray-700 bg-gray-800">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white">Group Chat</h3>
+                <h3 className="text-xl font-bold text-white">
+                  {t("chats.chatHeader.title")}
+                </h3>
                 <p className="text-gray-400 text-sm">
-                  {
-                    activeChatGroup.members.filter((m: any) => m.isOnline)
-                      .length
-                  }{" "}
-                  online now
+                  {t("chats.chatHeader.onlineNow", {
+                    count: activeChatGroup.members.filter(
+                      (m: any) => m.isOnline
+                    ).length,
+                  })}
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition-colors">
                   <Search className="w-5 h-5" />
                 </button>
@@ -193,14 +205,14 @@ export default function ChatModal({
                   timestamp: "2 minutes ago",
                 },
               ].map((message: any) => (
-                <div key={message.id} className="flex items-start space-x-4">
+                <div key={message.id} className="flex items-start gap-4">
                   <img
                     src={message.avatar}
                     alt={message.user}
                     className="w-10 h-10 rounded-full flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold text-white text-sm">
                         {message.user}
                       </span>
@@ -221,10 +233,10 @@ export default function ChatModal({
                 <div className="text-center py-12">
                   <MessageCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                   <h4 className="text-xl font-semibold text-white mb-2">
-                    No messages yet
+                    {t("chats.discussion.noMessagesTitle")}
                   </h4>
                   <p className="text-gray-400">
-                    Start the conversation with your study group!
+                    {t("chats.discussion.noMessagesSubtitle")}
                   </p>
                 </div>
               )}
@@ -233,15 +245,17 @@ export default function ChatModal({
 
           {/* Message Input */}
           <div className="p-6 border-t border-gray-700 bg-gray-800">
-            <div className="flex items-end space-x-4">
+            <div className="flex items-end gap-4">
               <div className="flex-1">
                 <textarea
                   value={groupMessage}
                   onChange={(e) => setGroupMessage(e.target.value)}
-                  placeholder={`Message ${activeChatGroup.name}...`}
+                  placeholder={t("chats.composer.placeholder", {
+                    groupName: activeChatGroup.name,
+                  })}
                   className="w-full bg-gray-700 text-white border border-gray-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                   rows={3}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendGroupMessage(activeChatGroup.id);
@@ -249,7 +263,7 @@ export default function ChatModal({
                   }}
                 />
                 <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <button className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors">
                       <span className="text-lg">😊</span>
                     </button>
@@ -258,7 +272,7 @@ export default function ChatModal({
                     </button>
                   </div>
                   <span className="text-xs text-gray-500">
-                    Press Enter to send, Shift+Enter for new line
+                    {t("chats.composer.hint")}
                   </span>
                 </div>
               </div>

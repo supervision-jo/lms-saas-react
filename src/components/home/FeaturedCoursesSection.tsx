@@ -5,10 +5,12 @@ import { API_ENDPOINTS } from "../../utils/constants";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { formatDuration } from "../../utils/formatDuration";
 import CourseCardsSkeleton from "../resource-stats/CourseLoading";
+import { useFeatureFlag } from "../../hooks/useSettings";
+import FeatureGate from "../settings/FeatureGate";
 
 export default function FeaturedCoursesSection() {
   const navigate = useNavigate();
-  const { t } = useTranslation("home");
+  const { t, i18n } = useTranslation("home");
 
   const {
     data: featuredCoursesData,
@@ -20,6 +22,7 @@ export default function FeaturedCoursesSection() {
   ]);
   const courses: Course[] = featuredCoursesData?.data;
 
+  const { enabled: priceEnabled } = useFeatureFlag("is_price_enabled", true);
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -82,37 +85,47 @@ export default function FeaturedCoursesSection() {
                     {course?.instructor?.last_name ?? "--"}
                   </p>
 
-                  <div className="flex items-center mb-4">
-                    <div className="flex items-center">
-                      <span className="text-yellow-500 font-bold mr-1">
-                        {parseInt(course?.average_rating) ?? 0}
-                      </span>
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i <
-                              Math.floor(parseInt(course?.average_rating) ?? 0)
-                                ? "text-yellow-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
+                  <FeatureGate
+                    flag="is_review_enabled"
+                    loadingFallback={null}
+                    fallback={null}
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="flex items-center">
+                        <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
+                          {parseInt(course?.average_rating) ?? 0}
+                        </span>
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i <
+                                Math.floor(
+                                  parseInt(course?.average_rating) ?? 0
+                                )
+                                  ? "text-yellow-400 fill-current"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-gray-500 text-sm ltr:ml-2 rtl:mr-2">
+                          ({course?.total_reviews ?? 0} {t("reviews")})
+                        </span>
                       </div>
-                      <span className="text-gray-500 text-sm ml-2">
-                        ({course?.total_reviews ?? 0} {t("reviews")})
-                      </span>
                     </div>
-                  </div>
+                  </FeatureGate>
 
                   <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
                     <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>{formatDuration(course?.total_hours)}</span>
+                      <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                      <span>
+                        {formatDuration(course?.total_hours, i18n.language)}
+                      </span>
                     </div>
                     <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
+                      <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                       <span>
                         {course?.total_students?.toLocaleString() ?? 0}
                       </span>
@@ -120,16 +133,18 @@ export default function FeaturedCoursesSection() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <span className="text-2xl font-bold text-gray-900">
-                        ${course?.price ?? "0"}
-                      </span>
-                      {course?.old_price && (
-                        <span className="text-gray-500 line-through ml-2">
-                          ${course?.old_price ?? "0"}
+                    {priceEnabled && (
+                      <div className="flex items-center">
+                        <span className="text-2xl font-bold text-gray-900">
+                          ${course?.price ?? "0"}
                         </span>
-                      )}
-                    </div>
+                        {course?.old_price && (
+                          <span className="text-gray-500 line-through ltr:ml-2 rtl:mr-2">
+                            ${course?.old_price ?? "0"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
                       {course?.level ?? "--"}
                     </span>

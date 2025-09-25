@@ -17,6 +17,7 @@ import Layout from "../layout/dashboard/Layout";
 import HomePage from "../pages/home/HomePage";
 import { RequireAuth } from "./requireAuth";
 import { RequireRole } from "./guards";
+import { useFeatureFlag } from "../hooks/useSettings";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -32,13 +33,23 @@ import { RequireRole } from "./guards";
 export default function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
+  const {
+    enabled: registrationEnabled,
+    isError: registrationError,
+    isFetching: registrationFetching,
+    isLoading: registrationLoading,
+  } = useFeatureFlag("is_registration_enabled", true);
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Auth */}
         <Route path="" element={<Layout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/sign-up" element={<SignupPage />} />
+          {(registrationError || registrationFetching || registrationLoading) &&
+            !registrationEnabled && (
+              <Route path="/sign-up" element={<SignupPage />} />
+            )}
           <Route path="/login" element={<LoginPage />} />
           {/* Auth */}
 

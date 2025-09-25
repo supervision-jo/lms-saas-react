@@ -290,7 +290,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                   ) : (
                     <ChevronRight className="w-5 h-5 text-gray-500 mr-3 transition-transform duration-200" />
                   )}
-                  <div className="text-left">
+                  <div className="rtl:text-right ltr:text-left">
                     <h4 className="font-semibold text-gray-900 text-base">
                       {module?.title}
                     </h4>

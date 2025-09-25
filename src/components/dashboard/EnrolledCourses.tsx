@@ -5,6 +5,7 @@ import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { formatDuration } from "../../utils/formatDuration";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../settings/FeatureGate";
 
 export default function EnrolledCourses({
   item,
@@ -111,22 +112,24 @@ export default function EnrolledCourses({
                     i18n.language
                   )}
                 </span>
-                {Array.from({ length: 5 }).map((_, i) =>
-                  i < (currentEnrollStat?.average_rating ?? 0) ? (
-                    <Star
-                      key={i + 9000}
-                      className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
-                    />
-                  ) : (
-                    <Star
-                      key={i + 9050}
-                      className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
-                    />
-                  )
-                )}
-                <span className="ltr:mr-4 rtl:ml-4">
-                  ({currentEnrollStat?.average_rating ?? 0})
-                </span>
+                <FeatureGate flag="is_review_enabled">
+                  {Array.from({ length: 5 }).map((_, i) =>
+                    i < (currentEnrollStat?.average_rating ?? 0) ? (
+                      <Star
+                        key={i + 9000}
+                        className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
+                      />
+                    ) : (
+                      <Star
+                        key={i + 9050}
+                        className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
+                      />
+                    )
+                  )}
+                  <span className="ltr:mr-4 rtl:ml-4">
+                    ({currentEnrollStat?.average_rating ?? 0})
+                  </span>
+                </FeatureGate>
                 <span className="text-gray-400">
                   {t("enrolledCourses.lastAccessed")}{" "}
                   {formatDateTimeSimple(

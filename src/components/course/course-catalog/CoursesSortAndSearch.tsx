@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../settings/FeatureGate";
 
 type SortKey =
   | "most_popular"
@@ -119,6 +120,7 @@ export default function CoursesSortAndSearch({
       label: t("sort.sortOptions.price_high_to_low"),
     },
   ];
+
   return (
     <>
       {/* Desktop */}
@@ -217,15 +219,21 @@ export default function CoursesSortAndSearch({
         />
 
         {/* Filter icon opens drawer */}
-        <button
-          type="button"
-          ref={filterButtonRef}
-          onClick={onOpenFilters}
-          className="p-2 border border-gray-300 rounded-lg text-gray-600"
-          aria-label="Open filters"
+        <FeatureGate
+          flag="is_courses_filter_enabled"
+          loadingFallback={null}
+          fallback={null}
         >
-          <FilterIcon className="w-5 h-5" />
-        </button>
+          <button
+            type="button"
+            ref={filterButtonRef}
+            onClick={onOpenFilters}
+            className="p-2 border border-gray-300 rounded-lg text-gray-600"
+            aria-label="Open filters"
+          >
+            <FilterIcon className="w-5 h-5" />
+          </button>
+        </FeatureGate>
       </div>
     </>
   );

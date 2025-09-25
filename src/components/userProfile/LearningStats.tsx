@@ -13,82 +13,88 @@ import { readUserFromStorage, roleOf } from "../../services/auth";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 interface LearningStatsProps {
   stats: StudentStats;
 }
 
-const ICONS = {
-  Users,
-  DollarSign,
-  Star,
-  Eye,
-} as const;
+type InstructorItemKey = "students" | "revenue" | "avgRating" | "reviews";
 
-type IconName = keyof typeof ICONS;
-
-type DisplayedStats = {
+type InstructorItem = {
+  key: InstructorItemKey;
   label: string;
   value: number;
-  icon: IconName;
+  Icon: LucideIcon;
   color: string;
   bg: string;
-  change?: number;
 };
 
 export default function LearningStats({ stats }: LearningStatsProps) {
   const profileData: User = readUserFromStorage();
   const isStudent = roleOf(profileData) === "student";
+
   const { t: y } = useTranslation("studentDashboard");
   const { t } = useTranslation("instructorDashboard");
 
   const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
     "instructor-stats",
   ]);
+  const insStats: InstructorStats | undefined = data?.data;
 
-  const insStats: InstructorStats = data?.data;
+  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
 
-  const items = [
+  const baseInstructorItems: InstructorItem[] = [
     {
+      key: "students",
       label: t("statisticsCards.totalStudents"),
       value: insStats?.total_students ?? 0,
-      icon: "Users",
+      Icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-100",
-      change: insStats?.new_students ?? 0,
     },
     {
+      key: "revenue",
       label: t("statisticsCards.totalRevenue"),
       value: insStats?.revenue ?? 0,
-      icon: "DollarSign",
+      Icon: DollarSign,
       color: "text-green-600",
       bg: "bg-green-100",
-      // change: "+8%",
     },
     {
+      key: "avgRating",
       label: t("statisticsCards.averageRating"),
       value: insStats?.average_rating ?? 0,
-      icon: "Star",
+      Icon: Star,
       color: "text-yellow-600",
       bg: "bg-yellow-100",
-      // change: "+0.2",
     },
     {
+      key: "reviews",
       label: t("statisticsCards.totalReviews"),
-      value: insStats?.total_reviews,
-      icon: "Eye",
+      value: insStats?.total_reviews ?? 0,
+      Icon: Eye,
       color: "text-purple-600",
       bg: "bg-purple-100",
-      change: insStats?.new_reviews ?? 0,
-      // change: "+15%",
     },
   ];
 
-  const instructorStats =
-    (items as DisplayedStats[] | undefined)?.map((s: DisplayedStats) => ({
-      ...s,
-      Icon: ICONS[s.icon] as LucideIcon,
-    })) ?? [];
+  const visibleInstructorItems = reviewsEnabled
+    ? baseInstructorItems
+    : baseInstructorItems.filter(
+        (i) => !["avgRating", "reviews"].includes(i.key)
+      );
+
+  const count = visibleInstructorItems.length;
+  const gridClass =
+    count <= 1
+      ? "grid-cols-1"
+      : count === 2
+      ? "grid-cols-1 md:grid-cols-2"
+      : count === 3
+      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4";
+
   if (isStudent) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -147,26 +153,26 @@ export default function LearningStats({ stats }: LearningStatsProps) {
         </div>
       </div>
     );
-  } else {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {instructorStats.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white rounded-xl shadow-sm p-6 text-center"
-          >
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center mb-3">
-                <stat.Icon className={`w-8 h-8 ${stat?.color}`} />
-              </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">
-                {stat?.value}
-              </p>
-              <p className="text-sm text-gray-600">{stat?.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
   }
+
+  return (
+    <div className={`grid ${gridClass} gap-6 mb-8`}>
+      {visibleInstructorItems.map((stat) => (
+        <div
+          key={stat.key}
+          className="bg-white rounded-xl shadow-sm p-6 text-center"
+        >
+          <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center mb-3">
+              <stat.Icon className={`w-8 h-8 ${stat.color}`} />
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">
+              {stat.value}
+            </p>
+            <p className="text-sm text-gray-600">{stat.label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

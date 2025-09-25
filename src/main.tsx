@@ -9,6 +9,7 @@ import AppRoutes from "./routes";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 import TokenRefreshSubscriber from "./services/TokenRefreshSubscriber";
+import SettingsBootstrap from "./components/settings/SettingsBootstrap";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -30,6 +31,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<div>Loading...</div>}>
+        <SettingsBootstrap />
         <AppRoutes />
         <Toaster position="top-right" />
         <TokenRefreshSubscriber />

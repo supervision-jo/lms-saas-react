@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Heart, ThumbsUp, Sparkles } from "lucide-react";
 import { Subject, useReaction } from "../../../hooks/useReaction";
+import { useTranslation } from "react-i18next";
 
 const colorFor = (type: null | "like" | "love" | "clap") =>
   type === "love"
@@ -44,6 +45,7 @@ export default function ReactionGroup({
   const hideTimer = useRef<number | null>(null);
   // const pressTimer = useRef<number | null>(null);
   // const [pressed, setPressed] = useState(false);
+  const { t } = useTranslation("coursePlayer");
 
   const safeOpen = () => {
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
@@ -116,11 +118,11 @@ export default function ReactionGroup({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onPointerLeave={onPointerLeave}
-        className={`flex items-center space-x-1 text-sm px-2 py-1 rounded transition-colors
+        className={`flex items-center gap-1 text-sm px-2 py-1 rounded transition-colors
           ${my ? "bg-gray-700" : "hover:bg-gray-700"}
           ${colorFor(my)}
         `}
-        title={my ? "Remove reaction" : "Like"}
+        title={my ? t("reactions.removeReact") : t("reactions.like")}
       >
         <ThumbsUp
           className="w-4 h-4"
@@ -139,7 +141,7 @@ export default function ReactionGroup({
           onMouseLeave={safeClose}
         >
           <PaletteBtn
-            label="Like"
+            label={t("reactions.like")}
             active={my === "like"}
             colorClass="text-sky-500"
             onClick={() => choose("like")}
@@ -152,7 +154,7 @@ export default function ReactionGroup({
           </PaletteBtn>
 
           <PaletteBtn
-            label="Love"
+            label={t("reactions.love")}
             active={my === "love"}
             colorClass="text-rose-500"
             onClick={() => choose("love")}
@@ -165,7 +167,7 @@ export default function ReactionGroup({
           </PaletteBtn>
 
           <PaletteBtn
-            label="Clap"
+            label={t("reactions.clap")}
             active={my === "clap"}
             colorClass="text-amber-500"
             onClick={() => choose("clap")}

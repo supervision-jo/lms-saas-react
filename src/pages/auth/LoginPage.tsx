@@ -9,6 +9,7 @@ import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomPost } from "../../hooks/useMutation";
 import { storeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../components/settings/FeatureGate";
 
 interface FormValues {
   email: string;
@@ -241,17 +242,23 @@ const LoginPage: React.FC = () => {
           </button> */}
 
           {/* Sign Up Link */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              {t("Login.dontHaveAcc")}{" "}
-              <button
-                onClick={() => navigate("/sign-up")}
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-              >
-                {t("Login.signup")}
-              </button>
-            </p>
-          </div>
+          <FeatureGate
+            flag="is_registration_enabled"
+            loadingFallback={null}
+            fallback={null}
+          >
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                {t("Login.dontHaveAcc")}{" "}
+                <button
+                  onClick={() => navigate("/sign-up")}
+                  className="text-purple-600 hover:text-purple-700 font-semibold"
+                >
+                  {t("Login.signup")}
+                </button>
+              </p>
+            </div>
+          </FeatureGate>
         </div>
       </div>
     </div>

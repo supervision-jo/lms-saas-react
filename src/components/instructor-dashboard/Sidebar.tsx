@@ -1,6 +1,7 @@
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../settings/FeatureGate";
 
 export default function InstructorDashboardSidebar() {
   const { t } = useTranslation("instructorDashboard"); // namespace
@@ -17,9 +18,15 @@ export default function InstructorDashboardSidebar() {
           {t("sidebar.quickActions")}
         </h3>
         <div className="space-y-3">
-          <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-            {t("sidebar.viewAllReviews")}
-          </button>
+          <FeatureGate
+            flag="is_review_enabled"
+            loadingFallback={null}
+            fallback={null}
+          >
+            <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+              {t("sidebar.viewAllReviews")}
+            </button>
+          </FeatureGate>
           <button className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
             {t("sidebar.downloadReports")}
           </button>
@@ -50,12 +57,18 @@ export default function InstructorDashboardSidebar() {
             <span className="text-gray-600">{t("sidebar.courseViews")}</span>
             <span className="font-semibold text-gray-900">+{stats?.}</span>
           </div> */}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">{t("sidebar.newReviews")}</span>
-            <span className="font-semibold text-gray-900">
-              +{stats?.new_reviews ?? 0}
-            </span>
-          </div>
+          <FeatureGate
+            flag="is_review_enabled"
+            loadingFallback={null}
+            fallback={null}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">{t("sidebar.newReviews")}</span>
+              <span className="font-semibold text-gray-900">
+                +{stats?.new_reviews ?? 0}
+              </span>
+            </div>
+          </FeatureGate>
         </div>
       </div>
 

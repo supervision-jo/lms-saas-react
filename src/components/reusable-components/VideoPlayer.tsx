@@ -11,6 +11,7 @@ import {
   SkipBack,
   SkipForward,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /** Forwarded ref in v3 aims to behave like HTMLMediaElement */
 type PlayerHandle = any; // keep loose to avoid ambient typing conflicts
@@ -105,6 +106,7 @@ const VideoPlayer: React.FC<Props> = ({
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation("coursePlayer");
   const pct = duration
     ? Math.max(0, Math.min(100, (current / duration) * 100))
     : 0;
@@ -191,9 +193,7 @@ const VideoPlayer: React.FC<Props> = ({
             height="100%"
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
-            onError={() =>
-              setError("This source can’t be played (permissions/format/CORS).")
-            }
+            onError={() => setError(t("video.error"))}
             onEnded={() => {
               setPlaying(false);
               onComplete?.();
@@ -240,7 +240,7 @@ const VideoPlayer: React.FC<Props> = ({
             onClick={togglePlay}
             className="sm:w-20 sm:h-20 w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-700"
           >
-            <Play className="sm:w-8 sm:h-8 w-5 h-5 text-white ml-1" />
+            <Play className="sm:w-8 sm:h-8 w-5 h-5 text-white ltr:ml-1 rtl:mr-1" />
           </button>
         </div>
       )}
@@ -269,7 +269,7 @@ const VideoPlayer: React.FC<Props> = ({
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center sm:space-x-4 space-x-1">
+            <div className="flex items-center sm:gap-4 gap-1">
               <button
                 onClick={togglePlay}
                 className="text-white hover:text-purple-400"
@@ -312,7 +312,7 @@ const VideoPlayer: React.FC<Props> = ({
                 </button>
               )}
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleMuteClick}
                   className="text-white hover:text-purple-400"
@@ -359,7 +359,7 @@ const VideoPlayer: React.FC<Props> = ({
                 </button>
                 <div className="absolute sm:bottom-8 bottom-5 right-0 bg-black/90 rounded-lg sm:p-2 p-1 opacity-0 group-hover/settings:opacity-100 transition-opacity">
                   <div className="text-white sm:text-sm text-xs sm:mb-2 mb-1">
-                    Speed
+                    {t("video.speed")}
                   </div>
                   <div className="flex flex-col items-start gap-1">
                     {[0.5, 0.75, 1, 1.25, 1.5, 2].map((r) => (

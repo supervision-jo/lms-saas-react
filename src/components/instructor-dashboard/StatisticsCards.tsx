@@ -2,20 +2,15 @@ import { DollarSign, Eye, LucideIcon, Star, Users } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
-const ICONS = {
-  Users,
-  DollarSign,
-  Star,
-  Eye,
-} as const;
-
-type IconName = keyof typeof ICONS;
+type StatKey = "students" | "revenue" | "avgRating" | "reviews";
 
 type DisplayedStats = {
+  key: StatKey;
   label: string;
   value: number;
-  icon: IconName;
+  Icon: LucideIcon;
   color: string;
   bg: string;
   change?: number;
@@ -23,58 +18,72 @@ type DisplayedStats = {
 
 export default function StatisticsCards() {
   const { t } = useTranslation("instructorDashboard");
+  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
+
   const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
     "instructor-stats",
   ]);
+  const stats: InstructorStats | undefined = data?.data;
 
-  const stats: InstructorStats = data?.data;
-
-  const items = [
+  // 1) العناصر الأساسية بمفاتيح داخلية ثابتة
+  const baseItems: DisplayedStats[] = [
     {
+      key: "students",
       label: t("statisticsCards.totalStudents"),
       value: stats?.total_students ?? 0,
-      icon: "Users",
+      Icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-100",
       change: stats?.new_students ?? 0,
     },
     {
+      key: "revenue",
       label: t("statisticsCards.totalRevenue"),
       value: stats?.revenue ?? 0,
-      icon: "DollarSign",
+      Icon: DollarSign,
       color: "text-green-600",
       bg: "bg-green-100",
-      // change: "+8%",
     },
     {
+      key: "avgRating",
       label: t("statisticsCards.averageRating"),
       value: stats?.average_rating ?? 0,
-      icon: "Star",
+      Icon: Star,
       color: "text-yellow-600",
       bg: "bg-yellow-100",
-      // change: "+0.2",
     },
     {
+      key: "reviews",
       label: t("statisticsCards.totalReviews"),
-      value: stats?.total_reviews,
-      icon: "Eye",
+      value: stats?.total_reviews ?? 0,
+      Icon: Eye,
       color: "text-purple-600",
       bg: "bg-purple-100",
       change: stats?.new_reviews ?? 0,
-      // change: "+15%",
     },
   ];
 
-  const instructorStats =
-    (items as DisplayedStats[] | undefined)?.map((s: DisplayedStats) => ({
-      ...s,
-      Icon: ICONS[s.icon] as LucideIcon,
-    })) ?? [];
+  // 2) رشّح حسب الفلاج (أخفي عناصر التقييم/المراجعات لو الفلاج مقفول)
+  const visible = baseItems.filter((item) =>
+    reviewsEnabled ? true : !["avgRating", "reviews"].includes(item.key)
+  );
+
+  // 3) حدّد كلاس الشبكة حسب العدد (1..4)
+  const count = visible.length;
+  const gridClass =
+    count <= 1
+      ? "grid-cols-1"
+      : count === 2
+      ? "grid-cols-1 md:grid-cols-2"
+      : count === 3
+      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"; // 4 أو أكثر
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {instructorStats.map((stat, index) => (
+    <div className={`grid ${gridClass} gap-6 mb-8`}>
+      {visible.map((stat) => (
         <div
-          key={index}
+          key={stat.key}
           className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
         >
           <div className="flex items-center justify-between">
@@ -90,7 +99,7 @@ export default function StatisticsCards() {
             {stat?.change && stat?.change > 0 ? (
               <div className="text-right">
                 <span className="text-sm font-medium text-green-600">
-                  +{stat?.change}
+                  +{stat.change}
                 </span>
                 <p className="text-xs text-gray-500">
                   {t("statisticsCards.vsLastMonth")}

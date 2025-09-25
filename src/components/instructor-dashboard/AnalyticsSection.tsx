@@ -2,6 +2,7 @@ import { Star, Users } from "lucide-react";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../settings/FeatureGate";
 
 type Analytics = {
   monthlyRevenue: number[];
@@ -68,8 +69,14 @@ export default function AnalyticsSection() {
                   <span className="mr-4">
                     {course.students.toLocaleString()} {t("courses.students")}
                   </span>
-                  <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                  <span>{course.rating}</span>
+                  <FeatureGate
+                    flag="is_review_enabled"
+                    loadingFallback={null}
+                    fallback={null}
+                  >
+                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
+                    <span>{course.rating}</span>
+                  </FeatureGate>
                 </div>
               </div>
               <div className="text-right">

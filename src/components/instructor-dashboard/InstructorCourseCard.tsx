@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 import DeleteConfirmation from "../reusable-components/DeleteConfirmation";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../settings/FeatureGate";
 
 interface Props {
   navigate: NavigateFunction;
@@ -64,11 +65,17 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   <span className="mr-4">
                     {course?.total_students ?? 0} {t("courses.students")}
                   </span>
-                  <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                  <span className="mr-1">{course?.average_rating ?? 0}</span>
-                  <span>
-                    ({course?.total_reviews ?? 0} {t("courses.reviews")})
-                  </span>
+                  <FeatureGate
+                    flag="is_review_enabled"
+                    loadingFallback={null}
+                    fallback={null}
+                  >
+                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
+                    <span className="mr-1">{course?.average_rating ?? 0}</span>
+                    <span>
+                      ({course?.total_reviews ?? 0} {t("courses.reviews")})
+                    </span>
+                  </FeatureGate>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 mb-2">
                   <span className="mr-4">
@@ -145,15 +152,21 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
               </h3>
 
               <div className="flex md:items-center items-start justify-start gap-4 w-full md:flex-row flex-col">
-                <div className="flex items-center">
-                  <span className="text-yellow-500 font-bold mr-1">
-                    {course?.average_rating ?? 0}
-                  </span>
-                  <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                  <span className="text-gray-500 text-sm ml-2">
-                    ({course?.total_reviews ?? 0} {t("courses.reviews")})
-                  </span>
-                </div>
+                <FeatureGate
+                  flag="is_review_enabled"
+                  loadingFallback={null}
+                  fallback={null}
+                >
+                  <div className="flex items-center">
+                    <span className="text-yellow-500 font-bold mr-1">
+                      {course?.average_rating ?? 0}
+                    </span>
+                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
+                    <span className="text-gray-500 text-sm ml-2">
+                      ({course?.total_reviews ?? 0} {t("courses.reviews")})
+                    </span>
+                  </div>
+                </FeatureGate>
 
                 <div className="flex items-center text-sm text-gray-600">
                   <Users className="w-4 h-4 mr-1" />

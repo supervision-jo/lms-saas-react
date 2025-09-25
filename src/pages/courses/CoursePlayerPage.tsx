@@ -9,6 +9,7 @@ import {
   X,
   ListVideo,
   Clock,
+  ChevronRight,
 } from "lucide-react";
 import CourseContent, {
   findNextLessonId,
@@ -27,6 +28,7 @@ import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { readUserFromStorage } from "../../services/auth";
 import { getCookie } from "../../services/cookies";
+import { useTranslation } from "react-i18next";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
@@ -38,6 +40,7 @@ export default function CoursePlayerPage() {
   };
   const { state } = location;
   const search = location.search;
+  const { t, i18n } = useTranslation("coursePlayer");
 
   // read lesson id from query
   const lessonFromQS = useMemo(
@@ -199,7 +202,7 @@ export default function CoursePlayerPage() {
             ({
               id: assessmentIdFromQS,
               type: assessmentTypeFromQS,
-              title: "Loading…",
+              title: t("loading"),
               description: "",
               lesson: currentLessonId,
               time_limit: 0,
@@ -220,6 +223,7 @@ export default function CoursePlayerPage() {
     assessmentTypeFromQS,
     examsForLessonRes,
     currentLessonId,
+    t,
   ]);
 
   const handleLessonSelect = (lessonId: string) => {
@@ -310,10 +314,10 @@ export default function CoursePlayerPage() {
           queryKey: ["modules", courseId],
         });
 
-        if (res?.status) toast.success("Awesome! Lesson completed.");
+        if (res?.status) toast.success(t("handleComplete.success"));
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Something went wrong.");
+      toast.error(error?.message ?? t("handleComplete.error"));
     }
   };
 
@@ -344,14 +348,18 @@ export default function CoursePlayerPage() {
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between flex-row">
-          <div className="flex mb-2 md:mb-0 items-center space-x-4 md:justify-start justify-between md:w-fit w-full">
+          <div className="flex mb-2 md:mb-0 items-center gap-4 md:justify-start justify-between md:w-fit w-full">
             <button
               onClick={() => navigate(`/catalog/${courseId}`)}
               className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
             >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="ml-2 font-medium lg:inline-block hidden">
-                Back to Course Details
+              {i18n.language === "ar" ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              )}
+              <span className="ltr:ml-2 rtl:mr-2 font-medium lg:inline-block hidden">
+                {t("backBtn")}
               </span>
             </button>
             <div className="flex-1">
@@ -360,9 +368,10 @@ export default function CoursePlayerPage() {
               </h1>
               <div className="flex items-center text-sm text-gray-400">
                 <span>
-                  Progress: {currentEnrollStat?.progress?.toFixed(0) ?? 0}%
+                  {t("progress")}:{" "}
+                  {currentEnrollStat?.progress?.toFixed(0) ?? 0}%
                 </span>
-                <div className="w-20 h-2 bg-gray-700 rounded-full ml-2">
+                <div className="w-20 h-2 bg-gray-700 rounded-full ltr:ml-2 rtl:mr-2">
                   <div
                     className="h-full bg-purple-600 rounded-full transition-all duration-300"
                     style={{
@@ -374,7 +383,7 @@ export default function CoursePlayerPage() {
             </div>
           </div>
 
-          {/* <div className="flex items-center space-x-2 sm:justify-start justify-center sm:w-fit w-full"> */}
+          {/* <div className="flex items-center gap-2 sm:justify-start justify-center sm:w-fit w-full"> */}
           <div className="flex items-center justify-end w-fit">
             {/* <button
               onClick={() => setShowNotes((v) => !v)}
@@ -404,7 +413,7 @@ export default function CoursePlayerPage() {
               onClick={() => setContentOpen(true)}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors md:hidden"
               aria-label="Open course content"
-              title="Course Content"
+              title={t("courseContent")}
             >
               <ListVideo className="w-5 h-5" />
             </button>
@@ -432,8 +441,11 @@ export default function CoursePlayerPage() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
                   <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
                   <span className="text-gray-400 flex items-center justify-start">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {formatDuration(currentLesson?.duration_hours)}
+                    <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                    {formatDuration(
+                      currentLesson?.duration_hours,
+                      i18n.language
+                    )}
                   </span>
                 </div>
                 <p className="text-gray-300 leading-relaxed">
@@ -461,7 +473,9 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <span>📝</span>
-                    <span>Lesson Notes ({notesCount})</span>
+                    <span>
+                      {t("lessonNotes")} ({notesCount})
+                    </span>
                   </button>
                   <button
                     onClick={() => {
@@ -476,7 +490,9 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <span>💬</span>
-                    <span>Q&A ({questions?.length})</span>
+                    <span>
+                      {t("QA")} ({questions?.length})
+                    </span>
                   </button>
                   <button
                     onClick={() => {
@@ -491,7 +507,7 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <Users size={16} />
-                    <span>Groups (2)</span>
+                    <span>{t("groups")} (2)</span>
                   </button>
                 </div>
               </div>
@@ -565,7 +581,7 @@ export default function CoursePlayerPage() {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <span className="font-semibold text-gray-900">
-                Course Content
+                {t("courseContent")}
               </span>
               <button
                 onClick={() => setContentOpen(false)}

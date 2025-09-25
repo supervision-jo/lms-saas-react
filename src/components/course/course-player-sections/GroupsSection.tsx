@@ -1,4 +1,5 @@
 import { Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const courseGroups = [
   {
@@ -91,13 +92,15 @@ export default function GroupsSection({
   handleJoinGroup,
   handleShowChat,
 }: GroupsProps) {
+  const { t } = useTranslation("coursePlayer");
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Study Groups</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          {t("groupsSection.title")}
+        </h3>
         <p className="text-gray-300 text-sm mb-6">
-          Join study groups to collaborate with fellow students and discuss
-          course content.
+          {t("groupsSection.subtitle")}
         </p>
 
         {/* Groups List */}
@@ -106,30 +109,39 @@ export default function GroupsSection({
             <div key={group.id} className="bg-gray-700 rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
-                  <div className={`w-4 h-4 rounded-full ${group.color} mr-3`} />
+                  <div
+                    className={`w-4 h-4 rounded-full ${group.color} ltr:mr-3 rtl:ml-3`}
+                  />
                   <div>
                     <h4 className="font-semibold text-white">{group.name}</h4>
                     <p className="text-gray-300 text-sm">{group.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">
-                    {group.members.length} member
-                    {group.members.length !== 1 ? "s" : ""}
+                    {t(
+                      group.members.length === 1
+                        ? "groupsSection.members_one"
+                        : "groupsSection.members_other",
+                      { count: group.members.length }
+                    )}
                   </span>
                   <button
                     onClick={() => handleJoinGroup(group.id)}
                     className="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 transition-colors"
                   >
-                    Join
+                    {t("groupsSection.join")}
                   </button>
                 </div>
               </div>
 
               {/* Group Members */}
               <div className="flex items-center mb-3">
-                <span className="text-gray-400 text-sm mr-3">Members:</span>
-                <div className="flex -space-x-2">
+                <span className="text-gray-400 text-sm ltr:mr-3 rtl:ml-3">
+                  {" "}
+                  {t("groupsSection.membersLabel")}
+                </span>
+                <div className="flex -gap-2">
                   {group.members.slice(0, 5).map((member) => (
                     <div key={member.id} className="relative">
                       <img
@@ -155,30 +167,27 @@ export default function GroupsSection({
               <div className="border-t border-gray-600 pt-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-400 text-sm">
-                    Recent Discussion:
+                    {t("groupsSection.recentDiscussion")}
                   </span>
                   <button
                     onClick={() => handleShowChat(group)}
                     className="text-purple-400 hover:text-purple-300 text-xs"
                   >
-                    Show Chat
+                    {t("groupsSection.showChat")}
                   </button>
                 </div>
 
                 {group.messages.length > 0 ? (
                   <div className="space-y-2">
                     {group.messages.slice(-2).map((message) => (
-                      <div
-                        key={message.id}
-                        className="flex items-start space-x-2"
-                      >
+                      <div key={message.id} className="flex items-start gap-2">
                         <img
                           src={message.avatar}
                           alt={message.user}
                           className="w-5 h-5 rounded-full"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center gap-2">
                             <span className="text-white text-sm font-medium">
                               {message.user}
                             </span>
@@ -195,7 +204,7 @@ export default function GroupsSection({
                   </div>
                 ) : (
                   <p className="text-gray-500 text-sm italic">
-                    No messages yet. Start the conversation!
+                    {t("groupsSection.noMessages")}
                   </p>
                 )}
               </div>
@@ -207,12 +216,9 @@ export default function GroupsSection({
           <div className="text-center py-8">
             <Users className="w-12 h-12 text-gray-500 mx-auto mb-4" />
             <h4 className="text-lg font-medium text-white mb-2">
-              No Study Groups Yet
+              {t("groupsSection.emptyTitle")}
             </h4>
-            <p className="text-gray-400">
-              Study groups will appear here when they're created by your
-              instructor.
-            </p>
+            <p className="text-gray-400">{t("groupsSection.emptySubtitle")}</p>
           </div>
         )}
       </div>

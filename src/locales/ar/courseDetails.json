@@ -21,8 +21,8 @@
     "instructor": "المدرس",
     "reviews": "التقييمات"
   },
-  "requirements": "المتطلبات",
-  "description": "الوصف",
+  "requirements": "المتطلبات:",
+  "description": "الوصف:",
   "content": "محتوى الدورة",
   "studentReviews": "تقييمات الطلاب",
   "rateModal": {

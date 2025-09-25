@@ -54,7 +54,7 @@ export default function CategoriesSection() {
                 </p>
                 <div className="flex items-center text-purple-600 font-semibold group-hover:text-purple-700">
                   <span>{t("exploreCourses")}</span>
-                  <ArrowRight className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform rtl:rotate-180" />
+                  <ArrowRight className="w-4 h-4 ltr:ml-2 rtl:mr-2 transform group-hover:translate-x-1 transition-transform rtl:rotate-180" />
                 </div>
               </div>
             </div>

@@ -23,6 +23,7 @@ const PUBLIC_ENDPOINT_PREFIXES: string[] = [
   API_ENDPOINTS.login,
   API_ENDPOINTS.signup,
   API_ENDPOINTS.refreshToken,
+  API_ENDPOINTS.settings,
 ];
 
 function extractPathname(config: AxiosRequestConfig): string {

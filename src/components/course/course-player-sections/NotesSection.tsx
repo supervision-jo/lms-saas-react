@@ -6,6 +6,7 @@ import { useCustomPatch, useCustomPost } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
+import { useTranslation } from "react-i18next";
 
 interface LessonNotesProps {
   currentLessonId: string;
@@ -29,6 +30,7 @@ export default function LessonNotes({
   const [editNoteTitle, setEditNoteTitle] = useState("");
   const [editNote, setEditNote] = useState(null);
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation("coursePlayer");
   // GET Notes
   const { data } = useCustomQuery(
     `/enrollments/lesson-notes/?lesson=${currentLessonId}`,
@@ -58,10 +60,12 @@ export default function LessonNotes({
       setNotes("");
       setTitle("");
     } catch (error: any) {
-      handleErrorAlerts(error.response?.data?.error || "Unknown error");
+      handleErrorAlerts(
+        error.response?.data?.error || t("notesSection.handleSave.error")
+      );
     }
 
-    toast.success("Notes saved successfully!");
+    toast.success(t("notesSection.handleSave.success"));
     console.log("Notes saved for lesson:", currentLessonId, notes);
   };
   const handleEditNotes = async (id: string) => {
@@ -83,7 +87,9 @@ export default function LessonNotes({
       setEditNoteTitle("");
       setEditNote(null);
     } catch (error: any) {
-      handleErrorAlerts(error.response?.data?.error || "Unknown error");
+      handleErrorAlerts(
+        error.response?.data?.error || t("notesSection.handleSave.error")
+      );
     }
   };
 
@@ -95,13 +101,15 @@ export default function LessonNotes({
       <div className="max-w-5xl mx-auto">
         <div className="bg-gray-900 rounded-lg p-4">
           <div className="flex sm:items-center items-start sm:gap-0 gap-4 justify-between mb-4 sm:flex-row flex-col">
-            <h3 className="text-lg font-semibold text-white">Lesson Notes</h3>
+            <h3 className="text-lg font-semibold text-white">
+              {t("lessonNotes")}
+            </h3>
             <button
               disabled={!notes || !title}
               onClick={handleSaveNotes}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save Notes
+              {t("notesSection.save")}
             </button>
           </div>
           <input
@@ -110,18 +118,18 @@ export default function LessonNotes({
             onChange={(e) => {
               setTitle(e.target.value);
             }}
-            placeholder="Title"
+            placeholder={t("notesSection.form.title")}
             className="w-full mb-5 px-3 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
           />
           <textarea
-            placeholder="Take notes while watching..."
+            placeholder={t("notesSection.form.placeholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full h-40 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
           />
           {savedNotes[currentLessonId] && (
             <p className="text-green-400 text-sm mt-2">
-              ✓ Notes saved for this lesson
+              {t("notesSection.saveSucceed")}
             </p>
           )}
         </div>
@@ -139,28 +147,28 @@ export default function LessonNotes({
                   type="text"
                   value={editNoteTitle}
                   onChange={(e) => setEditNoteTitle(e.target.value)}
-                  placeholder="Title"
+                  placeholder={t("notesSection.form.title")}
                   className="w-full mb-5 px-3 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
                 />
                 <textarea
-                  placeholder="Take notes while watching..."
+                  placeholder={t("notesSection.form.placeholder")}
                   value={editNoteValue}
                   onChange={(e) => setEditNoteValue(e.target.value)}
                   className="w-full h-40 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
                 />
-                <div className="mt-2 flex justify-end space-x-3">
+                <div className="mt-2 flex justify-end gap-3">
                   <button
                     onClick={() => setEditNote(null)}
                     className="px-8 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
                   >
-                    Cancel
+                    {t("notesSection.form.cancel")}
                   </button>
                   <button
                     disabled={!editNoteTitle || !editNoteValue}
                     onClick={() => handleEditNotes(note?.id)}
                     className="cursor-pointer px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                   >
-                    Save
+                    {t("notesSection.form.save")}
                   </button>
                 </div>
               </div>
@@ -175,7 +183,7 @@ export default function LessonNotes({
                   }}
                   className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg"
                 >
-                  ✏️ Edit
+                  {t("notesSection.form.edit")}
                 </button>
                 <div className="space-y-2">
                   <h2 className="text-base font-semibold text-white">
@@ -187,7 +195,10 @@ export default function LessonNotes({
                 </div>
                 {/* Right: created date */}
                 <p className="mt-3 sm:mt-0 text-xs text-gray-400 whitespace-nowrap">
-                  {formatDateTimeSimple(note?.created_at) || "-"}
+                  {formatDateTimeSimple(note?.created_at, {
+                    locale: i18n.language,
+                    t: t,
+                  }) || "-"}
                 </p>
               </>
             )}

@@ -15,6 +15,7 @@ import { readUserFromStorage } from "../../services/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import useAuth from "../../store/useAuth";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../components/settings/FeatureGate";
 
 type ViewMode = "grid" | "list";
 type PriceFilter = "all" | "free" | "paid";
@@ -254,18 +255,24 @@ const CourseCatalogPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
           {/* Filters Sidebar */}
-          <CoursesFilter
-            selectedCategory={selectedCategory}
-            selectedLevel={selectedLevel}
-            priceFilter={priceFilter}
-            setSelectedCategory={setSelectedCategory}
-            setSelectedLevel={setSelectedLevel}
-            setPriceFilter={setPriceFilter}
-            onClearFilters={clearAllFilters}
-            mobileOpen={filtersOpenMobile}
-            onCloseMobile={() => setFiltersOpenMobile(false)}
-            returnFocusRef={filterBtnRef}
-          />
+          <FeatureGate
+            flag="is_courses_filter_enabled"
+            loadingFallback={null}
+            fallback={null}
+          >
+            <CoursesFilter
+              selectedCategory={selectedCategory}
+              selectedLevel={selectedLevel}
+              priceFilter={priceFilter}
+              setSelectedCategory={setSelectedCategory}
+              setSelectedLevel={setSelectedLevel}
+              setPriceFilter={setPriceFilter}
+              onClearFilters={clearAllFilters}
+              mobileOpen={filtersOpenMobile}
+              onCloseMobile={() => setFiltersOpenMobile(false)}
+              returnFocusRef={filterBtnRef}
+            />
+          </FeatureGate>
 
           {/* Course Grid */}
           <div className="flex-1">

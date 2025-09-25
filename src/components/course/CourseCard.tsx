@@ -13,6 +13,8 @@ import { readUserFromStorage } from "../../services/auth";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
+import FeatureGate from "../settings/FeatureGate";
 
 interface CourseCardProps {
   course: Course;
@@ -54,37 +56,8 @@ const CourseCard: React.FC<CourseCardProps> = ({
     course?.id as string,
   ]);
 
-  // const { data: modulesResp } = useCustomQuery(
-  //   `${API_ENDPOINTS.modules}?course=${course?.id}`,
-  //   ["modules", course?.id],
-  //   undefined,
-  //   !!course?.id
-  // );
-
-  // const modulesData: Module[] = useMemo(
-  //   () => modulesResp?.data?.data ?? [],
-  //   [modulesResp]
-  // );
-
-  // const firstPlayableLessonId = useMemo(() => {
-  //   for (const m of modulesData ?? []) {
-  //     const lessons = m?.lessons ?? [];
-  //     const playable =
-  //       lessons.find((l) => isEnrolled || l?.free_preview) || lessons[0];
-  //     if (playable?.id) return String(playable.id);
-  //   }
-  //   return null;
-  // }, [modulesData, isEnrolled]);
-
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
-
-  // const goToPlayer = (opts?: { lessonId?: string }) => {
-  //   const params = new URLSearchParams();
-  //   if (opts?.lessonId) params.set("lesson", String(opts.lessonId));
-  //   const qs = params.toString();
-  //   navigate(`/catalog/${course?.id}/player${qs ? `?${qs}` : ""}`);
-  // };
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -123,6 +96,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
     if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
   }, [computedEnrolled, enrolledOptimistic]);
 
+  const { enabled: priceEnabled } = useFeatureFlag("is_price_enabled", true);
   return (
     <div
       className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
@@ -202,26 +176,34 @@ const CourseCard: React.FC<CourseCardProps> = ({
             )}
 
             <div className="flex items-center mb-4">
-              <div className="flex items-center">
-                <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
-                  {Math.floor(+course?.average_rating) ?? 0}
-                </span>
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-4 h-4 ${
-                        i < Math.floor(Math.floor(+course?.average_rating) ?? 0)
-                          ? "text-yellow-400 fill-current"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  ))}
+              <FeatureGate
+                flag="is_review_enabled"
+                loadingFallback={null}
+                fallback={null}
+              >
+                <div className="flex items-center">
+                  <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
+                    sss
+                    {Math.floor(+course?.average_rating) ?? 0}
+                  </span>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i <
+                          Math.floor(Math.floor(+course?.average_rating) ?? 0)
+                            ? "text-yellow-400 fill-current"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-gray-500 text-sm ltr:ml-2 rtl:mr-2">
+                    ({course?.total_reviews?.toLocaleString() ?? 0})
+                  </span>
                 </div>
-                <span className="text-gray-500 text-sm ltr:ml-2 rtl:mr-2">
-                  ({course?.total_reviews?.toLocaleString() ?? 0})
-                </span>
-              </div>
+              </FeatureGate>
             </div>
 
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
@@ -267,24 +249,30 @@ const CourseCard: React.FC<CourseCardProps> = ({
                 : "flex items-center justify-between"
             }`}
           >
-            {course?.is_paid ? (
-              <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
-                <span className="text-2xl font-bold text-gray-900">
-                  ${course?.price}
-                </span>
-                {course?.old_price && (
-                  <span className="text-gray-500 line-through ltr:ml-2 rtl:mr-2">
-                    ${course?.old_price}
+            <FeatureGate
+              flag="is_price_enabled"
+              loadingFallback={null}
+              fallback={null}
+            >
+              {course?.is_paid && priceEnabled ? (
+                <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
+                  <span className="text-2xl font-bold text-gray-900">
+                    ${course?.price}
                   </span>
-                )}
-              </div>
-            ) : (
-              <span
-                className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
-              >
-                {t("card.free")}
-              </span>
-            )}
+                  {course?.old_price && (
+                    <span className="text-gray-500 line-through ltr:ml-2 rtl:mr-2">
+                      ${course?.old_price}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span
+                  className={`px-4 py-1 rounded-lg font-semibold ${"bg-green-100 text-green-800"}`}
+                >
+                  {t("card.free")}
+                </span>
+              )}
+            </FeatureGate>
 
             {isListView && (
               <>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Download } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
+import { useTranslation } from "react-i18next";
 
 interface LessonContentProps {
   modules: Module[];
@@ -45,6 +46,7 @@ export default function LessonContentPlayer({
   const [showAutoNext, setShowAutoNext] = useState(false);
   const [animateRing, setAnimateRing] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+  const { t } = useTranslation("coursePlayer");
 
   const nextLessonId = useMemo(() => {
     if (!currentLessonId || !allLessons?.length) return null;
@@ -153,7 +155,7 @@ export default function LessonContentPlayer({
             className="mt-4 px-4 py-2 text-black rounded border"
             onClick={() => setAssessment(null)}
           >
-            Back
+            {t("content.back")}
           </button>
         </div>
       );
@@ -209,7 +211,7 @@ export default function LessonContentPlayer({
                     onClick={handleComplete}
                     className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
                   >
-                    Mark as completed
+                    {t("content.markComplete")}
                   </button>
                 </div>
               );
@@ -224,7 +226,11 @@ export default function LessonContentPlayer({
                     <button
                       onClick={() => downloadMaterial(fileUrl)}
                       className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6"
-                      title={downloading ? "Downloading…" : "Download"}
+                      title={
+                        downloading
+                          ? t("content.downloading")
+                          : t("content.download")
+                      }
                     >
                       <Download className="w-10 h-10 text-orange-600" />
                     </button>
@@ -267,8 +273,7 @@ export default function LessonContentPlayer({
                 />
                 {!safeUrl && (
                   <div className="mt-2 text-xs text-amber-500">
-                    Video not available for this lesson yet — showing poster
-                    only.
+                    {t("content.noVideo")}
                   </div>
                 )}
               </>
@@ -313,7 +318,9 @@ export default function LessonContentPlayer({
                     <ChevronRight className="w-9 h-9 text-white" />
                   </div>
                 </button>
-                <div className="mt-3 text-white font-semibold">Next</div>
+                <div className="mt-3 text-white font-semibold">
+                  {t("content.next")}
+                </div>
               </div>
             )}
         </div>

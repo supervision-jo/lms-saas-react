@@ -13,6 +13,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 type FormValues = {
   title: string;
@@ -23,6 +24,7 @@ const InstructorPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("courses");
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
   const { t } = useTranslation("instructorDashboard");
+  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
   const {
     register,
     handleSubmit,
@@ -89,19 +91,24 @@ const InstructorPage: React.FC = () => {
                 { id: "courses", label: `${t("tabs.myCourses")}` },
                 { id: "analytics", label: `${t("tabs.analytics")}` },
                 { id: "reviews", label: `${t("tabs.reviews")}` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? "border-purple-500 text-purple-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              ].map((tab) => {
+                if (!reviewsEnabled && tab.id === "reviews") {
+                  return;
+                }
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === tab.id
+                        ? "border-purple-500 text-purple-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>

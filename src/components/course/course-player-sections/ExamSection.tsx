@@ -4,6 +4,7 @@ import { useCustomPost } from "../../../hooks/useMutation";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
+import { useTranslation } from "react-i18next";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -24,6 +25,7 @@ interface StudentAnswers {
 }
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
+  const { t } = useTranslation("coursePlayer");
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
@@ -112,7 +114,9 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
     // Guard: only 3 trials total (or MAX_ATTEMPTS)
     if (attemptsCount >= MAX_ATTEMPTS) {
-      toast.error(`You only have ${MAX_ATTEMPTS} attempts.`);
+      toast.error(
+        t("examSection.submitExam.error", { MAX_ATTEMPTS: MAX_ATTEMPTS })
+      );
       return;
     }
 
@@ -121,7 +125,9 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
       await mutateAsync(payload); // server grades & stores attempt
       setSubmitted(true);
       await refetchSummary(); // refresh attempts array so UI shows latest server result
-      toast.success(`Submitted (attempt ${nextAttempt})`);
+      toast.success(
+        t("examSection.submitExam.success", { nextAttempt: nextAttempt })
+      );
     } catch (err: any) {
       handleErrorAlerts(err?.response?.data?.error);
     }
@@ -153,11 +159,15 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         </div>
         <div className="md:text-right">
           <div className="text-gray-900 font-semibold">
-            Time Limit: {exam.time_limit ?? 0} min
+            {t("examSection.timeLimit")}: {exam.time_limit ?? 0}{" "}
+            {t("examSection.min")}
           </div>
-          <div className="text-gray-500 text-sm">Passing Score: {passing}%</div>
           <div className="text-gray-500 text-sm">
-            Attempt {Math.min(nextAttempt, MAX_ATTEMPTS)} of {MAX_ATTEMPTS}
+            {t("examSection.passingScore")}: {passing}%
+          </div>
+          <div className="text-gray-500 text-sm">
+            {t("examSection.attempt")} {Math.min(nextAttempt, MAX_ATTEMPTS)}{" "}
+            {t("examSection.of")} {MAX_ATTEMPTS}
           </div>
         </div>
       </div>
@@ -195,10 +205,10 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                         checked={checked}
                         disabled={submitted}
                         onChange={() => toggleAnswer(q.id, c.id, multi)}
-                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 mr-3"
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 ltr:mr-3 rtl:ml-3"
                       />
                       <span className="text-gray-800">
-                        <span className="text-sm font-medium text-gray-500 mr-2">
+                        <span className="text-sm font-medium text-gray-500 ltr:mr-2 rtl:ml-2">
                           {String.fromCharCode(65 + ci)}.
                         </span>
                         {c.text}
@@ -218,8 +228,8 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
           <>
             <div className="text-gray-500 text-sm">
               {attemptsCount < MAX_ATTEMPTS
-                ? `Answer all questions to submit. Attempts left: ${attemptsLeft}`
-                : "No more attempts remaining."}
+                ? `${t("examSection.ansAll")}: ${attemptsLeft}`
+                : t("examSection.noAttempts")}
             </div>
             <button
               onClick={submitExam}
@@ -227,16 +237,22 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
               {isPending
-                ? "Submitting..."
-                : `Submit ${exam.type === "quiz" ? "Quiz" : "Exam"}`}
+                ? t("examSection.submitting")
+                : `${t("examSection.submit")} ${
+                    exam.type === "quiz"
+                      ? t("examSection.quiz")
+                      : t("examSection.exam")
+                  }`}
             </button>
           </>
         ) : (
           <div className="flex flex-col items-start justify-start gap-4 w-full">
             <div className="text-sm text-gray-500">
               {isFetchingSummary
-                ? "Loading results..."
-                : `Submitted at: ${latest?.submitted_at ?? "-"}`}
+                ? t("examSection.loadRes")
+                : `${t("examSection.submittedAt")}: ${
+                    latest?.submitted_at ?? "-"
+                  }`}
             </div>
 
             <div
@@ -244,13 +260,15 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 passed ? "text-green-700" : "text-red-700"
               }`}
             >
-              Score: {correct}/{totalQuestions} ({percent}%) —{" "}
-              {passed ? "Passed" : "Failed"} (pass {passing}%)
+              {t("examSection.score")}: {correct}/{totalQuestions} ({percent}%)
+              — {passed ? t("examSection.passed") : t("examSection.failed")} (
+              {t("examSection.pass")} {passing}%)
             </div>
 
             <div className="text-sm text-gray-500">
-              Correct: {correct} · Incorrect: {incorrect} · Attempt #
-              {latest?.attempt ?? nextAttempt}
+              {t("examSection.correct")}: {correct} ·{" "}
+              {t("examSection.incorrect")}: {incorrect} ·{" "}
+              {t("examSection.attempt")} #{latest?.attempt ?? nextAttempt}
             </div>
 
             <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
@@ -260,16 +278,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 {passed
-                  ? "Passed — No Retake"
+                  ? t("examSection.noRetake")
                   : attemptsCount >= MAX_ATTEMPTS
-                  ? "No Attempts Left"
-                  : "Retake"}
+                  ? t("examSection.noAttemptsLeft")
+                  : t("examSection.retake")}
               </button>
               <button
                 onClick={onClose}
                 className="bg-gray-800 text-white px-6 py-2 sm:w-52 w-full rounded-lg hover:bg-gray-900 transition-colors"
               >
-                Continue Learning
+                {t("examSection.continue")}
               </button>
             </div>
           </div>

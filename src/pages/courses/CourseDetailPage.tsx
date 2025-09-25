@@ -27,6 +27,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import CourseRatingModal from "../../components/course/course-details/CourseRatingModal";
 import CourseReviews from "../../components/course/course-details/CourseReviews";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../components/settings/FeatureGate";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
@@ -138,7 +140,7 @@ const CourseDetailPage: React.FC = () => {
   const [showSignupModal, setShowSignupModal] = useState<boolean>(false);
 
   const handleEnroll = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && authEnabled) {
       toast.error(y("card.handleEnroll.authError"));
       setShowLoginModal(true);
       return;
@@ -207,6 +209,13 @@ const CourseDetailPage: React.FC = () => {
     goToPlayer({ lessonId, assessment: a });
   };
 
+  // Settings flags
+  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
+  const { enabled: authEnabled } = useFeatureFlag(
+    "is_registration_enabled",
+    true
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Course Header */}
@@ -245,28 +254,34 @@ const CourseDetailPage: React.FC = () => {
                     {y("card.bestseller")}
                   </span>
                 )}
-                <div className="flex items-center">
-                  <span className="text-yellow-400 font-bold ltr:mr-2 rtl:ml-2">
-                    {course?.average_rating ?? 0}
-                  </span>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i + 1000}
-                        className={`w-4 h-4 ${
-                          i < parseInt(course?.average_rating)
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-400"
-                        }`}
-                      />
-                    ))}
+                <FeatureGate
+                  flag="is_review_enabled"
+                  loadingFallback={null}
+                  fallback={null}
+                >
+                  <div className="flex items-center">
+                    <span className="text-yellow-400 font-bold ltr:mr-2 rtl:ml-2">
+                      {course?.average_rating ?? 0}
+                    </span>
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i + 1000}
+                          className={`w-4 h-4 ${
+                            i < parseInt(course?.average_rating)
+                              ? "text-yellow-400 fill-current"
+                              : "text-gray-400"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-gray-300 ltr:ml-2 rtl:mr-2">
+                      {t("ratings", {
+                        reviews: course?.total_reviews?.toLocaleString() ?? 0,
+                      })}
+                    </span>
                   </div>
-                  <span className="text-gray-300 ltr:ml-2 rtl:mr-2">
-                    {t("ratings", {
-                      reviews: course?.total_reviews?.toLocaleString() ?? 0,
-                    })}
-                  </span>
-                </div>
+                </FeatureGate>
                 <span className="text-gray-300">
                   {t("students", {
                     students: course?.total_students?.toLocaleString() ?? 0,
@@ -339,24 +354,30 @@ const CourseDetailPage: React.FC = () => {
                 </div>
 
                 <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    {course?.is_paid ? (
-                      <div className="flex items-center">
-                        <span className="text-3xl font-bold text-gray-900">
-                          ${course?.price ?? 0}
-                        </span>
-                        {course?.old_price && (
-                          <span className="text-gray-500 line-through ltr:ml-3 rtl:mr-3">
-                            ${course?.old_price ?? 0}
+                  <FeatureGate
+                    flag="is_price_enabled"
+                    loadingFallback={null}
+                    fallback={null}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      {course?.is_paid ? (
+                        <div className="flex items-center">
+                          <span className="text-3xl font-bold text-gray-900">
+                            ${course?.price ?? 0}
                           </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="px-4 py-1 rounded-lg font-semibold bg-green-100 text-green-800">
-                        {y("card.free")}
-                      </span>
-                    )}
-                  </div>
+                          {course?.old_price && (
+                            <span className="text-gray-500 line-through ltr:ml-3 rtl:mr-3">
+                              ${course?.old_price ?? 0}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="px-4 py-1 rounded-lg font-semibold bg-green-100 text-green-800">
+                          {y("card.free")}
+                        </span>
+                      )}
+                    </div>
+                  </FeatureGate>
                   {!isEnrolled ? (
                     <button
                       onClick={handleEnroll}
@@ -402,9 +423,9 @@ const CourseDetailPage: React.FC = () => {
                       )}
                     </div>
                   )}
-                  <div className="text-center text-sm text-gray-600 mb-6">
+                  {/* <div className="text-center text-sm text-gray-600 mb-6">
                     {t("details.guarantee")}
-                  </div>
+                  </div> */}
                   <div className="space-y-3 text-sm">
                     <h4 className="font-semibold text-gray-900">
                       {t("details.includes")}
@@ -450,19 +471,22 @@ const CourseDetailPage: React.FC = () => {
                     { id: "curriculum", label: t("tabs.curriculum") },
                     { id: "instructor", label: t("tabs.instructor") },
                     { id: "reviews", label: t("tabs.reviews") },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === tab.id
-                          ? "border-purple-500 text-purple-600"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  ].map((tab) => {
+                    if (!reviewsEnabled && tab.id === "reviews") return;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === tab.id
+                            ? "border-purple-500 text-purple-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </nav>
               </div>
             </div>
@@ -601,7 +625,7 @@ const CourseDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === "reviews" && (
+              {activeTab === "reviews" && reviewsEnabled && (
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     {t("studentReviews")}
@@ -630,7 +654,7 @@ const CourseDetailPage: React.FC = () => {
           onClose={() => setShowRatingModal(false)}
         />
       )}
-      {showLoginModal && (
+      {showLoginModal && authEnabled && (
         <LoginPopup
           onClose={() => {
             setShowLoginModal(false);
@@ -638,7 +662,7 @@ const CourseDetailPage: React.FC = () => {
           setShowSignupModal={setShowSignupModal}
         />
       )}
-      {showSignupModal && (
+      {showSignupModal && authEnabled && (
         <SignupPopup
           onClose={() => {
             setShowSignupModal(false);

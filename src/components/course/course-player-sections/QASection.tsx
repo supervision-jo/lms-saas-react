@@ -8,6 +8,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import QAListSkeleton from "../../resource-stats/QuestionsLoading";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 import ReactionGroup from "./Reaction";
+import { useTranslation } from "react-i18next";
 
 // Answer Form (Create/Edit)
 const ReplyForm = React.memo(function ReplyForm({
@@ -18,6 +19,7 @@ const ReplyForm = React.memo(function ReplyForm({
   onSubmitEdit,
   isSubmitting,
   onClose,
+  t,
 }: {
   question: Question;
   currentUser: User;
@@ -33,6 +35,7 @@ const ReplyForm = React.memo(function ReplyForm({
   }) => Promise<void>;
   isSubmitting: boolean;
   onClose: () => void;
+  t: (key: string) => string;
 }) {
   const isEdit = !!editingAnswer;
 
@@ -60,10 +63,10 @@ const ReplyForm = React.memo(function ReplyForm({
 
     if (isEdit && editingAnswer) {
       await onSubmitEdit({ id: editingAnswer.id, question: question.id, text });
-      toast.success("Answer updated");
+      toast.success(t("qaSection.replyForm.answerUpdated"));
     } else {
       await onSubmitReply({ questionId: question.id, text });
-      toast.success("Reply posted");
+      toast.success(t("qaSection.replyForm.replyPosted"));
     }
 
     reset();
@@ -81,10 +84,10 @@ const ReplyForm = React.memo(function ReplyForm({
             <img
               src={currentUser?.profile_image}
               alt="You"
-              className="w-6 h-6 rounded-full object-cover border border-gray-500 mr-2"
+              className="w-6 h-6 rounded-full object-cover border border-gray-500 ltr:mr-2 rtl:ml-2"
             />
           ) : (
-            <div className="w-6 h-6 bg-gray-600 mr-2 rounded-full border border-gray-500 flex items-center justify-center">
+            <div className="w-6 h-6 bg-gray-600 ltr:mr-2 rtl:ml-2 rounded-full border border-gray-500 flex items-center justify-center">
               <span className="text-white text-sm font-medium">
                 {currentUser?.first_name?.charAt(0).toUpperCase()}
               </span>
@@ -92,18 +95,22 @@ const ReplyForm = React.memo(function ReplyForm({
           )}
           <span className="text-sm text-gray-300">
             {isEdit ? (
-              "Edit Answer"
+              t("qaSection.replyForm.editAnswer")
             ) : (
               <>
-                Replying to {question?.student_?.first_name}{" "}
-                {question?.student_?.last_name}
+                {t("qaSection.replyForm.replyingTo")}{" "}
+                {question?.student_?.first_name} {question?.student_?.last_name}
               </>
             )}
           </span>
         </div>
 
         <textarea
-          placeholder={isEdit ? "Update your answer..." : "Write your reply..."}
+          placeholder={
+            isEdit
+              ? t("qaSection.replyForm.updateYourAnswer")
+              : t("qaSection.replyForm.writeReply")
+          }
           {...register("reply", { required: "Please write a reply." })}
           className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
         />
@@ -113,7 +120,7 @@ const ReplyForm = React.memo(function ReplyForm({
           </p>
         )}
 
-        <div className="flex justify-end space-x-3 mt-3">
+        <div className="flex justify-end gap-3 mt-3">
           <button
             type="button"
             onClick={() => {
@@ -122,14 +129,16 @@ const ReplyForm = React.memo(function ReplyForm({
             }}
             className="px-4 py-2 text-gray-400 hover:text-white text-sm font-medium transition-colors"
           >
-            Cancel
+            {t("qaSection.replyForm.cancel")}
           </button>
           <button
             type="submit"
             disabled={isSubmitting || formSubmitting}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-60"
           >
-            {isEdit ? "Update Answer" : "Reply"}
+            {isEdit
+              ? t("qaSection.replyForm.updateAnswer")
+              : t("qaSection.replyForm.reply")}
           </button>
         </div>
       </form>
@@ -158,6 +167,8 @@ export default function QASection({
     id: number;
     text: string;
   } | null>(null);
+
+  const { t, i18n } = useTranslation("coursePlayer");
 
   const { mutateAsync: askQuestion, isPending: askQuestionPending } =
     useCustomPost(API_ENDPOINTS.createQuestion, ["questions", lesson]);
@@ -207,7 +218,7 @@ export default function QASection({
         // Edit Question
         const res = await editQuestion({ id: questionEdit.id, lesson, text });
         if (res?.status) {
-          toast.success("Question updated");
+          toast.success(t("qaSection.handleSubmitQuestion.questionUpdated"));
           setQuestionEdit(null);
           resetQuestion();
         }
@@ -215,12 +226,12 @@ export default function QASection({
         // Create Question
         const res = await askQuestion({ lesson, text });
         if (res?.status) {
-          toast.success("Question posted");
+          toast.success(t("qaSection.handleSubmitQuestion.questionPosted"));
           resetQuestion();
         }
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to submit question");
+      toast.error(e?.message ?? t("qaSection.handleSubmitQuestion.error"));
     }
   });
 
@@ -261,7 +272,7 @@ export default function QASection({
           {/* Questions List */}
           <div className="lg:col-span-2">
             <h3 className="text-lg font-semibold text-white mb-4">
-              Questions & Answers
+              {t("qaSection.title")}
             </h3>
 
             {isLoading ? (
@@ -277,7 +288,7 @@ export default function QASection({
                       className="bg-gray-900 rounded-lg p-5 border border-gray-700"
                     >
                       <div className="flex items-start justify-between mb-3 group relative">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center gap-3">
                           {qa?.student_?.profile_image ? (
                             <img
                               src={qa?.student_?.profile_image}
@@ -299,7 +310,10 @@ export default function QASection({
                               {qa?.student_?.last_name}
                             </h4>
                             <p className="text-sm text-gray-400">
-                              {formatDateTimeSimple(qa?.created_at)}
+                              {formatDateTimeSimple(qa?.created_at, {
+                                locale: i18n.language,
+                                t: t,
+                              })}
                             </p>
                           </div>
                         </div>
@@ -315,17 +329,17 @@ export default function QASection({
                             className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg absolute top-0 right-0 group-hover:opacity-100 opacity-0 duration-300 transition-opacity"
                             title="Edit your question"
                           >
-                            ✏️ Edit
+                            {t("qaSection.edit")}
                           </button>
                         )}
                       </div>
 
-                      <div className="text-gray-300 mb-4 ml-11 leading-relaxed">
+                      <div className="text-gray-300 mb-4 ltr:ml-11 rtl:mr-11 leading-relaxed">
                         <p>{qa?.text}</p>
                       </div>
 
                       {/* Actions */}
-                      <div className="ml-11 mb-4 flex items-center space-x-4">
+                      <div className="ltr:ml-11 rtl:mr-11 mb-4 flex items-center gap-4">
                         <ReactionGroup
                           subject={{ kind: "question", id: qa.id }}
                           countsFromServer={{
@@ -343,15 +357,15 @@ export default function QASection({
                               prev === qa.id ? null : qa.id
                             );
                           }}
-                          className="flex items-center space-x-1 text-sm text-gray-400 hover:text-purple-400 transition-colors"
+                          className="flex items-center gap-1 text-sm text-gray-400 hover:text-purple-400 transition-colors"
                         >
                           <Reply className="w-4 h-4" />
-                          <span>Reply</span>
+                          <span>{t("qaSection.replyForm.reply")}</span>
                         </button>
                       </div>
 
                       {/* Replies */}
-                      <div className="ml-11 space-y-3">
+                      <div className="ltr:ml-11 rtl:mr-11 space-y-3">
                         {qa?.answer?.map((reply: Answer) => {
                           const isMyAnswer =
                             reply?.user_?.id === currentUser?.id;
@@ -374,11 +388,12 @@ export default function QASection({
                                     setAnswerEdit(null);
                                     setOpenReplyId(null);
                                   }}
+                                  t={t}
                                 />
                               ) : (
                                 <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500 group relative">
                                   <div className="flex items-center w-full justify-between mb-2 relative">
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center gap-2">
                                       {reply?.user_?.profile_image ? (
                                         <img
                                           src={reply?.user_?.profile_image}
@@ -400,13 +415,16 @@ export default function QASection({
                                       </span>
                                       {reply?.user_?.is_instructor && (
                                         <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded-full font-medium">
-                                          Instructor
+                                          {t("qaSection.instructor")}
                                         </span>
                                       )}
                                     </div>
 
                                     <span className="text-xs text-gray-400">
-                                      {formatDateTimeSimple(reply?.created_at)}
+                                      {formatDateTimeSimple(reply?.created_at, {
+                                        locale: i18n.language,
+                                        t: t,
+                                      })}
                                     </span>
 
                                     {isMyAnswer && (
@@ -422,7 +440,7 @@ export default function QASection({
                                         className="absolute top-0 right-0 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg group-hover:opacity-100 opacity-0 duration-300 transition-opacity"
                                         title="Edit your answer"
                                       >
-                                        ✏️ Edit
+                                        {t("qaSection.edit")}
                                       </button>
                                     )}
                                   </div>
@@ -431,7 +449,7 @@ export default function QASection({
                                     {reply?.text}
                                   </div>
 
-                                  <div className="flex items-center space-x-4 mt-3">
+                                  <div className="flex items-center gap-4 mt-3">
                                     <ReactionGroup
                                       subject={{ kind: "answer", id: reply.id }}
                                       countsFromServer={{
@@ -449,13 +467,7 @@ export default function QASection({
                       </div>
 
                       {/* Create only Answer Box */}
-                      <div className="mt-4 ml-11">
-                        {/*
-                          FIX 2:
-                          Show the create-reply box only when:
-                          - this question is toggled open, AND
-                          - there is NO active answer edit for this question
-                        */}
+                      <div className="mt-4 ltr:ml-11 rtl:mr-11">
                         {openReplyId === qa.id &&
                           !(answerEdit && answerEdit.questionId === qa.id) && (
                             <ReplyForm
@@ -466,6 +478,7 @@ export default function QASection({
                               onSubmitEdit={onSubmitEditReply}
                               isSubmitting={createAnswerPending}
                               onClose={() => setOpenReplyId(null)}
+                              t={t}
                             />
                           )}
                       </div>
@@ -476,7 +489,7 @@ export default function QASection({
             ) : (
               <div className="flex items-center justify-center w-full bg-gray-900 rounded-lg p-5 border border-gray-700">
                 <p className="text-center text-lg text-gray-400">
-                  There are no questions for this lesson.
+                  {t("qaSection.empty")}
                 </p>
               </div>
             )}
@@ -499,19 +512,19 @@ export default function QASection({
                     onClick={cancelQuestionEdit}
                     className="text-xs text-gray-300 hover:text-white underline"
                   >
-                    Cancel edit
+                    {t("qaSection.cancelEdit")}
                   </button>
                 )}
               </div>
 
               <textarea
                 {...registerQuestion("qtext", {
-                  required: "Please write something.",
+                  required: t("qaSection.qForm.error"),
                 })}
                 placeholder={
                   questionEdit
-                    ? "Update your question..."
-                    : "Type your question here..."
+                    ? t("qaSection.qForm.editPlaceholder")
+                    : t("qaSection.qForm.addPlaceholder")
                 }
                 className="w-full h-32 p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400 text-sm"
               />
@@ -526,8 +539,10 @@ export default function QASection({
                 disabled={askQuestionPending || questionSubmitting}
                 className="w-full mt-3 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center font-medium disabled:opacity-60"
               >
-                <Send className="w-4 h-4 mr-2" />
-                {questionEdit ? "Update Question" : "Ask Question"}
+                <Send className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                {questionEdit
+                  ? t("qaSection.qForm.editBtn")
+                  : t("qaSection.qForm.addBtn")}
               </button>
             </form>
           </div>
