@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 import { useTranslation } from "react-i18next";
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -31,17 +33,103 @@ export function findNextLessonId(
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;
+  /** highlight the quiz/exam row itself */
+  currentAssessmentId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
+  onOpenAssessment?: (lessonId: string, assessment: Exam) => void;
+}
+
+function AssessmentList({
+  lesson,
+  isEnrolled,
+  onOpen,
+  currentAssessmentId,
+  t,
+}: {
+  lesson: Lesson;
+  isEnrolled: boolean;
+  onOpen: (assessment: Exam) => void;
+  currentAssessmentId?: string;
+  t: (k: string) => string;
+}) {
+  const { data } = useCustomQuery(
+    `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
+    ["exams", String(lesson.id)]
+  );
+  const assessments: Exam[] = data?.data ?? [];
+
+  if (!assessments?.length) return null;
+
+  const canAccess = isEnrolled || lesson.free_preview;
+
+  return (
+    <div className="mt-2 space-y-1">
+      {assessments.map((a) => {
+        const Icon = a.type === "exam" ? Award : HelpCircle;
+        const accent = a.type === "exam" ? "text-red-600" : "text-green-600";
+        const isActive =
+          currentAssessmentId && String(currentAssessmentId) === String(a.id);
+
+        return (
+          <button
+            key={a.id}
+            disabled={!canAccess}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(a);
+            }}
+            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left transition-all duration-200 ${
+              !canAccess
+                ? "opacity-50 cursor-not-allowed bg-gray-100"
+                : isActive
+                ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
+                : "hover:bg-white hover:shadow-md bg-white"
+            }`}
+            title={
+              a.type === "exam"
+                ? t("courseContent.openExam")
+                : t("courseContent.openQuiz")
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Icon className={`w-4 h-4 ${isActive ? "text-white" : accent}`} />
+              <span
+                className={`text-sm font-medium ${
+                  isActive ? "text-white" : "text-gray-700"
+                }`}
+              >
+                {a.title ||
+                  (a.type === "exam"
+                    ? t("courseContent.exam")
+                    : t("courseContent.quiz"))}
+              </span>
+            </div>
+            <div
+              className={`text-xs ${
+                isActive ? "text-purple-200" : "text-gray-500"
+              }`}
+            >
+              {a.time_limit}
+              {t("courseContent.m")} • {t("courseContent.pass")}{" "}
+              {a.passing_score}%
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
   modules,
   currentLessonId,
+  currentAssessmentId,
   onLessonSelect,
   isEnrolled,
   className,
+  onOpenAssessment,
 }) => {
   const { t, i18n } = useTranslation("courseDetails");
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
@@ -234,8 +322,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
               {isExpanded && (
                 <div className="sm:px-5 px-2 py-4 bg-gray-50">
                   {(module.lessons ?? []).map((lesson) => {
-                    const isCurrentLesson =
+                    const isLessonActive =
                       String(lesson?.id) === String(currentLessonId);
+                    const isCurrentLesson =
+                      isLessonActive && !currentAssessmentId;
                     const canAccess = isEnrolled || lesson?.free_preview;
 
                     return (
@@ -285,6 +375,19 @@ const CourseContent: React.FC<CourseContentProps> = ({
                             )}
                           </div>
                         </button>
+
+                        {/* attached assessments: highlight when currentAssessmentId matches */}
+                        {typeof onOpenAssessment === "function" && (
+                          <AssessmentList
+                            lesson={lesson}
+                            isEnrolled={isEnrolled}
+                            currentAssessmentId={currentAssessmentId}
+                            onOpen={(a) =>
+                              onOpenAssessment(String(lesson.id), a)
+                            }
+                            t={(k: string) => t(k)}
+                          />
+                        )}
                       </div>
                     );
                   })}

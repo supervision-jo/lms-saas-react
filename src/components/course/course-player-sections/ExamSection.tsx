@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useCustomPost } from "../../../hooks/useMutation";
 import { useCustomQuery } from "../../../hooks/useQuery";
@@ -27,12 +27,12 @@ interface StudentAnswers {
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const { t, i18n } = useTranslation("coursePlayer");
+
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
       : 3;
 
-  // Pull ALL previous attempts for this quiz (array)
   const {
     data: ansResp,
     isFetching: isFetchingSummary,
@@ -43,11 +43,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   );
 
   const attempts: StudentAnswers[] = ansResp?.data ?? [];
-  const latest = attempts.length
-    ? [...attempts].sort((a, b) => a.attempt - b.attempt)[attempts.length - 1]
-    : undefined;
+  const latest =
+    attempts.length > 0
+      ? [...attempts].sort((a, b) => a.attempt - b.attempt)[attempts.length - 1]
+      : undefined;
 
-  // Next attempt is based on how many we already have
   const attemptsCount = attempts.length;
   const nextAttempt = Math.min(attemptsCount + 1, MAX_ATTEMPTS);
   const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
@@ -59,11 +59,14 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const passing =
     typeof exam?.passing_score === "number" ? exam.passing_score : 0;
 
-  // local picks only
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [isRetaking, setIsRetaking] = useState<boolean>(() => !latest?.id);
 
-  // display numbers come from server (latest attempt)
+  useEffect(() => {
+    setIsRetaking(!latest?.id);
+  }, [latest?.id]);
+
   const totalQuestions = latest?.total_questions ?? questions.length;
   const correct = latest?.count_correct ?? 0;
   const incorrect = latest?.count_incorrect ?? 0;
@@ -72,16 +75,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
     : 0;
   const passed = latest?.passed ?? false;
 
+  const reachedMaxAttempts = attemptsCount >= MAX_ATTEMPTS;
+  const canRetake = !reachedMaxAttempts;
+
   const toggleAnswer = (qId: string, choiceId: string, isMulti: boolean) => {
-    if (submitted) return;
+    if (!isRetaking || submitted) return;
     setAnswers((prev) => {
       const curr = new Set(prev[qId] ?? []);
       if (isMulti) {
-        if (curr.has(choiceId)) {
-          curr.delete(choiceId);
-        } else {
-          curr.add(choiceId);
-        }
+        if (curr.has(choiceId)) curr.delete(choiceId);
+        else curr.add(choiceId);
         return { ...prev, [qId]: curr };
       }
       return { ...prev, [qId]: new Set([choiceId]) };
@@ -93,7 +96,6 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
     [answers, questions]
   );
 
-  // Build POST body [{question, choice, attempt}, ...] using nextAttempt
   const buildSubmission = () => {
     const rows: Array<{ question: string; choice: string; attempt: number }> =
       [];
@@ -113,36 +115,33 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const submitExam = async () => {
     if (!allAnswered || isPending) return;
 
-    // Guard: only 3 trials total (or MAX_ATTEMPTS)
-    if (attemptsCount >= MAX_ATTEMPTS) {
-      toast.error(
-        t("examSection.submitExam.error", { MAX_ATTEMPTS: MAX_ATTEMPTS })
-      );
+    if (reachedMaxAttempts) {
+      toast.error(t("examSection.submitExam.error", { MAX_ATTEMPTS }));
       return;
     }
 
     try {
       const payload = buildSubmission();
-      await mutateAsync(payload); // server grades & stores attempt
+      await mutateAsync(payload);
       setSubmitted(true);
-      await refetchSummary(); // refresh attempts array so UI shows latest server result
-      toast.success(
-        t("examSection.submitExam.success", { nextAttempt: nextAttempt })
-      );
+      setIsRetaking(false);
+      await refetchSummary();
+      toast.success(t("examSection.submitExam.success", { nextAttempt }));
     } catch (err: any) {
       handleErrorAlerts(err?.response?.data?.error);
     }
   };
 
   const retake = () => {
-    if (passed || attemptsCount >= MAX_ATTEMPTS) return;
+    if (!canRetake) return;
     setAnswers({});
     setSubmitted(false);
+    setIsRetaking(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const submitDisabled =
-    !allAnswered || isPending || attemptsCount >= MAX_ATTEMPTS;
+    !allAnswered || isPending || reachedMaxAttempts || !isRetaking;
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-lg">
@@ -194,6 +193,8 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               <div className="space-y-2">
                 {choices.map((c, ci) => {
                   const checked = selected.has(c.id);
+                  // disable inputs when not actively taking (either after submit or when viewing server latest)
+                  const disabledInput = !isRetaking || submitted;
                   return (
                     <label
                       key={c.id}
@@ -204,7 +205,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                         name={`q-${q.id}`}
                         value={c.id}
                         checked={checked}
-                        disabled={submitted || !!latest}
+                        disabled={disabledInput}
                         onChange={() => toggleAnswer(q.id, c.id, multi)}
                         className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 ltr:mr-3 rtl:ml-3"
                       />
@@ -225,7 +226,30 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
       {/* Footer */}
       <div className="mt-8 flex items-center justify-between">
-        {submitted || latest?.id ? (
+        {/* IMPORTANT: show submit controls when the user is actively taking (isRetaking === true).
+            otherwise show summary (viewing last attempt). */}
+        {isRetaking ? (
+          <>
+            <div className="text-gray-500 text-sm">
+              {attemptsCount < MAX_ATTEMPTS
+                ? `${t("examSection.ansAll")}: ${attemptsLeft}`
+                : t("examSection.noAttempts")}
+            </div>
+            <button
+              onClick={submitExam}
+              disabled={submitDisabled}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            >
+              {isPending
+                ? t("examSection.submitting")
+                : `${t("examSection.submit")} ${
+                    exam.type === "quiz"
+                      ? t("examSection.quiz")
+                      : t("examSection.exam")
+                  }`}
+            </button>
+          </>
+        ) : (
           <div className="flex flex-col items-start justify-start gap-4 w-full">
             <div className="text-sm text-gray-500">
               {isFetchingSummary
@@ -255,12 +279,10 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
             <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
               <button
                 onClick={retake}
-                disabled={passed || attemptsCount >= MAX_ATTEMPTS}
+                disabled={!canRetake}
                 className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                {passed
-                  ? t("examSection.noRetake")
-                  : attemptsCount >= MAX_ATTEMPTS
+                {reachedMaxAttempts
                   ? t("examSection.noAttemptsLeft")
                   : t("examSection.retake")}
               </button>
@@ -272,27 +294,6 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="text-gray-500 text-sm">
-              {attemptsCount < MAX_ATTEMPTS
-                ? `${t("examSection.ansAll")}: ${attemptsLeft}`
-                : t("examSection.noAttempts")}
-            </div>
-            <button
-              onClick={submitExam}
-              disabled={submitDisabled}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {isPending
-                ? t("examSection.submitting")
-                : `${t("examSection.submit")} ${
-                    exam.type === "quiz"
-                      ? t("examSection.quiz")
-                      : t("examSection.exam")
-                  }`}
-            </button>
-          </>
         )}
       </div>
     </div>

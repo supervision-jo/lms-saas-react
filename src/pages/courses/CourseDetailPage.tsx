@@ -1,3 +1,4 @@
+// src/pages/CourseDetailPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Star,
@@ -44,6 +45,7 @@ const CourseDetailPage: React.FC = () => {
     readUserFromStorage()?.id ?? null
   );
   const currentUser: User = readUserFromStorage();
+
   // Settings flags
   const {
     enabled: reviewsEnabled,
@@ -83,16 +85,10 @@ const CourseDetailPage: React.FC = () => {
     [modulesResp]
   );
 
-  // const { data: subCatesData } = useCustomQuery(
-  //   `${API_ENDPOINTS.subCategories}`,
-  //   ["sub-categories-details"]
-  // );
-
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
   const cates: Category[] = catesData?.data?.data ?? [];
-  // const subCategories: SubCategory[] = subCatesData?.data || [];
 
   const { data: subCategoriesData } = useCustomQuery(
     `${API_ENDPOINTS.subCategories}`,
@@ -106,7 +102,6 @@ const CourseDetailPage: React.FC = () => {
   const currentSubCate = subCategories?.find(
     (s) => s.id === course?.sub_category
   );
-
   const currentCategory = cates?.find((c) => c.id === currentSubCate?.category);
 
   const { data: instructorData } = useCustomQuery(
@@ -178,7 +173,7 @@ const CourseDetailPage: React.FC = () => {
       } else {
         setEnrolledOptimistic(false);
         toast.error(
-          res?.error?.non_field_errors?.[0] ??
+          (res?.error?.non_field_errors?.[0] as string) ??
             y("card.handleEnroll.failFallback")
         );
       }
@@ -190,7 +185,7 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
-  /** Find first lesson user can actually open (free preview if not enrolled). */
+  /** First lesson the user can open (free preview if not enrolled). */
   const firstPlayableLessonId = useMemo(() => {
     for (const m of modulesData ?? []) {
       const lessons = m?.lessons ?? [];
@@ -201,7 +196,7 @@ const CourseDetailPage: React.FC = () => {
     return null;
   }, [modulesData, isEnrolled]);
 
-  /** Navigate to player, passing lesson and optional assessment via query. */
+  /** Navigate to player with lesson + optional assessment. */
   const goToPlayer = (opts?: {
     lessonId?: string | number;
     assessment?: Exam;
@@ -344,15 +339,13 @@ const CourseDetailPage: React.FC = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                     <button
                       onClick={() => {
-                        // Start at first playable lesson to mirror player UX isEnrolled
-                        if (isEnrolled) {
-                          if (firstPlayableLessonId) {
-                            goToPlayer({ lessonId: firstPlayableLessonId });
-                          } else {
-                            goToPlayer(); // fallback
-                          }
-                        } else {
+                        // Start at first playable (allows free preview if not enrolled)
+                        if (firstPlayableLessonId) {
+                          goToPlayer({ lessonId: firstPlayableLessonId });
+                        } else if (!isEnrolled) {
                           toast.error(t("enrollError"));
+                        } else {
+                          goToPlayer();
                         }
                       }}
                       className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center"
@@ -389,6 +382,7 @@ const CourseDetailPage: React.FC = () => {
                       )}
                     </div>
                   </FeatureGate>
+
                   {!isEnrolled || createEnroll?.isPending ? (
                     <button
                       onClick={handleEnroll}
@@ -440,9 +434,7 @@ const CourseDetailPage: React.FC = () => {
                       )}
                     </div>
                   )}
-                  {/* <div className="text-center text-sm text-gray-600 mb-6">
-                    {t("details.guarantee")}
-                  </div> */}
+
                   <div className="space-y-3 text-sm">
                     <h4 className="font-semibold text-gray-900">
                       {t("details.includes")}
@@ -496,7 +488,7 @@ const CourseDetailPage: React.FC = () => {
                         reviewsLoading) &&
                       tab.id === "reviews"
                     )
-                      return;
+                      return null;
                     return (
                       <button
                         key={tab.id}

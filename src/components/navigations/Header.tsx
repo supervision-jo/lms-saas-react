@@ -157,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({
             {currentUser ? (
               <div className="relative">
                 <div
-                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors"
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 >
                   {currentUser.profile_image ? (
@@ -167,10 +167,10 @@ const Header: React.FC<HeaderProps> = ({
                         "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                       }
                       alt={currentUser?.first_name}
-                      className="w-8 h-8 rounded-full object-cover rtl:ml-2"
+                      className="w-8 h-8 rounded-full object-cover rtl:ml-2 ltr:mr-2"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center rtl:ml-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center rtl:ml-2 ltr:mr-2">
                       <span className="text-white text-sm font-medium">
                         {currentUser?.first_name?.charAt(0).toUpperCase()}
                       </span>
@@ -205,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({
                                 }
                                 setIsUserMenuOpen(false);
                               }}
-                              className={`block w-full text-left px-4 py-2 text-sm ${
+                              className={`block w-full ltr:text-left rtl:text-right px-4 py-2 text-sm ${
                                 i.id === "logout"
                                   ? "text-red-600 hover:bg-red-50"
                                   : "text-gray-700 hover:bg-gray-50"
@@ -221,7 +221,7 @@ const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 {authNavigationItems.map((i, idx) => {
                   if (
                     (!registrationEnabled || isLoading || isFetching) &&
