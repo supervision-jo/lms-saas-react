@@ -5,6 +5,7 @@ import { useCustomQuery } from "../../../hooks/useQuery";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
+import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -25,7 +26,7 @@ interface StudentAnswers {
 }
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
-  const { t } = useTranslation("coursePlayer");
+  const { t, i18n } = useTranslation("coursePlayer");
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
@@ -203,7 +204,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                         name={`q-${q.id}`}
                         value={c.id}
                         checked={checked}
-                        disabled={submitted}
+                        disabled={submitted || !!latest}
                         onChange={() => toggleAnswer(q.id, c.id, multi)}
                         className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 ltr:mr-3 rtl:ml-3"
                       />
@@ -224,35 +225,15 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
       {/* Footer */}
       <div className="mt-8 flex items-center justify-between">
-        {!submitted ? (
-          <>
-            <div className="text-gray-500 text-sm">
-              {attemptsCount < MAX_ATTEMPTS
-                ? `${t("examSection.ansAll")}: ${attemptsLeft}`
-                : t("examSection.noAttempts")}
-            </div>
-            <button
-              onClick={submitExam}
-              disabled={submitDisabled}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {isPending
-                ? t("examSection.submitting")
-                : `${t("examSection.submit")} ${
-                    exam.type === "quiz"
-                      ? t("examSection.quiz")
-                      : t("examSection.exam")
-                  }`}
-            </button>
-          </>
-        ) : (
+        {submitted || latest?.id ? (
           <div className="flex flex-col items-start justify-start gap-4 w-full">
             <div className="text-sm text-gray-500">
               {isFetchingSummary
                 ? t("examSection.loadRes")
-                : `${t("examSection.submittedAt")}: ${
-                    latest?.submitted_at ?? "-"
-                  }`}
+                : `${t("examSection.submittedAt")}: ${formatDateTimeSimple(
+                    latest?.submitted_at ?? "",
+                    { locale: i18n.language, t: t }
+                  )}`}
             </div>
 
             <div
@@ -291,6 +272,27 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               </button>
             </div>
           </div>
+        ) : (
+          <>
+            <div className="text-gray-500 text-sm">
+              {attemptsCount < MAX_ATTEMPTS
+                ? `${t("examSection.ansAll")}: ${attemptsLeft}`
+                : t("examSection.noAttempts")}
+            </div>
+            <button
+              onClick={submitExam}
+              disabled={submitDisabled}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            >
+              {isPending
+                ? t("examSection.submitting")
+                : `${t("examSection.submit")} ${
+                    exam.type === "quiz"
+                      ? t("examSection.quiz")
+                      : t("examSection.exam")
+                  }`}
+            </button>
+          </>
         )}
       </div>
     </div>

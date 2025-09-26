@@ -25,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { readUserFromStorage } from "../../services/auth";
 import { getCookie } from "../../services/cookies";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../components/settings/FeatureGate";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
@@ -169,10 +170,13 @@ export default function CoursePlayerPage() {
     ["course", courseData?.id]
   );
 
-  const handleAssessmentSubmit = () => {
+  const handleAssessmentSubmit = async () => {
     // advance to next lesson
     const nextId = findNextLessonId(modules, currentLessonId);
     const newLessonId = nextId ?? currentLessonId;
+
+    await handleComplete();
+
     setCurrentLessonId(String(newLessonId));
 
     const params = new URLSearchParams(search);
@@ -320,86 +324,122 @@ export default function CoursePlayerPage() {
           <div className="bg-gray-800 border-b border-gray-700">
             <div className="max-w-5xl mx-auto px-6">
               <div className="grid grid-cols-3 items-center justify-items-center whitespace-nowrap">
-                <button
-                  onClick={() => {
-                    setShowNotes(true);
-                    setShowQA(false);
-                    setShowGroups(false);
-                  }}
-                  className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                    showNotes
-                      ? "border-purple-500 text-purple-400"
-                      : "border-transparent text-gray-400 hover:text-gray-300"
-                  }`}
+                <FeatureGate
+                  flag="is_lesson_notes_enabled"
+                  fallback={null}
+                  loadingFallback={null}
                 >
-                  <span>📝</span>
-                  <span>
-                    {t("lessonNotes")} ({notesCount})
-                  </span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowQA(true);
-                    setShowNotes(false);
-                    setShowGroups(false);
-                  }}
-                  className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                    showQA
-                      ? "border-purple-500 text-purple-400"
-                      : "border-transparent text-gray-400 hover:text-gray-300"
-                  }`}
+                  <button
+                    onClick={() => {
+                      setShowNotes(true);
+                      setShowQA(false);
+                      setShowGroups(false);
+                    }}
+                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                      showNotes
+                        ? "border-purple-500 text-purple-400"
+                        : "border-transparent text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    <span>📝</span>
+                    <span>
+                      {t("lessonNotes")} ({notesCount})
+                    </span>
+                  </button>
+                </FeatureGate>
+                <FeatureGate
+                  flag="is_Q_and_A_enabled"
+                  fallback={null}
+                  loadingFallback={null}
                 >
-                  <span>💬</span>
-                  <span>
-                    {t("QA")} ({(questions ?? []).length})
-                  </span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowGroups(true);
-                    setShowNotes(false);
-                    setShowQA(false);
-                  }}
-                  className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                    showGroups
-                      ? "border-purple-500 text-purple-400"
-                      : "border-transparent text-gray-400 hover:text-gray-300"
-                  }`}
+                  <button
+                    onClick={() => {
+                      setShowQA(true);
+                      setShowNotes(false);
+                      setShowGroups(false);
+                    }}
+                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                      showQA
+                        ? "border-purple-500 text-purple-400"
+                        : "border-transparent text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    <span>💬</span>
+                    <span>
+                      {t("QA")} ({(questions ?? []).length})
+                    </span>
+                  </button>
+                </FeatureGate>
+                <FeatureGate
+                  flag="is_chat_group_enabled"
+                  fallback={null}
+                  loadingFallback={null}
                 >
-                  <Users size={16} />
-                  <span>{t("groups")} (2)</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowGroups(true);
+                      setShowNotes(false);
+                      setShowQA(false);
+                    }}
+                    className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                      showGroups
+                        ? "border-purple-500 text-purple-400"
+                        : "border-transparent text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    <Users size={16} />
+                    <span>{t("groups")} (2)</span>
+                  </button>
+                </FeatureGate>
               </div>
             </div>
           </div>
 
           {/* Notes */}
           {showNotes && (
-            <NotesSection
-              currentLessonId={currentLessonId}
-              notes={notes}
-              setNotes={setNotes}
-              title={noteTitle}
-              setTitle={setNoteTitle}
-              setNotesCount={setNotesCount}
-            />
+            <FeatureGate
+              flag="is_lesson_notes_enabled"
+              fallback={null}
+              loadingFallback={null}
+            >
+              <NotesSection
+                currentLessonId={currentLessonId}
+                notes={notes}
+                setNotes={setNotes}
+                title={noteTitle}
+                setTitle={setNoteTitle}
+                setNotesCount={setNotesCount}
+              />
+            </FeatureGate>
           )}
 
           {/* Q&A */}
           {showQA && (
-            <QASection
-              lesson={currentLessonId}
-              questions={questions}
-              isLoading={isQuestionsLoading}
-            />
+            <FeatureGate
+              flag="is_Q_and_A_enabled"
+              fallback={null}
+              loadingFallback={null}
+            >
+              <QASection
+                lesson={currentLessonId}
+                questions={questions}
+                isLoading={isQuestionsLoading}
+              />
+            </FeatureGate>
           )}
 
           {/* Groups */}
           {showGroups && (
-            <GroupsSection
-              handleJoinGroup={handleJoinGroup}
-              handleShowChat={handleShowChat}
-            />
+            <FeatureGate
+              flag="is_chat_group_enabled"
+              fallback={null}
+              loadingFallback={null}
+            >
+              <GroupsSection
+                handleJoinGroup={handleJoinGroup}
+                handleShowChat={handleShowChat}
+              />
+            </FeatureGate>
           )}
         </div>
 
@@ -461,13 +501,19 @@ export default function CoursePlayerPage() {
       </div>
 
       {showChatModal && activeChatGroup && (
-        <ChatModal
-          activeChatGroup={activeChatGroup}
-          groupMessage={groupMessage}
-          handleCloseChatModal={handleCloseChatModal}
-          handleSendGroupMessage={handleSendGroupMessage}
-          setGroupMessage={setGroupMessage}
-        />
+        <FeatureGate
+          flag="is_chat_group_enabled"
+          fallback={null}
+          loadingFallback={null}
+        >
+          <ChatModal
+            activeChatGroup={activeChatGroup}
+            groupMessage={groupMessage}
+            handleCloseChatModal={handleCloseChatModal}
+            handleSendGroupMessage={handleSendGroupMessage}
+            setGroupMessage={setGroupMessage}
+          />
+        </FeatureGate>
       )}
     </div>
   );
