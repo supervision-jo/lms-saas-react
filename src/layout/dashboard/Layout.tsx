@@ -4,6 +4,7 @@ import Header from "../../components/navigations/Header";
 import useAuth from "../../store/useAuth";
 import { removeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 export interface NavItems {
   id: string;
@@ -17,8 +18,25 @@ const Layout = () => {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const { t } = useTranslation();
 
+  // إضافة الـ feature flag
+  const {
+    enabled: indexEnabled,
+    isError: indexError,
+    isFetching: indexFetching,
+    isLoading: indexLoading,
+  } = useFeatureFlag("index_page", true);
+
+  // تحديد ما إذا كان يجب إظهار الـ Home
+  const shouldShowHome =
+    !indexLoading &&
+    !indexFetching &&
+    (indexError ? false : indexEnabled === "home");
+
   const mainNavigationItems: NavItems[] = [
-    { id: "", label: t("header.home"), icon: Home },
+    ...(shouldShowHome
+      ? [{ id: "", label: t("header.home"), icon: Home }]
+      : []),
+
     { id: "catalog", label: t("header.courses"), icon: GraduationCap },
     {
       id: !isAuthenticated ? "login" : "dashboard",
