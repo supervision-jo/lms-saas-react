@@ -47,9 +47,11 @@ export default function AppRoutes() {
         <Route path="" element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           {(registrationError || registrationFetching || registrationLoading) &&
-            !registrationEnabled && (
-              <Route path="/sign-up" element={<SignupPage />} />
-            )}
+          !registrationEnabled ? (
+            <Route path="/login" element={<LoginPage />} />
+          ) : (
+            <Route path="/sign-up" element={<SignupPage />} />
+          )}
           <Route path="/login" element={<LoginPage />} />
           {/* Auth */}
 
