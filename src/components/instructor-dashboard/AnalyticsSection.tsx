@@ -65,8 +65,8 @@ export default function AnalyticsSection() {
               <div>
                 <h4 className="font-medium text-gray-900">{course.name}</h4>
                 <div className="flex items-center text-sm text-gray-600 mt-1">
-                  <Users className="w-4 h-4 mr-1" />
-                  <span className="mr-4">
+                  <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                  <span className="ltr:mr-4 rtl:ml-4">
                     {course.students.toLocaleString()} {t("courses.students")}
                   </span>
                   <FeatureGate
@@ -74,7 +74,7 @@ export default function AnalyticsSection() {
                     loadingFallback={null}
                     fallback={null}
                   >
-                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
+                    <Star className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400" />
                     <span>{course.rating}</span>
                   </FeatureGate>
                 </div>
@@ -99,7 +99,7 @@ export default function AnalyticsSection() {
           Student Growth
         </h3>
         <div className="h-64 bg-gray-100 rounded-lg flex items-end justify-center p-4">
-          <div className="flex items-end space-x-2 h-full">
+          <div className="flex items-end gap-2 h-full">
             {analytics.studentGrowth.map((value, index) => (
               <div key={index} className="flex flex-col items-center">
                 <div
@@ -127,7 +127,7 @@ export default function AnalyticsSection() {
           {analytics.topCountries.map((country, index) => (
             <div key={index} className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center ltr:mr-3 rtl:ml-3">
                   <span className="text-xs font-medium">{index + 1}</span>
                 </div>
                 <span className="font-medium text-gray-900">
@@ -135,7 +135,7 @@ export default function AnalyticsSection() {
                 </span>
               </div>
               <div className="flex items-center">
-                <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+                <div className="w-32 bg-gray-200 rounded-full h-2 ltr:mr-3 rtl:ml-3">
                   <div
                     className="bg-purple-600 h-2 rounded-full"
                     style={{ width: `${country.percentage}%` }}

@@ -88,7 +88,7 @@ export default function StatisticsCards() {
   const count = visible.length;
   const gridClass =
     count <= 1
-      ? "grid-cols-1"
+      ? "grid-cols-3"
       : count === 2
       ? "grid-cols-1 md:grid-cols-2"
       : count === 3
@@ -107,7 +107,7 @@ export default function StatisticsCards() {
               <div className={`p-3 rounded-lg ${stat.bg}`}>
                 <stat.Icon className={`w-6 h-6 ${stat.color}`} />
               </div>
-              <div className="ml-4">
+              <div className="ltr:ml-4 rtl:mr-4">
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 <p className="text-sm text-gray-600">{stat.label}</p>
               </div>

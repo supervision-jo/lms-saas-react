@@ -49,6 +49,13 @@ export default function LearningStats({ stats }: LearningStatsProps) {
     isLoading: reviewsLoading,
   } = useFeatureFlag("is_review_enabled", true);
 
+  const {
+    enabled: pricingEnabled,
+    isError: pricingError,
+    isFetching: pricingFetching,
+    isLoading: pricingLoading,
+  } = useFeatureFlag("is_price_enabled", true);
+
   const baseInstructorItems: InstructorItem[] = [
     {
       key: "students",
@@ -84,12 +91,24 @@ export default function LearningStats({ stats }: LearningStatsProps) {
     },
   ];
 
-  const visibleInstructorItems =
-    !reviewsEnabled || reviewsError || reviewsLoading || reviewsFetching
-      ? baseInstructorItems.filter(
-          (i) => !["avgRating", "reviews"].includes(i.key)
-        )
-      : baseInstructorItems;
+  const visibleInstructorItems = baseInstructorItems
+    .filter((item) =>
+      !reviewsEnabled || reviewsError || reviewsLoading || reviewsFetching
+        ? !["avgRating", "reviews"].includes(item.key)
+        : true
+    )
+    .filter((i) =>
+      !pricingEnabled || pricingError || pricingLoading || pricingFetching
+        ? !["revenue"].includes(i.key)
+        : true
+    );
+
+  // const visibleInstructorItems =
+  //   !reviewsEnabled || reviewsError || reviewsLoading || reviewsFetching
+  //     ? baseInstructorItems.filter(
+  //         (i) => !["avgRating", "reviews"].includes(i.key)
+  //       )
+  //     : baseInstructorItems;
 
   const count = visibleInstructorItems.length;
   const gridClass =

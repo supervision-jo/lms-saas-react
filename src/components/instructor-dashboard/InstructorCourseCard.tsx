@@ -54,15 +54,15 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
             alt={course?.title}
             className="w-20 h-20 rounded-lg object-cover"
           />
-          <div className="ml-4 flex-1">
+          <div className="ltr:ml-4 rtl:mr-4 flex-1">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-1">
                   {course?.title}
                 </h4>
                 <div className="flex items-center text-sm text-gray-600 mb-2">
-                  <Users className="w-4 h-4 mr-1" />
-                  <span className="mr-4">
+                  <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                  <span className="ltr:mr-4 rtl:ml-4">
                     {course?.total_students ?? 0} {t("courses.students")}
                   </span>
                   <FeatureGate
@@ -70,18 +70,20 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                     loadingFallback={null}
                     fallback={null}
                   >
-                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                    <span className="mr-1">{course?.average_rating ?? 0}</span>
+                    <Star className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400" />
+                    <span className="ltr:mr-1 rtl:ml-1">
+                      {course?.average_rating ?? 0}
+                    </span>
                     <span>
                       ({course?.total_reviews ?? 0} {t("courses.reviews")})
                     </span>
                   </FeatureGate>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 mb-2">
-                  <span className="mr-4">
+                  <span className="ltr:mr-4 rtl:ml-4">
                     {t("courses.revenue")}: {course?.revenue ?? 0}
                   </span>
-                  <span className="mr-4">
+                  <span className="ltr:mr-4 rtl:ml-4">
                     {t("courses.completion")}: {course?.completion ?? 0}%
                   </span>
                   <span
@@ -103,7 +105,7 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   />
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate(`/catalog/${course?.id}`)}
                   className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
@@ -158,18 +160,18 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
                   fallback={null}
                 >
                   <div className="flex items-center">
-                    <span className="text-yellow-500 font-bold mr-1">
+                    <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
                       {course?.average_rating ?? 0}
                     </span>
-                    <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                    <span className="text-gray-500 text-sm ml-2">
+                    <Star className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400" />
+                    <span className="text-gray-500 text-sm ltr:ml-2 rtl:mr-2">
                       ({course?.total_reviews ?? 0} {t("courses.reviews")})
                     </span>
                   </div>
                 </FeatureGate>
 
                 <div className="flex items-center text-sm text-gray-600">
-                  <Users className="w-4 h-4 mr-1" />
+                  <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                   <span>
                     {course?.total_students ?? 0} {t("courses.students")}
                   </span>
@@ -177,10 +179,10 @@ export default function InstructorCourseCard({ course, navigate }: Props) {
               </div>
 
               <div className="flex md:items-center items-start md:flex-row flex-col gap-4 text-sm text-gray-600 w-full">
-                <span className="mr-4">
+                <span className="ltr:mr-4 rtl:ml-4">
                   {t("courses.revenue")}: {course?.revenue ?? 0}
                 </span>
-                <span className="mr-4">
+                <span className="ltr:mr-4 rtl:ml-4">
                   {t("courses.completion")}: {course?.completion ?? 0}%
                 </span>
                 <span

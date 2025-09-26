@@ -13,7 +13,7 @@ import {
 import CourseContent from "../../components/course/CourseContent";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { useNavigate, useParams } from "react-router";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { ACCESS_TOKEN_KEY, API_ENDPOINTS } from "../../utils/constants";
 import { formatDateTimeSimple } from "../../utils/formatDateTime";
 import { useCustomPost } from "../../hooks/useMutation";
 import toast from "react-hot-toast";
@@ -29,6 +29,7 @@ import CourseReviews from "../../components/course/course-details/CourseReviews"
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
 import { useFeatureFlag } from "../../hooks/useSettings";
+import { getCookie } from "../../services/cookies";
 
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
@@ -116,10 +117,16 @@ const CourseDetailPage: React.FC = () => {
   );
   const instructor: CourseInstructor = instructorData?.data?.[0];
 
+  const isStudent = !!(currentUser && currentUser.is_student);
+  const token = getCookie(ACCESS_TOKEN_KEY);
   const enrolledCoursesData = useCustomQuery(
     API_ENDPOINTS.enrolledCourses,
     ["enrolledCourses", isAuthenticated, userId],
-    undefined,
+    {
+      headers: {
+        ...(isStudent && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
     !!isAuthenticated
   );
   const enrolledCourses: EnrolledCourse[] =
@@ -382,7 +389,7 @@ const CourseDetailPage: React.FC = () => {
                       )}
                     </div>
                   </FeatureGate>
-                  {!isEnrolled ? (
+                  {!isEnrolled || createEnroll?.isPending ? (
                     <button
                       onClick={handleEnroll}
                       disabled={

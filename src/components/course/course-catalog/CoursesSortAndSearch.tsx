@@ -113,7 +113,7 @@ function SortMenuButton({
                   setOpen(false);
                   btnRef.current?.focus(); // return focus for a11y
                 }}
-                className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                className={`block w-full ltr:text-left rtl:text-right px-3 py-2 text-sm hover:bg-gray-50 ${
                   sortBy === o.value
                     ? "text-purple-600 font-medium"
                     : "text-gray-700"

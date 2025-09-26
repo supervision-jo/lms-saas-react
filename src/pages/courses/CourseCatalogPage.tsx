@@ -4,7 +4,7 @@ import { useCustomQuery } from "../../hooks/useQuery";
 import CourseCard from "../../components/course/CourseCard";
 import CoursesSortAndSearch from "../../components/course/course-catalog/CoursesSortAndSearch";
 import CoursesFilter from "../../components/course/course-catalog/CoursesFilter";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { ACCESS_TOKEN_KEY, API_ENDPOINTS } from "../../utils/constants";
 import { useSearchParams } from "react-router";
 import Pagination from "../../components/reusable-components/Pagination";
 import { useEffect, useRef, useState } from "react";
@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import useAuth from "../../store/useAuth";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
+import { getCookie } from "../../services/cookies";
 
 type ViewMode = "grid" | "list";
 type PriceFilter = "all" | "free" | "paid";
@@ -214,10 +215,17 @@ const CourseCatalogPage: React.FC = () => {
     }
   }, [isAuthenticated, queryClient]);
 
+  const currentUser: User = readUserFromStorage();
+  const isStudent = !!(currentUser && currentUser.is_student);
+  const token = getCookie(ACCESS_TOKEN_KEY);
   const enrolledCoursesData = useCustomQuery(
     API_ENDPOINTS.enrolledCourses,
     ["enrolledCourses", isAuthenticated, userId],
-    undefined,
+    {
+      headers: {
+        ...(isStudent && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
     !!isAuthenticated
   );
 

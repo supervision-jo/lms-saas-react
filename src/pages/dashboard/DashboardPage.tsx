@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { BookOpen, Trophy } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
-import { API_ENDPOINTS } from "../../utils/constants";
+import { ACCESS_TOKEN_KEY, API_ENDPOINTS } from "../../utils/constants";
 import EnrolledCourses from "../../components/dashboard/EnrolledCourses";
 import { readUserFromStorage, roleOf } from "../../services/auth";
 import HeaderStatistics from "../../components/dashboard/HeaderStatistics";
 import { useTranslation } from "react-i18next";
+import { getCookie } from "../../services/cookies";
 
 const achievements = [
   { id: "1", icon: "🎓", date: "2024-01-15" },
@@ -26,11 +27,15 @@ const DashboardPage: React.FC = () => {
 
   const currentUser: User = readUserFromStorage();
   const isStudent = roleOf(currentUser) === "student";
-
+  const token = getCookie(ACCESS_TOKEN_KEY);
   const enrolledCoursesData = useCustomQuery(
     `${API_ENDPOINTS.enrolledCourses}`,
     ["enrolledCourses"],
-    undefined,
+    {
+      headers: {
+        ...(isStudent && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
     !!isStudent
   );
 
