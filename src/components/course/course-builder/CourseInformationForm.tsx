@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useCustomPatch } from "../../../hooks/useMutation";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import FeatureGate from "../../settings/FeatureGate";
 
 type FormValues = {
   title: string;
@@ -24,6 +26,7 @@ interface Props {
 export default function CourseInformationForm({ course }: Props) {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+  const { t } = useTranslation("courseBuilder");
 
   const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
     "categories",
@@ -154,7 +157,7 @@ export default function CourseInformationForm({ course }: Props) {
         if (Number.isNaN(num) || num < 0) {
           setError(
             "price",
-            { message: "Price must be ≥ 0" },
+            { message: t("courseInfo.priceError") },
             { shouldFocus: true }
           );
           return;
@@ -178,15 +181,15 @@ export default function CourseInformationForm({ course }: Props) {
       if (!ok) {
         const payload = res?.data?.error || res?.error;
         if (payload) handleErrorAlerts(payload);
-        throw new Error("Save failed");
+        throw new Error(t("courseInfo.error"));
       }
       const serverCourse = res?.data?.data || res?.data || res?.result?.data;
       rehydrateFromServer(serverCourse);
-      toast.success("Saved");
+      toast.success(t("courseInfo.success"));
     } catch (error: any) {
       const payload = error?.response?.data?.error;
       if (payload) handleErrorAlerts(payload);
-      else toast.error(error?.message || "Failed to save");
+      else toast.error(error?.message || t("courseInfo.error"));
     }
   };
 
@@ -202,15 +205,15 @@ export default function CourseInformationForm({ course }: Props) {
       if (!ok) {
         const payload = res?.data?.error || res?.error;
         if (payload) handleErrorAlerts(payload);
-        throw new Error("Image save failed");
+        throw new Error(t("courseInfo.savePicError"));
       }
       const serverCourse = res?.data?.data || res?.data || res?.result?.data;
       rehydrateFromServer(serverCourse);
-      toast.success("Image uploaded");
+      toast.success(t("courseInfo.savePicSuccess"));
     } catch (error: any) {
       const payload = error?.response?.data?.error;
       if (payload) handleErrorAlerts(payload);
-      else toast.error(error?.message || "Failed to upload image");
+      else toast.error(error?.message || t("courseInfo.uploadPicError"));
     }
   };
 
@@ -257,7 +260,7 @@ export default function CourseInformationForm({ course }: Props) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Course Information
+        {t("courseInfo.title")}
       </h2>
 
       <form
@@ -276,11 +279,11 @@ export default function CourseInformationForm({ course }: Props) {
         {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Title *
+            {t("courseInfo.courseTitle")}
           </label>
           <input
             type="text"
-            placeholder="Enter course title"
+            placeholder={t("courseInfo.titlePlaceholder")}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             {...register("title", { onBlur: onBlurSave })}
           />
@@ -289,11 +292,11 @@ export default function CourseInformationForm({ course }: Props) {
         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Description *
+            {t("courseInfo.courseDescription")}
           </label>
           <textarea
             rows={5}
-            placeholder="Describe what students will learn in this course"
+            placeholder={t("courseInfo.descriptionPlaceholder")}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             {...register("description", { onBlur: onBlurSave })}
           />
@@ -301,33 +304,39 @@ export default function CourseInformationForm({ course }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Price ($) *
-            </label>
-            <input
-              type="number"
-              min="0"
-              placeholder="Course price"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              {...register("price", {
-                valueAsNumber: true,
-                min: { value: 0, message: "Price cannot be negative" },
-                onBlur: onBlurSave,
-                onChange: (e) => {
-                  const val = parseFloat(e.target.value);
-                  setValue("price", Number.isFinite(val) ? val : 0, {
-                    shouldDirty: true,
-                  });
-                },
-              })}
-            />
-          </div>
+          <FeatureGate
+            flag="is_price_enabled"
+            fallback={null}
+            loadingFallback={null}
+          >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t("courseInfo.coursePrice")}
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder={t("courseInfo.pricePlaceholder")}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("price", {
+                  valueAsNumber: true,
+                  min: { value: 0, message: t("courseInfo.priceMinError") },
+                  onBlur: onBlurSave,
+                  onChange: (e) => {
+                    const val = parseFloat(e.target.value);
+                    setValue("price", Number.isFinite(val) ? val : 0, {
+                      shouldDirty: true,
+                    });
+                  },
+                })}
+              />
+            </div>
+          </FeatureGate>
 
           {/* Category (UI-only) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category *
+              {t("courseInfo.categoryTitle")}
             </label>
             <select
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -338,7 +347,7 @@ export default function CourseInformationForm({ course }: Props) {
                 onBlur: onBlurSave, // optional: save selection change
               })}
             >
-              <option value="">Select a category</option>
+              <option value="">{t("courseInfo.selectCategory")}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -350,7 +359,7 @@ export default function CourseInformationForm({ course }: Props) {
           {/* Sub-category (SENT to backend) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sub-category *
+              {t("courseInfo.subCategory")}
             </label>
             <select
               disabled={!selectedCategory || subCatsLoading}
@@ -365,8 +374,8 @@ export default function CourseInformationForm({ course }: Props) {
             >
               <option value="">
                 {selectedCategory
-                  ? "Select a sub-category"
-                  : "Choose a category first"}
+                  ? t("courseInfo.selectSubCategory")
+                  : t("courseInfo.chooseCategoryFirst")}
               </option>
               {subCategories.map((sc) => (
                 <option key={sc.id} value={sc.id}>
@@ -379,7 +388,7 @@ export default function CourseInformationForm({ course }: Props) {
           {/* Level */}
           <div className="md:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Level *
+              {t("courseInfo.level")}
             </label>
             <select
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -389,9 +398,11 @@ export default function CourseInformationForm({ course }: Props) {
                 onBlur: onBlurSave,
               })}
             >
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
+              <option value="beginner">{t("courseInfo.beginner")}</option>
+              <option value="intermediate">
+                {t("courseInfo.intermediate")}
+              </option>
+              <option value="advanced">{t("courseInfo.advanced")}</option>
             </select>
           </div>
         </div>
@@ -399,7 +410,7 @@ export default function CourseInformationForm({ course }: Props) {
         {/* Thumbnail */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Thumbnail
+            {t("courseInfo.thumbnail")}
           </label>
 
           <div
@@ -407,8 +418,10 @@ export default function CourseInformationForm({ course }: Props) {
             onClick={() => document.getElementById("course-thumb")?.click()}
           >
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">Click to upload or drag and drop</p>
-            <p className="text-sm text-gray-500 mt-1">PNG, JPG up to 2MB</p>
+            <p className="text-gray-600">{t("courseInfo.clickToUpload")}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {t("courseInfo.formats")}
+            </p>
 
             <input
               id="course-thumb"
@@ -439,7 +452,7 @@ export default function CourseInformationForm({ course }: Props) {
             ) : (
               thumbnailFile && (
                 <p className="text-sm text-gray-500 mt-2 truncate">
-                  Selected: {thumbnailFile.name}
+                  {t("courseInfo.selected", { name: thumbnailFile.name })}
                 </p>
               )
             )}

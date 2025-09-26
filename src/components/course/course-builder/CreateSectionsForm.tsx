@@ -44,6 +44,7 @@ import { buildLessonsPayload } from "../../../utils/lessonNormalize";
 import { useExamsByLesson } from "../../../hooks/useExamsByLesson";
 import { invalidateLessonExams } from "../../../utils/builderQueries";
 import { qk } from "../../../utils/builderQueries";
+import { useTranslation } from "react-i18next";
 
 const debounceLessons = makeKeyedDebouncer(450);
 const debounceAssessments = makeKeyedDebouncer(450);
@@ -63,6 +64,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     };
 
   const assessmentCacheRef = useRef<Record<string, AssessmentDraft>>({});
+  const { t } = useTranslation("courseBuilder");
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
@@ -338,8 +340,8 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     if (!full) {
       const fetched = await fetchAssessmentByAnchor(anchorLessonId, preferType);
       if (!fetched) {
-        toast.error("Open the quiz/exam and save once before editing inline.");
-        throw new Error("No complete assessment available for safe PATCH");
+        toast.error(t("createSections.patchAssessmentFieldToastError"));
+        throw new Error(t("createSections.patchAssessmentFieldError"));
       }
       full = fetched;
       setCachedAssessment(id, full);
@@ -353,7 +355,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     return debounceAssessments(String(id), async () => {
       await mutateExam({ id, payload: merged, lessonIdHint: anchorLessonId });
       setCachedAssessment(id, merged);
-      toast.success("Saved");
+      toast.success(t("createSections.patchAssessmentFieldSuccess"));
     });
   };
 
@@ -361,12 +363,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     try {
       const body = {
         course: courseId,
-        title: `New Module ${modules.length + 1}`,
+        title: t("createSections.newModuleTitle", { l: modules.length + 1 }),
         description: "",
         order: modules.length + 1, // 1-based
       };
       await createSection(body);
-      toast.success("New module added!");
+      toast.success(t("createSections.addModuleSuccess"));
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
@@ -455,10 +457,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           _draft: true,
           title:
             type === "video"
-              ? "New Video"
+              ? t("createSections.newVideoTitle")
               : type === "article"
-              ? "New Article"
-              : "New Material",
+              ? t("createSections.newArticleTitle")
+              : t("createSections.newMaterialTitle"),
           description: "",
           description_html: null,
           content_type: type,
@@ -496,7 +498,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         .find(({ l }) => isContent((l as any).content_type))?.i ?? -1;
 
     if (lastContentIndex < 0) {
-      toast.error("Create a content lesson first");
+      toast.error(t("createSections.addAssessementSuccess"));
       return;
     }
 
@@ -512,13 +514,13 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         passing_score: 70,
         questions: [
           {
-            text: "Sample question",
+            text: t("createSections.sampleQuestion"),
             question_type: "mcq",
             points: 1,
             explanation: "",
             choices: [
-              { text: "Option 1", is_correct: true },
-              { text: "Option 2", is_correct: false },
+              { text: t("createSections.option1"), is_correct: true },
+              { text: t("createSections.option2"), is_correct: false },
             ],
           },
         ],
@@ -534,19 +536,19 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         passing_score: 70,
         questions: [
           {
-            text: "Sample question",
+            text: t("createSections.sampleQuestion"),
             question_type: "mcq",
             explanation: "",
             choices: [
-              { text: "Option 1", is_correct: true },
-              { text: "Option 2", is_correct: false },
+              { text: t("createSections.option1"), is_correct: true },
+              { text: t("createSections.option2"), is_correct: false },
             ],
             points: 1,
           },
         ],
       });
 
-      if (!newId) throw new Error("No id returned");
+      if (!newId) throw new Error(t("createSections.noIdReturned"));
 
       setModules((prev) =>
         prev.map((m) => {
@@ -565,7 +567,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         })
       );
 
-      toast.success(`${type === "quiz" ? "Quiz" : "Exam"} created`);
+      toast.success(
+        `${
+          type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
+        } ${t("createSections.created")}`
+      );
       invalidateAssessmentsCacheForLesson(anchorId);
     } catch (e: any) {
       const payload = e?.response?.data?.error;
@@ -600,10 +606,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     if (!ops.length) return;
     try {
       await Promise.all(ops);
-      toast.success("Module order updated");
+      toast.success(t("createSections.commitModulesOrderSuccess"));
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch {
-      toast.error("Failed to update module order");
+      toast.error(t("createSections.commitModulesOrderError"));
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
@@ -677,7 +683,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       try {
         await saveSectionLessons(moduleId);
       } catch {
-        toast.error("Failed to save lesson order");
+        toast.error(t("createSections.commitLessonOrderAndAnchorsError"));
         await queryClient.invalidateQueries({
           queryKey: qk.modules(courseId),
         });
@@ -711,9 +717,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           affectedAnchors.forEach((a) =>
             invalidateAssessmentsCacheForLesson(a)
           );
-          toast.success("Attachments updated");
+          toast.success(t("createSections.attachmentsUpdated"));
         } catch {
-          toast.error("Failed to update some attachments");
+          toast.error(t("createSections.failedUpdateSomeAttachments"));
         }
       }
     });
@@ -722,7 +728,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const deleteModule = async (id: string) => {
     try {
       await removeSection({ id });
-      toast.success("Module deleted");
+      toast.success(t("createSections.moduleDeleted"));
       await queryClient.invalidateQueries({
         queryKey: qk.modules(courseId),
       });
@@ -747,10 +753,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     );
     try {
       await saveSectionLessons(moduleId);
-      toast.success("Lesson removed");
+      toast.success(t("createSections.lessonRemoved"));
       await commitLessonOrderAndAnchors(moduleId);
     } catch {
-      toast.error("Failed to remove lesson");
+      toast.error(t("createSections.failedRemoveLesson"));
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
@@ -776,7 +782,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       if (anchorIdForDeleted)
         invalidateAssessmentsCacheForLesson(anchorIdForDeleted);
 
-      toast.success("Assessment deleted");
+      toast.success(t("createSections.assessmentDeleted"));
     } catch (e: any) {
       const payload = e?.response?.data?.error;
       handleErrorAlerts(payload);
@@ -787,30 +793,32 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     <div className="sm:space-y-6 space-y-3">
       <div className="bg-white rounded-xl shadow-sm sm:p-8 p-2">
         <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Curriculum</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {t("createSections.curriculum")}
+          </h2>
           <button
             type="button"
             onClick={addModule}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Module
+            {t("createSections.addModule")}
           </button>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">Loading…</div>
+          <div className="text-center py-12 text-gray-500">
+            {t("createSections.loading")}
+          </div>
         ) : modules.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">
-              Start by adding modules to structure your course content.
-            </p>
+            <p className="text-gray-600">{t("createSections.title")}</p>
             <button
               type="button"
               onClick={addModule}
               className="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              + Add your first module
+              {t("createSections.addYourFirstModule")}
             </button>
           </div>
         ) : (
@@ -891,7 +899,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                 )
                               }
                               className="text-purple-600 hover:text-purple-800 p-2 rounded-lg border border-purple-200 hover:border-purple-300"
-                              title="Add"
+                              title={t("createSections.add")}
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -906,7 +914,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                 >
                                   <Video className="w-4 h-4 mr-2" />
-                                  Video
+                                  {t("createSections.video")}
                                 </button>
                                 <button
                                   type="button"
@@ -917,7 +925,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                 >
                                   <FileText className="w-4 h-4 mr-2" />
-                                  Article
+                                  {t("createSections.article")}
                                 </button>
                                 <button
                                   type="button"
@@ -928,7 +936,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
                                 >
                                   <Upload className="w-4 h-4 mr-2" />
-                                  Material
+                                  {t("createSections.material")}
                                 </button>
                                 <div className="my-1 border-t border-gray-200" />
                                 <button

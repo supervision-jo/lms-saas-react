@@ -3,7 +3,7 @@ export const REFRESH_TOKEN_KEY = "lms-refresh-token";
 export const ACCESS_TOKEN_EXPIRES_AT_KEY = "lms-access-token-exp";
 export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const USER_KEY = "lms-user";
-export const BASE_URL = "https://lms-saas-jv3u7.ondigitalocean.app/api/";
+export const BASE_URL = "https://backend.iraqform.com/api/";
 
 export const API_ENDPOINTS = {
   oldCourses: "course/courses/",

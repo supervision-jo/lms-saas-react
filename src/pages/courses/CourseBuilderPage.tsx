@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Eye, Users, UserCheck } from "lucide-react";
+import { ArrowLeft, Eye, Users, UserCheck, ArrowRight } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
@@ -14,26 +14,15 @@ import { get, patch } from "../../api";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import IssuesModal from "./IssuesModal";
-
-const TABS = [
-  { id: "course-info", label: "Course Information" },
-  { id: "curriculum", label: "Curriculum" },
-  { id: "users", label: "Users", icon: <Users className="w-4 h-4 mr-2" /> },
-  {
-    id: "groups",
-    label: "Groups",
-    icon: <UserCheck className="w-4 h-4 mr-2" />,
-  },
-  { id: "settings", label: "Settings" },
-];
+import { useTranslation } from "react-i18next";
 
 // Simple modal for the validation issues
-
 const CourseBuilderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("course-info");
   const { courseId } = useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("courseBuilder");
 
   const { data: courseData } = useCustomQuery(
     `${API_ENDPOINTS.oldCourses}${courseId}`,
@@ -83,33 +72,37 @@ const CourseBuilderPage: React.FC = () => {
     const subcatOK =
       !!(c as any)?.sub_category || !!(c as any)?.sub_category_id;
 
-    if (!titleOK) problems.push("Course title is required.");
-    if (!descOK) problems.push("Course description is required.");
-    if (!levelOK) problems.push("Course level is required.");
-    if (!subcatOK) problems.push("Course sub-category is required.");
+    if (!titleOK) problems.push(t("validateCourseReady.titleOK"));
+    if (!descOK) problems.push(t("validateCourseReady.descOK"));
+    if (!levelOK) problems.push(t("validateCourseReady.levelOK"));
+    if (!subcatOK) problems.push(t("validateCourseReady.subcatOK"));
     if (typeof isPaid !== "boolean") {
-      problems.push("Course payment status (is_paid) is required.");
+      problems.push(t("validateCourseReady.isPaidOK"));
     }
 
     // 2) Sections (modules)
     const modules = await fetchModulesForCourse(cid);
     if (!Array.isArray(modules) || modules.length === 0) {
-      problems.push("At least one section (module) is required.");
+      problems.push(t("validateCourseReady.modulesOK"));
     } else {
       modules.forEach((m, idx) => {
         if (!m?.title?.trim())
-          problems.push(`Section #${idx + 1} is missing a title.`);
+          problems.push(
+            t("validateCourseReady.moduleTitleOK", { idx: idx + 1 })
+          );
         if (
           (m as any)?.description != null &&
           !String((m as any).description).trim()
         ) {
           // treat empty string as missing; if you don't require description, remove this check
-          problems.push(`Section #${idx + 1} is missing a description.`);
+          problems.push(
+            t("validateCourseReady.moduleDescrOK", { idx: idx + 1 })
+          );
         }
         const lessons = (m?.lessons ?? []) as any[];
         if (!lessons.length)
           problems.push(
-            `Section #${idx + 1} must contain at least one lesson.`
+            t("validateCourseReady.moduleLessonsOK", { idx: idx + 1 })
           );
       });
     }
@@ -142,10 +135,10 @@ const CourseBuilderPage: React.FC = () => {
     exams.forEach((ex, idx) => {
       const label =
         ex?.type === "exam"
-          ? "Exam"
+          ? t("labels.exam")
           : ex?.type === "quiz"
-          ? "Quiz"
-          : "Assessment";
+          ? t("labels.quiz")
+          : t("labels.assessment");
       const prefix = `${label} "${ex?.title || `#${idx + 1}`}"`;
       const titleOK = !!ex?.title?.trim();
       const descOK = !!ex?.description?.trim();
@@ -158,38 +151,43 @@ const CourseBuilderPage: React.FC = () => {
         Number(ex?.passing_score) <= 100;
       const questions = Array.isArray(ex?.questions) ? ex.questions : [];
 
-      if (!titleOK) problems.push(`${prefix}: title is required.`);
-      if (!descOK) problems.push(`${prefix}: description is required.`);
-      if (!tlimOK) problems.push(`${prefix}: time limit is required.`);
+      if (!titleOK) problems.push(t("missingValues.title", { prefix: prefix }));
+      if (!descOK) problems.push(t("missingValues.descr", { prefix: prefix }));
+      if (!tlimOK) problems.push(t("missingValues.limit", { prefix: prefix }));
       if (!passOK)
-        problems.push(`${prefix}: passing score (0–100) is required.`);
+        problems.push(t("missingValues.passingScore", { prefix: prefix }));
       if (!questions.length) {
-        problems.push(`${prefix}: must include at least one question.`);
+        problems.push(t("missingValues.questions", { prefix: prefix }));
       } else {
         questions.forEach((q: any, qidx: number) => {
           if (!q?.text?.trim()) {
-            problems.push(`${prefix}: Question #${qidx + 1} is missing text.`);
+            problems.push(
+              `${prefix}: ${t("missingValues.questionTxt", { qidx: qidx + 1 })}`
+            );
           }
           const choices = Array.isArray(q?.choices) ? q.choices : [];
           if (!choices.length) {
             problems.push(
-              `${prefix}: Question #${qidx + 1} must have choices.`
+              `${prefix}: ${t("missingValues.choices", { qidx: qidx + 1 })}`
             );
           } else {
             let hasCorrect = false;
             choices.forEach((ch: any, cidx: number) => {
               if (!ch?.text?.trim()) {
                 problems.push(
-                  `${prefix}: Question #${qidx + 1} → Choice #${
-                    cidx + 1
-                  } is missing text.`
+                  `${prefix}: ${t("question")} #${qidx + 1} ${t(
+                    "missingValues.choiceTxt",
+                    { cidx: cidx + 1 }
+                  )}`
                 );
               }
               if (ch?.is_correct) hasCorrect = true;
             });
             if (!hasCorrect) {
               problems.push(
-                `${prefix}: Question #${qidx + 1} has no correct choice.`
+                `${prefix}: ${t("missingValues.hasCorrect", {
+                  qidx: qidx + 1,
+                })}`
               );
             }
           }
@@ -217,10 +215,10 @@ const CourseBuilderPage: React.FC = () => {
       await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
       await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       setPublished(true);
-      toast.success("Course Published!");
+      toast.success(t("tryPublish.success"));
       navigate(`/catalog/${course?.id}`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to publish");
+      toast.error(e?.response?.data?.error || t("tryPublish.error"));
     }
   };
 
@@ -234,9 +232,11 @@ const CourseBuilderPage: React.FC = () => {
         await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
         await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
         setPublished(false);
-        toast.success("Moved to draft");
+        toast.success(t("handleSettingsChange.success"));
       } catch (e: any) {
-        toast.error(e?.response?.data?.error || "Failed to update status");
+        toast.error(
+          e?.response?.data?.error || t("handleSettingsChange.error")
+        );
       }
       return;
     }
@@ -257,12 +257,28 @@ const CourseBuilderPage: React.FC = () => {
       await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
       await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       setPublished(true);
-      toast.success("Course published");
+      toast.success(t("tryPublish.success"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to publish");
+      toast.error(e?.response?.data?.error || t("tryPublish.error"));
       setPublished(false);
     }
   };
+
+  const TABS = [
+    { id: "course-info", label: t("tabs.info") },
+    { id: "curriculum", label: t("tabs.curriculum") },
+    {
+      id: "users",
+      label: t("tabs.users"),
+      icon: <Users className="w-4 h-4 ltr:mr-2 rtl:ml-2" />,
+    },
+    {
+      id: "groups",
+      label: t("tabs.groups"),
+      icon: <UserCheck className="w-4 h-4 ltr:mr-2 rtl:ml-2" />,
+    },
+    { id: "settings", label: t("tabs.settings") },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -278,16 +294,25 @@ const CourseBuilderPage: React.FC = () => {
             className="flex items-center text-gray-600 hover:text-gray-900"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
+            {i18n.language === "ar" ? (
+              <>
+                {t("back")}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            ) : (
+              <>
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                {t("back")}
+              </>
+            )}
           </button>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <button
               onClick={tryPublish}
               className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
-              <Eye className="w-4 h-4 mr-2" /> Publish
+              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" /> {t("publish")}
             </button>
           </div>
         </div>
@@ -300,7 +325,7 @@ const CourseBuilderPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 ${
+                  className={`w-full ltr:text-left rtl:text-right px-4 py-3 rounded-lg hover:bg-gray-50 ${
                     activeTab === tab.id
                       ? "bg-purple-50 text-purple-700"
                       : "text-gray-700"

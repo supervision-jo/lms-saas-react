@@ -39,6 +39,10 @@ import coursePlayerEN from "../locales/en/coursePlayer.json";
 import coursePlayerAR from "../locales/ar/coursePlayer.json";
 import coursePlayerES from "../locales/es/coursePlayer.json";
 
+import courseBuilderEN from "../locales/en/courseBuilder.json";
+import courseBuilderAR from "../locales/ar/courseBuilder.json";
+import courseBuilderES from "../locales/es/courseBuilder.json";
+
 const resources = {
   en: {
     translation: translationEN,
@@ -50,6 +54,7 @@ const resources = {
     courseCatalog: courseCatalogEN,
     courseDetails: courseDetailsEN,
     coursePlayer: coursePlayerEN,
+    courseBuilder: courseBuilderEN,
   },
   ar: {
     translation: translationAR,
@@ -61,6 +66,7 @@ const resources = {
     courseCatalog: courseCatalogAR,
     courseDetails: courseDetailsAR,
     coursePlayer: coursePlayerAR,
+    courseBuilder: courseBuilderAR,
   },
   es: {
     translation: translationES,
@@ -72,6 +78,7 @@ const resources = {
     courseCatalog: courseCatalogES,
     courseDetails: courseDetailsES,
     coursePlayer: coursePlayerES,
+    courseBuilder: courseBuilderES,
   },
 };
 
@@ -98,6 +105,7 @@ i18n
       "courseCatalog",
       "courseDetails",
       "coursePlayer",
+      "courseBuilder",
     ],
     defaultNS: "translation",
     supportedLngs: Object.keys(supportedLngs),
