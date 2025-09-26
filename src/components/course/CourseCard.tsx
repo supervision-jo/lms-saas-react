@@ -183,7 +183,6 @@ const CourseCard: React.FC<CourseCardProps> = ({
               >
                 <div className="flex items-center">
                   <span className="text-yellow-500 font-bold ltr:mr-1 rtl:ml-1">
-                    sss
                     {Math.floor(+course?.average_rating) ?? 0}
                   </span>
                   <div className="flex">

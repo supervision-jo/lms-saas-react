@@ -43,7 +43,7 @@ export default function LocaleSwitcher() {
   };
 
   return (
-    <div className="relative inline-block text-left">
+    <div className="relative inline-block text-left h-6 w-6 ">
       <button
         onClick={() => setOpen((p) => !p)}
         className="relative cursor-pointer text-[24px] text-gray-400 hover:text-gray-500"
@@ -51,7 +51,9 @@ export default function LocaleSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Globe className="h-6 w-6" />
+        <div>
+          <Globe className="h-6 w-6" />
+        </div>
       </button>
 
       {open && (

@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Search, Menu, X } from "lucide-react";
+import React, { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { readUserFromStorage } from "../../services/auth";
-import { useTranslation } from "react-i18next";
 import LocaleSwitcher from "../reusable-components/LocaleSwitcher";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -16,44 +16,48 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({
-  onSearch,
+  // onSearch,
   onLogout,
   mainNavigationItems,
   userNavigationItems,
   authNavigationItems,
 }) => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    enabled: registrationEnabled,
+    isLoading,
+    isFetching,
+  } = useFeatureFlag("is_registration_enabled", true);
+  // const [searchQuery, setSearchQuery] = useState("");
 
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const mobileInputRef = useRef<HTMLInputElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  // const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // const mobileInputRef = useRef<HTMLInputElement>(null);
+  // const overlayRef = useRef<HTMLDivElement>(null);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchQuery);
-  };
+  // const handleSearchSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   onSearch(searchQuery);
+  // };
 
   const currentUser: User = readUserFromStorage();
 
-  useEffect(() => {
-    if (mobileSearchOpen) {
-      const id = setTimeout(() => mobileInputRef.current?.focus(), 10);
-      return () => clearTimeout(id);
-    }
-  }, [mobileSearchOpen]);
+  // useEffect(() => {
+  //   if (mobileSearchOpen) {
+  //     const id = setTimeout(() => mobileInputRef.current?.focus(), 10);
+  //     return () => clearTimeout(id);
+  //   }
+  // }, [mobileSearchOpen]);
 
-  useEffect(() => {
-    if (!mobileSearchOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileSearchOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mobileSearchOpen]);
+  // useEffect(() => {
+  //   if (!mobileSearchOpen) return;
+  //   const onKey = (e: KeyboardEvent) => {
+  //     if (e.key === "Escape") setMobileSearchOpen(false);
+  //   };
+  //   window.addEventListener("keydown", onKey);
+  //   return () => window.removeEventListener("keydown", onKey);
+  // }, [mobileSearchOpen]);
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -134,14 +138,14 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-4">
             <LocaleSwitcher />
 
-            <button
+            {/* <button
               type="button"
               className="sm:hidden p-2 text-gray-500 hover:text-gray-700"
               aria-label="Open search"
               onClick={() => setMobileSearchOpen(true)}
             >
               <Search className="h-5 w-5 text-gray-400" />
-            </button>
+            </button> */}
 
             {/* <button className="lg:block hidden p-2 text-gray-400 hover:text-gray-500">
               <Bell className="h-6 w-6" />
@@ -219,6 +223,12 @@ const Header: React.FC<HeaderProps> = ({
             ) : (
               <div className="flex items-center space-x-2">
                 {authNavigationItems.map((i, idx) => {
+                  if (
+                    (!registrationEnabled || isLoading || isFetching) &&
+                    i.id === "sign-up"
+                  ) {
+                    return;
+                  }
                   return (
                     <button
                       key={idx + 3000}
@@ -247,67 +257,6 @@ const Header: React.FC<HeaderProps> = ({
                 <Menu className="h-6 w-6" />
               )}
             </button>
-          </div>
-
-          <div
-            ref={overlayRef}
-            className={`
-              sm:hidden absolute right-0 top-0 h-16 bg-white border-b
-              transition-all duration-300 ease-out overflow-hidden z-50
-              ${
-                mobileSearchOpen
-                  ? "w-full"
-                  : "w-0 pointer-events-none opacity-0"
-              }
-            `}
-          >
-            <form
-              onSubmit={(e) => {
-                handleSearchSubmit(e);
-                setMobileSearchOpen(false);
-              }}
-              className="h-full"
-            >
-              <div className="h-full flex items-center gap-2">
-                {/* close button */}
-                <button
-                  type="button"
-                  aria-label="Close search"
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={() => setMobileSearchOpen(false)}
-                >
-                  <X className="h-6 w-6" />
-                </button>
-
-                {/* search field */}
-                <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    ref={mobileInputRef}
-                    type="text"
-                    placeholder={t("header.search")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onBlur={(e) => {
-                      const next = e.relatedTarget as HTMLElement | null;
-                      if (next && overlayRef.current?.contains(next)) return;
-                      setMobileSearchOpen(false);
-                    }}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Submit button on mobile */}
-                <button
-                  type="submit"
-                  className="px-3 py-2 rounded-full bg-purple-600 text-white text-sm font-medium"
-                >
-                  Go
-                </button>
-              </div>
-            </form>
           </div>
         </div>
 
