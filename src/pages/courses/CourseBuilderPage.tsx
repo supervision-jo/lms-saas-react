@@ -291,20 +291,11 @@ const CourseBuilderPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <button
-            className="flex items-center text-gray-600 hover:text-gray-900"
+            className="flex items-center text-gray-600 hover:text-gray-900 gap-2"
             onClick={() => window.history.back()}
           >
-            {i18n.language === "ar" ? (
-              <>
-                {t("back")}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            ) : (
-              <>
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                {t("back")}
-              </>
-            )}
+            <ArrowLeft className="w-5 h-5 mr-2 rtl:rotate-180" />
+            {t("back")}
           </button>
 
           <div className="flex items-center gap-3">

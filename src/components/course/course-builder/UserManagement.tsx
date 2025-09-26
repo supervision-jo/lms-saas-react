@@ -7,6 +7,7 @@ import UserAvatar from "../../reusable-components/UserAvatar";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
+import { useTranslation } from "react-i18next";
 
 interface CourseUser {
   id: string;
@@ -18,6 +19,7 @@ interface CourseUser {
   profile_image: string;
 }
 export default function UserManagement({ courseId }: { courseId: string }) {
+  const { t } = useTranslation("courseBuilder");
   const { data, isLoading } = useCustomQuery(
     `${API_ENDPOINTS.courseUsers}${courseId}`,
     ["course-users", courseId],
@@ -52,9 +54,18 @@ export default function UserManagement({ courseId }: { courseId: string }) {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { color: "bg-green-100 text-green-800", label: "Active" },
-      inactive: { color: "bg-yellow-100 text-yellow-800", label: "Inactive" },
-      completed: { color: "bg-blue-100 text-blue-800", label: "Completed" },
+      active: {
+        color: "bg-green-100 text-green-800",
+        label: t("userManagement.active"),
+      },
+      inactive: {
+        color: "bg-yellow-100 text-yellow-800",
+        label: t("userManagement.inactive"),
+      },
+      completed: {
+        color: "bg-blue-100 text-blue-800",
+        label: t("userManagement.completed"),
+      },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig];
@@ -72,9 +83,11 @@ export default function UserManagement({ courseId }: { courseId: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Course Users</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {t("userManagement.CourseUsers")}
+          </h2>
           <p className="text-gray-600 mt-1">
-            {filteredUsers.length} of {users.length} users
+            {filteredUsers.length} of {users.length} {t("userManagement.users")}
           </p>
         </div>
         <Button
@@ -82,7 +95,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
           icon={Plus}
           variant="primary"
         >
-          Add User
+          {t("userManagement.addUser")}
         </Button>
       </div>
 
@@ -91,7 +104,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search users by name or email..."
+          placeholder={t("userManagement.searchByNameEmail")}
           className="flex-1"
         />
 
@@ -102,10 +115,10 @@ export default function UserManagement({ courseId }: { courseId: string }) {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="completed">Completed</option>
+            <option value="all">{t("userManagement.allStatus")}</option>
+            <option value="active">{t("userManagement.active")}</option>
+            <option value="inactive">{t("userManagement.inactive")}</option>
+            <option value="completed">{t("userManagement.completed")}</option>
           </select>
         </div>
       </div>
@@ -117,22 +130,22 @@ export default function UserManagement({ courseId }: { courseId: string }) {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  {t("userManagement.user")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Progress
+                  {t("userManagement.progress")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t("userManagement.status")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Enrolled
+                  {t("userManagement.enrolled")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Activity
+                  {t("userManagement.lastActive")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t("userManagement.actions")}
                 </th>
               </tr>
             </thead>
@@ -186,7 +199,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
                       <button
                         onClick={() => handleRemoveUser(user?.id)}
                         className="text-red-600 hover:text-red-900 p-1"
-                        title="Remove user"
+                        title={t("userManagement.removeUser")}
                       >
                         <UserX className="w-4 h-4" />
                       </button>
@@ -202,12 +215,12 @@ export default function UserManagement({ courseId }: { courseId: string }) {
           <div className="text-center py-12">
             <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No users found
+              {t("userManagement.noUsers")}
             </h3>
             <p className="text-gray-500">
               {searchQuery || statusFilter !== "all"
-                ? "Try adjusting your search or filters"
-                : "Add users to get started"}
+                ? t("userManagement.noUsersMatch")
+                : t("userManagement.noUsersGet")}
             </p>
           </div>
         )}
@@ -217,38 +230,40 @@ export default function UserManagement({ courseId }: { courseId: string }) {
       <Modal
         isOpen={isAddUserModalOpen}
         onClose={() => setIsAddUserModalOpen(false)}
-        title="Add User to Course"
+        title={t("userManagement.addUserToCourse")}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              User Email *
+              {t("userManagement.userEmail")}*
             </label>
             <input
               type="email"
               value={newUserEmail}
               onChange={(e) => setNewUserEmail(e.target.value)}
-              placeholder="Enter user email address"
+              placeholder={t("userManagement.enterUserEmailAddress")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
             <p className="text-sm text-gray-500 mt-1">
-              The user will receive an invitation email to join the course.
+              {t("userManagement.invitationEmailMessage")}
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-4 gap-2">
             <Button
               onClick={() => setIsAddUserModalOpen(false)}
               variant="secondary"
             >
-              Cancel
+              {t("userManagement.cancel")}
             </Button>
             <Button
               onClick={handleAddUser}
               disabled={!newUserEmail.trim() || isLoading}
               variant="primary"
             >
-              {isLoading ? "Adding..." : "Add User"}
+              {isLoading
+                ? t("userManagement.adding")
+                : t("userManagement.addUser")}
             </Button>
           </div>
         </div>

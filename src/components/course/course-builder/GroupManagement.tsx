@@ -4,6 +4,7 @@ import Button from "../../reusable-components/Button";
 import SearchInput from "../../reusable-components/SearchInput";
 import UserAvatar from "../../reusable-components/UserAvatar";
 import Modal from "../../reusable-components/Modal";
+import { useTranslation } from "react-i18next";
 
 interface User {
   id: string;
@@ -22,6 +23,7 @@ interface Group {
 }
 
 export default function GroupManagement() {
+  const { t } = useTranslation("courseBuilder");
   const [groups, setGroups] = useState<Group[]>([
     {
       id: "1",
@@ -102,7 +104,7 @@ export default function GroupManagement() {
   };
 
   const handleDeleteGroup = (groupId: string) => {
-    if (window.confirm("Are you sure you want to delete this group?")) {
+    if (window.confirm(t("groupManagement.confirmDelete"))) {
       setGroups(groups.filter((group) => group.id !== groupId));
     }
   };
@@ -177,15 +179,19 @@ export default function GroupManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Study Groups</h2>
-          <p className="text-gray-600 mt-1">{groups.length} groups created</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {t("groupManagement.studyGroups")}
+          </h2>
+          <p className="text-gray-600 mt-1">
+            {t("groupManagement.groupsCreated", { count: groups.length })}
+          </p>
         </div>
         <Button
           onClick={() => setIsCreateGroupModalOpen(true)}
           icon={Plus}
           variant="primary"
         >
-          Create Group
+          {t("groupManagement.createGroup")}
         </Button>
       </div>
 
@@ -193,7 +199,7 @@ export default function GroupManagement() {
       <SearchInput
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search groups..."
+        placeholder={t("groupManagement.searchGroups")}
         className="max-w-md"
       />
 
@@ -238,12 +244,13 @@ export default function GroupManagement() {
               <div className="flex items-center text-sm text-gray-500">
                 <Users className="w-4 h-4 mr-1" />
                 <span>
-                  {group.members.length} member
+                  {group.members.length} {t("groupManagement.member")}
                   {group.members.length !== 1 ? "s" : ""}
                 </span>
               </div>
               <div className="text-xs text-gray-400">
-                Created {new Date(group.createdAt).toLocaleDateString()}
+                {t("groupManagement.created")}{" "}
+                {new Date(group.createdAt).toLocaleDateString()}
               </div>
             </div>
 
@@ -274,12 +281,12 @@ export default function GroupManagement() {
         <div className="text-center py-12">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No groups found
+            {t("groupManagement.noGroupsFound")}
           </h3>
           <p className="text-gray-500">
             {searchQuery
-              ? "Try adjusting your search"
-              : "Create your first study group to get started"}
+              ? t("groupManagement.tryAdjustingSearch")
+              : t("groupManagement.createFirstGroup")}
           </p>
         </div>
       )}
@@ -288,12 +295,12 @@ export default function GroupManagement() {
       <Modal
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
-        title="Create Study Group"
+        title={t("groupManagement.createStudyGroup")}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Group Name *
+              {t("groupManagement.groupName")} *
             </label>
             <input
               type="text"
@@ -301,21 +308,21 @@ export default function GroupManagement() {
               onChange={(e) =>
                 setNewGroup({ ...newGroup, name: e.target.value })
               }
-              placeholder="Enter group name"
+              placeholder={t("groupManagement.enterGroupName")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              {t("groupManagement.description")}
             </label>
             <textarea
               value={newGroup.description}
               onChange={(e) =>
                 setNewGroup({ ...newGroup, description: e.target.value })
               }
-              placeholder="Describe the purpose of this group"
+              placeholder={t("groupManagement.describePurpose")}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
@@ -323,9 +330,9 @@ export default function GroupManagement() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Group Color
+              {t("groupManagement.groupColor")}
             </label>
-            <div className="flex space-x-2">
+            <div className="flex gap-2">
               {colors.map((color) => (
                 <button
                   key={color}
@@ -340,19 +347,19 @@ export default function GroupManagement() {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-4 gap-2">
             <Button
               onClick={() => setIsCreateGroupModalOpen(false)}
               variant="secondary"
             >
-              Cancel
+              {t("groupManagement.cancel")}
             </Button>
             <Button
               onClick={handleCreateGroup}
               disabled={!newGroup.name.trim()}
               variant="primary"
             >
-              Create Group
+              {t("groupManagement.createGroup")}
             </Button>
           </div>
         </div>
@@ -362,21 +369,25 @@ export default function GroupManagement() {
       <Modal
         isOpen={isManageMembersModalOpen}
         onClose={() => setIsManageMembersModalOpen(false)}
-        title={`Manage Members - ${selectedGroup?.name}`}
+        title={t("groupManagement.manageMembersTitle", {
+          groupName: selectedGroup?.name,
+        })}
         size="lg"
       >
         <div className="space-y-6">
           <SearchInput
             value={memberSearchQuery}
             onChange={setMemberSearchQuery}
-            placeholder="Search users..."
+            placeholder={t("groupManagement.searchUsers")}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Members */}
             <div>
               <h4 className="font-medium text-gray-900 mb-3">
-                Current Members ({selectedGroup?.members.length || 0})
+                {t("groupManagement.currentMembers", {
+                  count: selectedGroup?.members.length || 0,
+                })}
               </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {getGroupMembers().map((member) => (
@@ -402,7 +413,7 @@ export default function GroupManagement() {
                     <button
                       onClick={() => handleRemoveMemberFromGroup(member.id)}
                       className="text-red-600 hover:text-red-800 p-1"
-                      title="Remove from group"
+                      title={t("groupManagement.removeFromGroup")}
                     >
                       <UserMinus className="w-4 h-4" />
                     </button>
@@ -411,8 +422,8 @@ export default function GroupManagement() {
                 {getGroupMembers().length === 0 && (
                   <p className="text-gray-500 text-sm text-center py-4">
                     {memberSearchQuery
-                      ? "No members match your search"
-                      : "No members in this group"}
+                      ? t("groupManagement.noMembersMatch")
+                      : t("groupManagement.noMembersInGroup")}
                   </p>
                 )}
               </div>
@@ -421,7 +432,9 @@ export default function GroupManagement() {
             {/* Available Users */}
             <div>
               <h4 className="font-medium text-gray-900 mb-3">
-                Available Users ({getAvailableUsersForGroup().length})
+                {t("groupManagement.availableUsers", {
+                  count: getAvailableUsersForGroup().length,
+                })}
               </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {getAvailableUsersForGroup().map((user) => (
@@ -447,7 +460,7 @@ export default function GroupManagement() {
                     <button
                       onClick={() => handleAddMemberToGroup(user.id)}
                       className="text-green-600 hover:text-green-800 p-1"
-                      title="Add to group"
+                      title={t("groupManagement.addToGroup")}
                     >
                       <UserPlus className="w-4 h-4" />
                     </button>
@@ -456,8 +469,8 @@ export default function GroupManagement() {
                 {getAvailableUsersForGroup().length === 0 && (
                   <p className="text-gray-500 text-sm text-center py-4">
                     {memberSearchQuery
-                      ? "No users match your search"
-                      : "All users are already in this group"}
+                      ? t("groupManagement.noUsersMatch")
+                      : t("groupManagement.allUsersInGroup")}
                   </p>
                 )}
               </div>
@@ -469,7 +482,7 @@ export default function GroupManagement() {
               onClick={() => setIsManageMembersModalOpen(false)}
               variant="primary"
             >
-              Done
+              {t("groupManagement.done")}
             </Button>
           </div>
         </div>
