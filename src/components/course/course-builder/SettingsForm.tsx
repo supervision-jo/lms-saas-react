@@ -1,23 +1,31 @@
+import { useTranslation } from "react-i18next";
+
 interface Props {
   isPublished: boolean;
   onChange: (published: boolean) => void;
 }
 
 export default function SettingsForm({ isPublished, onChange }: Props) {
+  const { t } = useTranslation("courseBuilder");
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Course Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        {t("settings.courseSettings")}
+      </h2>
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Publishing
+            {t("settings.publishing")}
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div>
-                <h4 className="font-medium text-gray-900">Course Status</h4>
+                <h4 className="font-medium text-gray-900">
+                  {t("settings.courseStatus")}
+                </h4>
                 <p className="text-sm text-gray-600">
-                  Control who can see your course
+                  {t("settings.courseStatusDesc")}
                 </p>
               </div>
               <select
@@ -25,8 +33,8 @@ export default function SettingsForm({ isPublished, onChange }: Props) {
                 value={isPublished ? "published" : "draft"}
                 onChange={(e) => onChange(e.target.value === "published")}
               >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
+                <option value="draft">{t("settings.draft")}</option>
+                <option value="published">{t("settings.published")}</option>
               </select>
             </div>
           </div>
@@ -34,16 +42,16 @@ export default function SettingsForm({ isPublished, onChange }: Props) {
 
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Enrollment
+            {t("settings.enrollment")}
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div>
                 <h4 className="font-medium text-gray-900">
-                  Auto-approve enrollments
+                  {t("settings.autoApproveEnrollments")}
                 </h4>
                 <p className="text-sm text-gray-600">
-                  Students can enroll immediately
+                  {t("settings.studentsCanEnrollDesc")}
                 </p>
               </div>
               <input
