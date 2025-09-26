@@ -47,12 +47,14 @@ export default function InstructorDashboardSidebar() {
               +{stats?.new_students ?? 0}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">{t("sidebar.revenue")}</span>
-            <span className="font-semibold text-green-600">
-              +${stats?.revenue_this_month ?? 0}
-            </span>
-          </div>
+          <FeatureGate flag="is_price_enabled">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">{t("sidebar.revenue")}</span>
+              <span className="font-semibold text-green-600">
+                +${stats?.revenue_this_month ?? 0}
+              </span>
+            </div>
+          </FeatureGate>
           {/* <div className="flex items-center justify-between">
             <span className="text-gray-600">{t("sidebar.courseViews")}</span>
             <span className="font-semibold text-gray-900">+{stats?.}</span>

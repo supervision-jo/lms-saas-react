@@ -18,14 +18,24 @@ type DisplayedStats = {
 
 export default function StatisticsCards() {
   const { t } = useTranslation("instructorDashboard");
-  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
+  const {
+    enabled: reviewsEnabled,
+    isError: reviewsError,
+    isFetching: reviewsFetching,
+    isLoading: reviewsLoading,
+  } = useFeatureFlag("is_review_enabled", true);
+  const {
+    enabled: pricingEnabled,
+    isError: pricingError,
+    isFetching: pricingFetching,
+    isLoading: pricingLoading,
+  } = useFeatureFlag("is_price_enabled", true);
 
   const { data } = useCustomQuery(API_ENDPOINTS.instructorStats, [
     "instructor-stats",
   ]);
   const stats: InstructorStats | undefined = data?.data;
 
-  // 1) العناصر الأساسية بمفاتيح داخلية ثابتة
   const baseItems: DisplayedStats[] = [
     {
       key: "students",
@@ -63,12 +73,18 @@ export default function StatisticsCards() {
     },
   ];
 
-  // 2) رشّح حسب الفلاج (أخفي عناصر التقييم/المراجعات لو الفلاج مقفول)
-  const visible = baseItems.filter((item) =>
-    reviewsEnabled ? true : !["avgRating", "reviews"].includes(item.key)
-  );
+  const visible = baseItems
+    .filter((item) =>
+      !reviewsEnabled || reviewsError || reviewsLoading || reviewsFetching
+        ? !["avgRating", "reviews"].includes(item.key)
+        : true
+    )
+    .filter((i) =>
+      !pricingEnabled || pricingError || pricingLoading || pricingFetching
+        ? !["revenue"].includes(i.key)
+        : true
+    );
 
-  // 3) حدّد كلاس الشبكة حسب العدد (1..4)
   const count = visible.length;
   const gridClass =
     count <= 1
@@ -77,7 +93,7 @@ export default function StatisticsCards() {
       ? "grid-cols-1 md:grid-cols-2"
       : count === 3
       ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"; // 4 أو أكثر
+      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4";
 
   return (
     <div className={`grid ${gridClass} gap-6 mb-8`}>

@@ -5,7 +5,6 @@ import { API_ENDPOINTS } from "../../utils/constants";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { formatDuration } from "../../utils/formatDuration";
 import CourseCardsSkeleton from "../resource-stats/CourseLoading";
-import { useFeatureFlag } from "../../hooks/useSettings";
 import FeatureGate from "../settings/FeatureGate";
 
 export default function FeaturedCoursesSection() {
@@ -22,7 +21,6 @@ export default function FeaturedCoursesSection() {
   ]);
   const courses: Course[] = featuredCoursesData?.data;
 
-  const { enabled: priceEnabled } = useFeatureFlag("is_price_enabled", true);
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,7 +131,11 @@ export default function FeaturedCoursesSection() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    {priceEnabled && (
+                    <FeatureGate
+                      flag="is_price_enabled"
+                      fallback={null}
+                      loadingFallback={null}
+                    >
                       <div className="flex items-center">
                         <span className="text-2xl font-bold text-gray-900">
                           ${course?.price ?? "0"}
@@ -144,7 +146,7 @@ export default function FeaturedCoursesSection() {
                           </span>
                         )}
                       </div>
-                    )}
+                    </FeatureGate>
                     <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
                       {course?.level ?? "--"}
                     </span>

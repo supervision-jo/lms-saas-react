@@ -42,8 +42,18 @@ const CourseDetailPage: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(
     readUserFromStorage()?.id ?? null
   );
-
   const currentUser: User = readUserFromStorage();
+  // Settings flags
+  const {
+    enabled: reviewsEnabled,
+    isError: reviewsError,
+    isFetching: reviewsFetching,
+    isLoading: reviewsLoading,
+  } = useFeatureFlag("is_review_enabled", true);
+  const { enabled: authEnabled } = useFeatureFlag(
+    "is_registration_enabled",
+    true
+  );
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -209,13 +219,6 @@ const CourseDetailPage: React.FC = () => {
   const handleOpenAssessment = (lessonId: string, a: Exam) => {
     goToPlayer({ lessonId, assessment: a });
   };
-
-  // Settings flags
-  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
-  const { enabled: authEnabled } = useFeatureFlag(
-    "is_registration_enabled",
-    true
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -414,13 +417,19 @@ const CourseDetailPage: React.FC = () => {
                           ? y("card.viewCourse")
                           : y("card.startLearning")}
                       </button>
-                      {!isInstructorCourse && reviewsEnabled && (
-                        <button
-                          onClick={() => setShowRatingModal(true)}
-                          className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
+                      {!isInstructorCourse && (
+                        <FeatureGate
+                          flag="is_review_enabled"
+                          fallback={null}
+                          loadingFallback={null}
                         >
-                          {t("rate")}
-                        </button>
+                          <button
+                            onClick={() => setShowRatingModal(true)}
+                            className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors text-sm"
+                          >
+                            {t("rate")}
+                          </button>
+                        </FeatureGate>
                       )}
                     </div>
                   )}
@@ -473,7 +482,14 @@ const CourseDetailPage: React.FC = () => {
                     { id: "instructor", label: t("tabs.instructor") },
                     { id: "reviews", label: t("tabs.reviews") },
                   ].map((tab) => {
-                    if (!reviewsEnabled && tab.id === "reviews") return;
+                    if (
+                      (!reviewsEnabled ||
+                        reviewsError ||
+                        reviewsFetching ||
+                        reviewsLoading) &&
+                      tab.id === "reviews"
+                    )
+                      return;
                     return (
                       <button
                         key={tab.id}
@@ -587,22 +603,28 @@ const CourseDetailPage: React.FC = () => {
                         {instructor?.instructor?.bio}
                       </p>
                       <div className="flex sm:flex-row w-full flex-col sm:items-center items-start gap-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          {Array.from({ length: 5 }).map((_, i) =>
-                            i < +instructor?.average_rating?.toFixed(0) ? (
-                              <Star
-                                key={i + 3000}
-                                className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
-                              />
-                            ) : (
-                              <Star
-                                key={i + 4000}
-                                className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
-                              />
-                            )
-                          )}
-                          ({instructor?.total_reviews ?? 0})
-                        </div>
+                        <FeatureGate
+                          flag="is_review_enabled"
+                          fallback={null}
+                          loadingFallback={null}
+                        >
+                          <div className="flex items-center">
+                            {Array.from({ length: 5 }).map((_, i) =>
+                              i < +instructor?.average_rating?.toFixed(0) ? (
+                                <Star
+                                  key={i + 3000}
+                                  className="w-4 h-4 ltr:mr-1 rtl:ml-1 text-yellow-400 fill-current"
+                                />
+                              ) : (
+                                <Star
+                                  key={i + 4000}
+                                  className="text-gray-300 w-4 h-4 ltr:mr-1 rtl:ml-1"
+                                />
+                              )
+                            )}
+                            ({instructor?.total_reviews ?? 0})
+                          </div>
+                        </FeatureGate>
                         <div className="flex items-center">
                           <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                           <span>
@@ -626,13 +648,19 @@ const CourseDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === "reviews" && reviewsEnabled && (
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    {t("studentReviews")}
-                  </h3>
-                  <CourseReviews courseId={course?.id} />
-                </div>
+              {activeTab === "reviews" && (
+                <FeatureGate
+                  flag="is_review_enabled"
+                  fallback={null}
+                  loadingFallback={null}
+                >
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                      {t("studentReviews")}
+                    </h3>
+                    <CourseReviews courseId={course?.id} />
+                  </div>
+                </FeatureGate>
               )}
             </div>
           </div>
@@ -655,7 +683,7 @@ const CourseDetailPage: React.FC = () => {
           onClose={() => setShowRatingModal(false)}
         />
       )}
-      {showLoginModal && authEnabled && (
+      {showLoginModal && (
         <LoginPopup
           onClose={() => {
             setShowLoginModal(false);
@@ -663,13 +691,19 @@ const CourseDetailPage: React.FC = () => {
           setShowSignupModal={setShowSignupModal}
         />
       )}
-      {showSignupModal && authEnabled && (
-        <SignupPopup
-          onClose={() => {
-            setShowSignupModal(false);
-          }}
-          setShowLoginModal={setShowLoginModal}
-        />
+      {showSignupModal && (
+        <FeatureGate
+          flag="is_registration_enabled"
+          fallback={null}
+          loadingFallback={null}
+        >
+          <SignupPopup
+            onClose={() => {
+              setShowSignupModal(false);
+            }}
+            setShowLoginModal={setShowLoginModal}
+          />
+        </FeatureGate>
       )}
     </div>
   );

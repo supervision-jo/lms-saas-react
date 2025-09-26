@@ -13,7 +13,6 @@ import { readUserFromStorage } from "../../services/auth";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useFeatureFlag } from "../../hooks/useSettings";
 import FeatureGate from "../settings/FeatureGate";
 
 interface CourseCardProps {
@@ -96,7 +95,6 @@ const CourseCard: React.FC<CourseCardProps> = ({
     if (computedEnrolled && enrolledOptimistic) setEnrolledOptimistic(false);
   }, [computedEnrolled, enrolledOptimistic]);
 
-  const { enabled: priceEnabled } = useFeatureFlag("is_price_enabled", true);
   return (
     <div
       className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer ${
@@ -253,7 +251,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
               loadingFallback={null}
               fallback={null}
             >
-              {course?.is_paid && priceEnabled ? (
+              {course?.is_paid ? (
                 <div className={`${isListView ? "mb-4" : "flex items-center"}`}>
                   <span className="text-2xl font-bold text-gray-900">
                     ${course?.price}

@@ -79,12 +79,16 @@ export default function AnalyticsSection() {
                   </FeatureGate>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-900">
-                  ${course.revenue.toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-600">{t("courses.revenue")}</p>
-              </div>
+              <FeatureGate flag="is_price_enabled">
+                <div className="text-right">
+                  <p className="text-lg font-bold text-gray-900">
+                    ${course.revenue.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {t("courses.revenue")}
+                  </p>
+                </div>
+              </FeatureGate>
             </div>
           ))}
         </div>

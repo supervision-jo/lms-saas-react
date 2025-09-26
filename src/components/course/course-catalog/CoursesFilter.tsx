@@ -3,6 +3,7 @@ import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useEffect, useRef, useId } from "react";
 import { useTranslation } from "react-i18next";
+import FeatureGate from "../../settings/FeatureGate";
 
 type PriceFilter = "all" | "free" | "paid";
 
@@ -148,32 +149,43 @@ export default function CoursesFilter({
       </div>
 
       {/* Price */}
-      <div className="mb-6">
-        <h4 className="font-medium text-gray-900 mb-3">
-          {t("filters.price.title")}
-        </h4>
-        <div className="space-y-2">
-          {[
-            { id: "all", label: t("filters.price.all") },
-            { id: "free", label: t("filters.price.free") },
-            { id: "paid", label: t("filters.price.paid") },
-          ].map((price) => (
-            <label key={price.id} className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name={`price-${group}`}
-                value={price.id}
-                checked={priceFilter === (price.id as PriceFilter)}
-                onChange={(e) => setPriceFilter(e.target.value as PriceFilter)}
-                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-              />
-              <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700">
-                {price.label}
-              </span>
-            </label>
-          ))}
+      <FeatureGate
+        flag="is_price_enabled"
+        fallback={null}
+        loadingFallback={null}
+      >
+        <div className="mb-6">
+          <h4 className="font-medium text-gray-900 mb-3">
+            {t("filters.price.title")}
+          </h4>
+          <div className="space-y-2">
+            {[
+              { id: "all", label: t("filters.price.all") },
+              { id: "free", label: t("filters.price.free") },
+              { id: "paid", label: t("filters.price.paid") },
+            ].map((price) => (
+              <label
+                key={price.id}
+                className="flex items-center cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name={`price-${group}`}
+                  value={price.id}
+                  checked={priceFilter === (price.id as PriceFilter)}
+                  onChange={(e) =>
+                    setPriceFilter(e.target.value as PriceFilter)
+                  }
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                />
+                <span className="ltr:ml-3 rtl:mr-3 text-sm text-gray-700">
+                  {price.label}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      </FeatureGate>
 
       <button
         onClick={onClearFilters}

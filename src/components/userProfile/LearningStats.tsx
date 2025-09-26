@@ -42,7 +42,12 @@ export default function LearningStats({ stats }: LearningStatsProps) {
   ]);
   const insStats: InstructorStats | undefined = data?.data;
 
-  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
+  const {
+    enabled: reviewsEnabled,
+    isError: reviewsError,
+    isFetching: reviewsFetching,
+    isLoading: reviewsLoading,
+  } = useFeatureFlag("is_review_enabled", true);
 
   const baseInstructorItems: InstructorItem[] = [
     {
@@ -79,11 +84,12 @@ export default function LearningStats({ stats }: LearningStatsProps) {
     },
   ];
 
-  const visibleInstructorItems = reviewsEnabled
-    ? baseInstructorItems
-    : baseInstructorItems.filter(
-        (i) => !["avgRating", "reviews"].includes(i.key)
-      );
+  const visibleInstructorItems =
+    !reviewsEnabled || reviewsError || reviewsLoading || reviewsFetching
+      ? baseInstructorItems.filter(
+          (i) => !["avgRating", "reviews"].includes(i.key)
+        )
+      : baseInstructorItems;
 
   const count = visibleInstructorItems.length;
   const gridClass =

@@ -24,7 +24,12 @@ const InstructorPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("courses");
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
   const { t } = useTranslation("instructorDashboard");
-  const { enabled: reviewsEnabled } = useFeatureFlag("is_review_enabled", true);
+  const {
+    enabled: reviewsEnabled,
+    isError: reviewsError,
+    isFetching: reviewsFetching,
+    isLoading: reviewsLoading,
+  } = useFeatureFlag("is_review_enabled", true);
   const {
     register,
     handleSubmit,
@@ -92,7 +97,13 @@ const InstructorPage: React.FC = () => {
                 { id: "analytics", label: `${t("tabs.analytics")}` },
                 { id: "reviews", label: `${t("tabs.reviews")}` },
               ].map((tab) => {
-                if (!reviewsEnabled && tab.id === "reviews") {
+                if (
+                  (!reviewsEnabled ||
+                    reviewsError ||
+                    reviewsFetching ||
+                    reviewsLoading) &&
+                  tab.id === "reviews"
+                ) {
                   return;
                 }
                 return (

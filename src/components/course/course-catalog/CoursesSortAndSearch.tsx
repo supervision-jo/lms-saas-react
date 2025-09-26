@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../settings/FeatureGate";
+import { useFeatureFlag } from "../../../hooks/useSettings";
 
 type SortKey =
   | "most_popular"
@@ -42,6 +43,18 @@ function SortMenuButton({
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const {
+    enabled: pricingEnabled,
+    isError: pricingError,
+    isFetching: pricingFetching,
+    isLoading: pricingLoading,
+  } = useFeatureFlag("is_price_enabled", true);
+  const {
+    enabled: reviewsEnabled,
+    isError: reviewsError,
+    isFetching: reviewsFetching,
+    isLoading: reviewsLoading,
+  } = useFeatureFlag("is_review_enabled", true);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -72,24 +85,45 @@ function SortMenuButton({
           role="menu"
           className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1"
         >
-          {sortOptions.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => {
-                setSortBy(o.value);
-                setOpen(false);
-                btnRef.current?.focus(); // return focus for a11y
-              }}
-              className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                sortBy === o.value
-                  ? "text-purple-600 font-medium"
-                  : "text-gray-700"
-              }`}
-              role="menuitem"
-            >
-              {o.label}
-            </button>
-          ))}
+          {sortOptions.map((o) => {
+            if (
+              (!pricingEnabled ||
+                pricingError ||
+                pricingFetching ||
+                pricingLoading) &&
+              (o.value === "price_high_to_low" ||
+                o.value === "price_low_to_high")
+            ) {
+              return;
+            }
+            if (
+              (!reviewsEnabled ||
+                reviewsError ||
+                reviewsFetching ||
+                reviewsLoading) &&
+              o.value === "high_rating"
+            ) {
+              return;
+            }
+            return (
+              <button
+                key={o.value}
+                onClick={() => {
+                  setSortBy(o.value);
+                  setOpen(false);
+                  btnRef.current?.focus(); // return focus for a11y
+                }}
+                className={`block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                  sortBy === o.value
+                    ? "text-purple-600 font-medium"
+                    : "text-gray-700"
+                }`}
+                role="menuitem"
+              >
+                {o.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
