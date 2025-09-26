@@ -14,18 +14,17 @@ import {
 import { useTranslation } from "react-i18next";
 
 /** Forwarded ref in v3 aims to behave like HTMLMediaElement */
-type PlayerHandle = any; // keep loose to avoid ambient typing conflicts
+type PlayerHandle = any;
 
 type Props = {
-  /** Any supported URL: YouTube, HLS/DASH (.m3u8/.mpd), MP4/WebM/OGG, Vimeo, Wistia, Mux… */
   src: string;
   title?: string;
   onComplete?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
   startMuted?: boolean;
-  poster?: string; // uses `light` mode if provided
-  privacyEnhanced?: boolean; // transforms youtube urls to youtube-nocookie
+  poster?: string;
+  privacyEnhanced?: boolean;
 };
 
 const formatTime = (s: number) => {
@@ -85,6 +84,9 @@ const VideoPlayer: React.FC<Props> = ({
   const playerRef = useRef<PlayerHandle>(null);
   const lastVolRef = useRef(1);
 
+  const { t, i18n } = useTranslation("coursePlayer");
+  const isRTL = i18n.dir() === "rtl";
+
   const safeSrc = useMemo(
     () => (privacyEnhanced ? toNoCookie(src) : src),
     [src, privacyEnhanced]
@@ -106,7 +108,6 @@ const VideoPlayer: React.FC<Props> = ({
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { t } = useTranslation("coursePlayer");
   const pct = duration
     ? Math.max(0, Math.min(100, (current / duration) * 100))
     : 0;
@@ -115,7 +116,6 @@ const VideoPlayer: React.FC<Props> = ({
 
   const seekToSeconds = (t: number) => {
     const clamped = Math.max(0, Math.min(duration || 0, t));
-    // v3 aims to be HTMLMediaElement-like; try standard first, fallback to legacy seekTo
     const el = playerRef.current as any;
     if (el && typeof el.currentTime === "number") {
       el.currentTime = clamped;
@@ -154,8 +154,6 @@ const VideoPlayer: React.FC<Props> = ({
     else el.requestFullscreen?.().catch(() => {});
   };
 
-  // Guard: optionally use canPlay to short-circuit hard failures
-  // (ReactPlayer will still try, but this lets us show a nicer message up front)
   const canPlay = (ReactPlayer as any).canPlay?.(safeSrc) ?? true;
 
   return (
@@ -164,6 +162,7 @@ const VideoPlayer: React.FC<Props> = ({
       className="relative bg-black rounded-lg overflow-hidden group select-none"
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
+      dir={isRTL ? "rtl" : "ltr"}
     >
       {title && (
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent px-4 py-2 text-white text-sm">
@@ -175,7 +174,7 @@ const VideoPlayer: React.FC<Props> = ({
       <div className="w-full h-full aspect-video">
         {!playing && (
           <img
-            src={resolvedPoster} // compute from props/src; see helper below
+            src={resolvedPoster}
             alt=""
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
@@ -206,12 +205,12 @@ const VideoPlayer: React.FC<Props> = ({
               )
             }
             onTimeUpdate={() => {
-              const t = (playerRef.current as any)?.currentTime;
-              if (typeof t === "number") setCurrent(t);
+              const tnow = (playerRef.current as any)?.currentTime;
+              if (typeof tnow === "number") setCurrent(tnow);
             }}
             onProgress={() => {
-              const t = (playerRef.current as any)?.currentTime;
-              if (typeof t === "number") setCurrent(t);
+              const tnow = (playerRef.current as any)?.currentTime;
+              if (typeof tnow === "number") setCurrent(tnow);
             }}
             config={{
               youtube: {
@@ -245,16 +244,17 @@ const VideoPlayer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Controls bar (same look/feel as your original) */}
+      {/* Controls bar */}
       <div
         className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent transition-opacity duration-300 ${
           showControls ? "opacity-100" : "opacity-0"
         }`}
       >
         <div className="sm:p-4 p-2">
-          {/* Progress */}
+          {/* Progress (RTL-aware) */}
           <div className="sm:mb-4 mb-2">
             <input
+              dir={isRTL ? "rtl" : "ltr"}
               type="range"
               min={0}
               max={100}
@@ -262,7 +262,9 @@ const VideoPlayer: React.FC<Props> = ({
               onChange={(e) => handleSeekPct(parseFloat(e.target.value))}
               className="slider w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
               style={{
-                background: `linear-gradient(to right, #9333ea 0%, #9333ea ${pct}%, #4b5563 ${pct}%, #4b5563 100%)`,
+                background: `linear-gradient(to ${
+                  isRTL ? "left" : "right"
+                }, #9333ea 0%, #9333ea ${pct}%, #4b5563 ${pct}%, #4b5563 100%)`,
               }}
               aria-label="Seek"
             />
@@ -270,6 +272,7 @@ const VideoPlayer: React.FC<Props> = ({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center sm:gap-4 gap-1">
+              {/* Play/Pause */}
               <button
                 onClick={togglePlay}
                 className="text-white hover:text-purple-400"
@@ -281,49 +284,72 @@ const VideoPlayer: React.FC<Props> = ({
                 )}
               </button>
 
+              {/* -10 / +10 */}
               <button
                 onClick={() => skip(-10)}
                 className="text-white hover:text-purple-400"
+                title="-10s"
               >
-                <SkipBack className="w-5 h-5" />
+                {i18n.language === "ar" ? (
+                  <SkipForward className="w-5 h-5" />
+                ) : (
+                  <SkipBack className="w-5 h-5" />
+                )}
               </button>
-
               <button
                 onClick={() => skip(10)}
                 className="text-white hover:text-purple-400"
+                title="+10s"
               >
-                <SkipForward className="w-5 h-5" />
+                {i18n.language === "ar" ? (
+                  <SkipBack className="w-5 h-5" />
+                ) : (
+                  <SkipForward className="w-5 h-5" />
+                )}
               </button>
 
+              {/* Prev / Next (RTL-aware icons) */}
               {onPrev && (
                 <button
                   onClick={onPrev}
                   className="text-white hover:text-purple-400"
+                  title={t("video.prev") || "Previous"}
                 >
-                  <SkipBack className="w-5 h-5" />
+                  {isRTL ? (
+                    <SkipForward className="w-5 h-5" />
+                  ) : (
+                    <SkipBack className="w-5 h-5" />
+                  )}
                 </button>
               )}
               {onNext && (
                 <button
                   onClick={onNext}
                   className="text-white hover:text-purple-400"
+                  title={t("video.next") || "Next"}
                 >
-                  <SkipForward className="w-5 h-5" />
+                  {isRTL ? (
+                    <SkipBack className="w-5 h-5" />
+                  ) : (
+                    <SkipForward className="w-5 h-5" />
+                  )}
                 </button>
               )}
 
+              {/* Volume (RTL-aware) */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleMuteClick}
                   className="text-white hover:text-purple-400"
                 >
                   {muted || volume === 0 ? (
-                    <VolumeX className="w-5 h-5" />
+                    <VolumeX className="w-5 h-5 rtl:rotate-180" />
                   ) : (
-                    <Volume2 className="w-5 h-5" />
+                    <Volume2 className="w-5 h-5 rtl:rotate-180" />
                   )}
                 </button>
                 <input
+                  dir={isRTL ? "rtl" : "ltr"}
                   type="range"
                   min={0}
                   max={100}
@@ -339,7 +365,9 @@ const VideoPlayer: React.FC<Props> = ({
                   }}
                   className="slider sm:w-20 w-14 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, #9333ea 0%, #9333ea ${Math.round(
+                    background: `linear-gradient(to ${
+                      isRTL ? "left" : "right"
+                    }, #9333ea 0%, #9333ea ${Math.round(
                       volume * 100
                     )}%, #4b5563 ${Math.round(volume * 100)}%, #4b5563 100%)`,
                   }}
@@ -353,11 +381,16 @@ const VideoPlayer: React.FC<Props> = ({
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Settings popover (anchor side flips in RTL) */}
               <div className="relative group/settings h-5">
                 <button className="text-white hover:text-purple-400">
                   <Settings className="w-5 h-5" />
                 </button>
-                <div className="absolute sm:bottom-8 bottom-5 right-0 bg-black/90 rounded-lg sm:p-2 p-1 opacity-0 group-hover/settings:opacity-100 transition-opacity">
+                <div
+                  className={`absolute sm:bottom-8 bottom-5 ${
+                    isRTL ? "left-0" : "right-0"
+                  } bg-black/90 rounded-lg sm:p-2 p-1 opacity-0 group-hover/settings:opacity-100 transition-opacity`}
+                >
                   <div className="text-white sm:text-sm text-xs sm:mb-2 mb-1">
                     {t("video.speed")}
                   </div>
