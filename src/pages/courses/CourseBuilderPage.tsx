@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Eye, Users, UserCheck, ArrowRight } from "lucide-react";
+import { ArrowLeft, Eye, Users, UserCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
@@ -22,7 +22,7 @@ const CourseBuilderPage: React.FC = () => {
   const { courseId } = useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation("courseBuilder");
+  const { t } = useTranslation("courseBuilder");
 
   const { data: courseData } = useCustomQuery(
     `${API_ENDPOINTS.oldCourses}${courseId}`,
