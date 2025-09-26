@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
-  // BookOpen,
-  // MessageSquare,
-  // Star,
-  // Award,
   Users,
   X,
   ListVideo,
@@ -35,24 +31,12 @@ export default function CoursePlayerPage() {
   const currentUser: User = readUserFromStorage();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const location = useLocation() as unknown as Location & {
-    state?: { assessment?: Exam };
-  };
-  const { state } = location;
+  const location = useLocation();
   const search = location.search;
   const { t, i18n } = useTranslation("coursePlayer");
 
-  // read lesson id from query
   const lessonFromQS = useMemo(
     () => new URLSearchParams(search).get("lesson") ?? "",
-    [search]
-  );
-  const assessmentIdFromQS = useMemo(
-    () => new URLSearchParams(search).get("assessment"),
-    [search]
-  );
-  const assessmentTypeFromQS = useMemo(
-    () => new URLSearchParams(search).get("atype"),
     [search]
   );
 
@@ -60,9 +44,6 @@ export default function CoursePlayerPage() {
   const [currentLesson, setCurrentLesson] = useState<Lesson | undefined>(
     undefined
   );
-  const [currentAssessmentId, setCurrentAssessmentId] = useState<
-    string | undefined
-  >(undefined);
 
   // side panels
   const [showNotes, setShowNotes] = useState(true);
@@ -71,9 +52,6 @@ export default function CoursePlayerPage() {
   const [notes, setNotes] = useState("");
   const [noteTitle, setNoteTitle] = useState("");
   const [notesCount, setNotesCount] = useState<number>(0);
-
-  // assessment modal/state
-  const [assessment, setAssessment] = useState<Exam | null>(null);
 
   // mobile drawer
   const [contentOpen, setContentOpen] = useState(false);
@@ -107,18 +85,7 @@ export default function CoursePlayerPage() {
     !!courseId
   );
 
-  // Exams: ALWAYS fetch by lesson (your API expects ?lesson=)
-  const shouldFetchLessonExams = !!currentLessonId && !state?.assessment;
-  const { data: examsForLessonRes } = useCustomQuery(
-    shouldFetchLessonExams
-      ? `${API_ENDPOINTS.exams}?lesson=${currentLessonId}`
-      : "",
-    ["exams-by-lesson", currentLessonId],
-    undefined,
-    shouldFetchLessonExams
-  );
-
-  // Questions for Q&A tab (independent)
+  // Questions for Q&A tab
   const { data: questionsData, isLoading: isQuestionsLoading } = useCustomQuery(
     `${API_ENDPOINTS.questions}?lesson=${currentLessonId}`,
     ["questions", currentLessonId],
@@ -176,66 +143,12 @@ export default function CoursePlayerPage() {
     if (selected) setCurrentLesson(selected);
   }, [currentLessonId, modules]);
 
-  // Decide which exam to show (prefer state; else from list; else placeholder)
-  useEffect(() => {
-    // 1) If a full exam was passed via navigation state, use it
-    if (state?.assessment) {
-      setAssessment(state.assessment);
-      setCurrentAssessmentId(String(state.assessment.id));
-      return;
-    }
-
-    // 2) If assessment id is in QS, try to pick it from the fetched list
-    if (assessmentIdFromQS) {
-      const list: Exam[] = examsForLessonRes?.data ?? [];
-      if (list.length) {
-        const chosen =
-          list.find((e) => String(e.id) === String(assessmentIdFromQS)) ||
-          list[0];
-        setAssessment(chosen);
-        setCurrentAssessmentId(String(chosen.id));
-      } else {
-        // while waiting / or empty list — keep a minimal placeholder
-        setAssessment(
-          (prev) =>
-            prev ??
-            ({
-              id: assessmentIdFromQS,
-              type: assessmentTypeFromQS,
-              title: t("loading"),
-              description: "",
-              lesson: currentLessonId,
-              time_limit: 0,
-              passing_score: 0,
-              questions: [],
-            } as unknown as Exam)
-        );
-        setCurrentAssessmentId(String(assessmentIdFromQS));
-      }
-    } else {
-      // no exam in QS → clear
-      setAssessment(null);
-      setCurrentAssessmentId(undefined);
-    }
-  }, [
-    state,
-    assessmentIdFromQS,
-    assessmentTypeFromQS,
-    examsForLessonRes,
-    currentLessonId,
-    t,
-  ]);
-
   const handleLessonSelect = (lessonId: string) => {
-    setAssessment(null);
     setCurrentLessonId(lessonId);
     setContentOpen(false);
-    setCurrentAssessmentId(undefined);
 
     const params = new URLSearchParams(search);
     params.set("lesson", String(lessonId));
-    params.delete("assessment");
-    params.delete("atype");
     navigate(
       {
         pathname: `/catalog/${courseId}/player`,
@@ -257,10 +170,6 @@ export default function CoursePlayerPage() {
   );
 
   const handleAssessmentSubmit = () => {
-    // close assessment & clear highlight
-    setAssessment(null);
-    setCurrentAssessmentId(undefined);
-
     // advance to next lesson
     const nextId = findNextLessonId(modules, currentLessonId);
     const newLessonId = nextId ?? currentLessonId;
@@ -268,27 +177,6 @@ export default function CoursePlayerPage() {
 
     const params = new URLSearchParams(search);
     params.set("lesson", String(newLessonId));
-    params.delete("assessment");
-    params.delete("atype");
-    navigate(
-      {
-        pathname: `/catalog/${courseId}/player`,
-        search: `?${params.toString()}`,
-      },
-      { replace: true }
-    );
-  };
-
-  const handleOpenAssessment = (lessonId: string, a: Exam) => {
-    setCurrentLessonId(String(lessonId));
-    setAssessment(a);
-    setContentOpen(false);
-    setCurrentAssessmentId(String(a.id)); // IMPORTANT: a.id, not old state
-
-    const params = new URLSearchParams(search);
-    params.set("lesson", String(lessonId));
-    params.set("assessment", String(a.id));
-    if (a.type) params.set("atype", String(a.type));
     navigate(
       {
         pathname: `/catalog/${courseId}/player`,
@@ -383,32 +271,7 @@ export default function CoursePlayerPage() {
             </div>
           </div>
 
-          {/* <div className="flex items-center gap-2 sm:justify-start justify-center sm:w-fit w-full"> */}
           <div className="flex items-center justify-end w-fit">
-            {/* <button
-              onClick={() => setShowNotes((v) => !v)}
-              className={`p-2 rounded-lg transition-colors ${
-                showNotes ? "bg-purple-600" : "hover:bg-gray-700"
-              }`}
-            >
-              <BookOpen className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowQA((v) => !v)}
-              className={`p-2 rounded-lg transition-colors ${
-                showQA ? "bg-purple-600" : "hover:bg-gray-700"
-              }`}
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
-            <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-              <Star className="w-5 h-5" />
-            </button>
-            <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-              <Award className="w-5 h-5" />
-            </button> */}
-
-            {/* Mobile syllabus trigger */}
             <button
               onClick={() => setContentOpen(true)}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors md:hidden"
@@ -429,8 +292,6 @@ export default function CoursePlayerPage() {
             currentLessonId={currentLessonId}
             handleComplete={handleComplete}
             onLessonSelect={handleLessonSelect}
-            assessment={assessment}
-            setAssessment={setAssessment}
             onAssessmentSubmit={handleAssessmentSubmit}
           />
 
@@ -443,7 +304,7 @@ export default function CoursePlayerPage() {
                   <span className="text-gray-400 flex items-center justify-start">
                     <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                     {formatDuration(
-                      currentLesson?.duration_hours,
+                      (currentLesson as any)?.duration_hours,
                       i18n.language
                     )}
                   </span>
@@ -455,67 +316,65 @@ export default function CoursePlayerPage() {
             </div>
           )}
 
-          {/* Tabs (hidden while an assessment is open) */}
-          {!assessment && (
-            <div className="bg-gray-800 border-b border-gray-700">
-              <div className="max-w-5xl mx-auto px-6">
-                <div className="grid grid-cols-3 items-center justify-items-center whitespace-nowrap">
-                  <button
-                    onClick={() => {
-                      setShowNotes(true);
-                      setShowQA(false);
-                      setShowGroups(false);
-                    }}
-                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                      showNotes
-                        ? "border-purple-500 text-purple-400"
-                        : "border-transparent text-gray-400 hover:text-gray-300"
-                    }`}
-                  >
-                    <span>📝</span>
-                    <span>
-                      {t("lessonNotes")} ({notesCount})
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowQA(true);
-                      setShowNotes(false);
-                      setShowGroups(false);
-                    }}
-                    className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                      showQA
-                        ? "border-purple-500 text-purple-400"
-                        : "border-transparent text-gray-400 hover:text-gray-300"
-                    }`}
-                  >
-                    <span>💬</span>
-                    <span>
-                      {t("QA")} ({questions?.length})
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowGroups(true);
-                      setShowNotes(false);
-                      setShowQA(false);
-                    }}
-                    className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
-                      showGroups
-                        ? "border-purple-500 text-purple-400"
-                        : "border-transparent text-gray-400 hover:text-gray-300"
-                    }`}
-                  >
-                    <Users size={16} />
-                    <span>{t("groups")} (2)</span>
-                  </button>
-                </div>
+          {/* Tabs */}
+          <div className="bg-gray-800 border-b border-gray-700">
+            <div className="max-w-5xl mx-auto px-6">
+              <div className="grid grid-cols-3 items-center justify-items-center whitespace-nowrap">
+                <button
+                  onClick={() => {
+                    setShowNotes(true);
+                    setShowQA(false);
+                    setShowGroups(false);
+                  }}
+                  className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    showNotes
+                      ? "border-purple-500 text-purple-400"
+                      : "border-transparent text-gray-400 hover:text-gray-300"
+                  }`}
+                >
+                  <span>📝</span>
+                  <span>
+                    {t("lessonNotes")} ({notesCount})
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowQA(true);
+                    setShowNotes(false);
+                    setShowGroups(false);
+                  }}
+                  className={`flex sm:items-start sm:justify-start gap-1 sm:flex-row items-center flex-col py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    showQA
+                      ? "border-purple-500 text-purple-400"
+                      : "border-transparent text-gray-400 hover:text-gray-300"
+                  }`}
+                >
+                  <span>💬</span>
+                  <span>
+                    {t("QA")} ({(questions ?? []).length})
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowGroups(true);
+                    setShowNotes(false);
+                    setShowQA(false);
+                  }}
+                  className={`flex items-center justify-start sm:flex-row flex-col gap-1 py-3 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    showGroups
+                      ? "border-purple-500 text-purple-400"
+                      : "border-transparent text-gray-400 hover:text-gray-300"
+                  }`}
+                >
+                  <Users size={16} />
+                  <span>{t("groups")} (2)</span>
+                </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Notes */}
-          {showNotes && !assessment && (
+          {showNotes && (
             <NotesSection
               currentLessonId={currentLessonId}
               notes={notes}
@@ -527,7 +386,7 @@ export default function CoursePlayerPage() {
           )}
 
           {/* Q&A */}
-          {showQA && !assessment && (
+          {showQA && (
             <QASection
               lesson={currentLessonId}
               questions={questions}
@@ -536,7 +395,7 @@ export default function CoursePlayerPage() {
           )}
 
           {/* Groups */}
-          {showGroups && !assessment && (
+          {showGroups && (
             <GroupsSection
               handleJoinGroup={handleJoinGroup}
               handleShowChat={handleShowChat}
@@ -550,11 +409,9 @@ export default function CoursePlayerPage() {
             <div className="h-full overflow-y-auto">
               <CourseContent
                 modules={modules}
-                currentAssessmentId={currentAssessmentId}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
-                onOpenAssessment={handleOpenAssessment}
               />
             </div>
           </div>
@@ -594,11 +451,9 @@ export default function CoursePlayerPage() {
             <div className="h-[calc(100%-48px)] overflow-y-auto">
               <CourseContent
                 modules={modules}
-                currentAssessmentId={currentAssessmentId}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
                 isEnrolled={true}
-                onOpenAssessment={handleOpenAssessment}
               />
             </div>
           </div>

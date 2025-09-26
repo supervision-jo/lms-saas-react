@@ -1,3 +1,5 @@
+// src/components/course/quizes/QuizBuilder.tsx
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -19,7 +21,9 @@ type QuestionDraft = {
   choices: Choice[];
 };
 export type AssessmentDraft = {
-  title: string;
+  // NOTE: title/description are *not* used for patching the exam;
+  // they are kept for compatibility but parent strips them out.
+  title?: string;
   description?: string;
   time_limit: number;
   passing_score: number;
@@ -32,7 +36,14 @@ interface QuizBuilderProps {
   onPreview: (draft: AssessmentDraft) => void;
   onClose: (s: boolean) => void;
   initialQuiz?: any;
-  onTitleChange?: (title: string) => void;
+
+  /** NEW: lesson meta shown/edited in the builder header + info card */
+  lessonTitle?: string;
+  lessonDescription?: string;
+  onLessonTitleChange?: (title: string) => void; // live UI sync
+  onLessonDescriptionChange?: (desc: string) => void; // live UI sync
+  onLessonTitleBlur?: (title: string) => void | Promise<void>; // persist lesson (section patch)
+  onLessonDescriptionBlur?: (desc: string) => void | Promise<void>; // persist lesson (section patch)
 }
 
 type UiOption = { id: string; text: string; is_correct: boolean };
@@ -40,14 +51,12 @@ type UiQuestion = {
   id: string;
   text: string;
   explanation?: string;
-  points: number; // UI-only (not sent to API)
-  timeLimitSeconds?: number; // UI optional per-question time (not sent to API)
+  points: number;
+  timeLimitSeconds?: number;
   options: UiOption[];
 };
 
 type UiQuiz = {
-  title: string;
-  description?: string;
   time_limit: number;
   passing_score: number;
   type?: "quiz" | "exam";
@@ -56,11 +65,8 @@ type UiQuiz = {
 
 const uid = () => Math.random().toString(36).slice(2);
 
-function fromInitialToUi(initial?: any): UiQuiz {
-  // Defaults
+function normalizeInitial(initial?: any): UiQuiz {
   const base: UiQuiz = {
-    title: "",
-    description: "",
     time_limit: 10,
     passing_score: 70,
     type: initial?.type === "exam" ? "exam" : "quiz",
@@ -81,15 +87,12 @@ function fromInitialToUi(initial?: any): UiQuiz {
 
   if (!initial) return base;
 
-  // If initial already looks like AssessmentDraft
+  // Treat anything with questions array as the new server shape
   if (
-    typeof initial?.title === "string" &&
     Array.isArray(initial?.questions) &&
     (typeof initial?.time_limit === "number" || initial?.time_limit == null)
   ) {
     return {
-      title: initial.title ?? base.title,
-      description: initial.description ?? base.description,
       time_limit:
         typeof initial.time_limit === "number"
           ? Math.max(1, Math.floor(initial.time_limit))
@@ -101,71 +104,42 @@ function fromInitialToUi(initial?: any): UiQuiz {
       type: initial.type === "exam" ? "exam" : "quiz",
       questions:
         initial.questions.length > 0
-          ? initial.questions.map((q: any) => ({
-              id: uid(),
-              text: String(q.text ?? ""),
-              explanation: q.explanation ?? "",
-              points: q.points,
-              timeLimitSeconds: undefined,
-              options:
-                Array.isArray(q.choices) && q.choices.length > 0
-                  ? q.choices.map((c: any) => ({
-                      id: uid(),
-                      text: String(c.text ?? ""),
-                      is_correct: !!c.is_correct,
-                    }))
-                  : [
-                      { id: uid(), text: "", is_correct: false },
-                      { id: uid(), text: "", is_correct: false },
-                    ],
-            }))
+          ? initial.questions.map((q: any) => {
+              const optionsRaw = Array.isArray(q.choices)
+                ? q.choices
+                : Array.isArray(q.options)
+                ? q.options
+                : [];
+              return {
+                id: uid(),
+                text: String(q.text ?? q.question ?? q.title ?? ""),
+                explanation: q.explanation ?? "",
+                points: Number.isFinite(q.points) ? Math.max(1, q.points) : 1,
+                timeLimitSeconds: undefined,
+                options:
+                  optionsRaw.length > 0
+                    ? optionsRaw.map((c: any) => ({
+                        id: uid(),
+                        text: String(c.text ?? c.label ?? ""),
+                        is_correct: !!(c.is_correct ?? c.isCorrect),
+                      }))
+                    : [
+                        { id: uid(), text: "", is_correct: false },
+                        { id: uid(), text: "", is_correct: false },
+                      ],
+              };
+            })
           : base.questions,
     };
   }
 
-  // Legacy shape fallback (your old Quiz type)
-  // { title, description, questions:[{ question, options:[{text,isCorrect}], explanation, points, timeLimit }], totalTimeLimit, ... }
-  const fromLegacy: UiQuiz = {
-    title: initial?.title ?? base.title,
-    description: initial?.description ?? base.description,
-    time_limit: initial?.totalTimeLimit
-      ? Math.max(1, Math.floor(Number(initial.totalTimeLimit) / 60))
-      : base.time_limit,
-    passing_score: 70,
-    type: "quiz",
-    questions:
-      Array.isArray(initial?.questions) && initial.questions.length
-        ? initial.questions.map((q: any) => ({
-            id: uid(),
-            text: String(q.question ?? ""),
-            explanation: q.explanation ?? "",
-            points: Number.isFinite(q.points)
-              ? Math.max(1, Number(q.points))
-              : 1,
-            timeLimitSeconds: q.timeLimit ? Number(q.timeLimit) : undefined,
-            options:
-              Array.isArray(q.options) && q.options.length
-                ? q.options.map((o: any) => ({
-                    id: uid(),
-                    text: String(o.text ?? ""),
-                    is_correct: !!(o.isCorrect ?? o.is_correct),
-                  }))
-                : [
-                    { id: uid(), text: "", is_correct: false },
-                    { id: uid(), text: "", is_correct: false },
-                  ],
-          }))
-        : base.questions,
-  };
-
-  return fromLegacy;
+  // Legacy fallback
+  return base;
 }
 
 function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
   const mins = Math.max(1, Math.floor(Number(ui.time_limit || 1)));
   return {
-    title: ui.title.trim(),
-    description: ui.description?.trim() || "",
     time_limit: mins,
     passing_score: Math.max(
       0,
@@ -176,7 +150,7 @@ function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
       text: q.text.trim(),
       question_type: "mcq",
       explanation: q.explanation?.trim() || "",
-      points: Math.max(1, Number(q.points || 1)), // <-- include points
+      points: Math.max(1, Number(q.points || 1)),
       choices: q.options.map((o) => ({
         text: o.text.trim(),
         is_correct: !!o.is_correct,
@@ -185,24 +159,39 @@ function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
   };
 }
 
-/** ===== Component ===== */
 const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onSave,
   onPreview,
   initialQuiz,
   onClose,
-  onTitleChange,
-}) => {
-  const [quiz, setQuiz] = useState<UiQuiz>(() => fromInitialToUi(initialQuiz));
 
+  // NEW lesson meta props
+  lessonTitle = "",
+  lessonDescription = "",
+  onLessonTitleChange,
+  onLessonDescriptionChange,
+  onLessonTitleBlur,
+  onLessonDescriptionBlur,
+}) => {
+  // Exam/quiz payload state
+  const [quiz, setQuiz] = useState<UiQuiz>(() => normalizeInitial(initialQuiz));
+
+  // Lesson meta state (local copy so inputs are controlled)
+  const [metaTitle, setMetaTitle] = useState<string>(lessonTitle);
+  const [metaDescription, setMetaDescription] =
+    useState<string>(lessonDescription);
+
+  // keep lesson meta in sync when parent changes (opening different lesson)
   useEffect(() => {
-    if (!initialQuiz) return;
-    const next = fromInitialToUi(initialQuiz);
-    setQuiz(next);
-    if (typeof onTitleChange === "function") {
-      onTitleChange(next.title || "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setMetaTitle(lessonTitle);
+  }, [lessonTitle]);
+  useEffect(() => {
+    setMetaDescription(lessonDescription);
+  }, [lessonDescription]);
+
+  // when server exam changes, normalize again
+  useEffect(() => {
+    setQuiz(normalizeInitial(initialQuiz));
   }, [initialQuiz]);
 
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
@@ -306,7 +295,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   /** ---- validation ---- */
   const validate = (): boolean => {
     const next: Record<string, string> = {};
-    if (!quiz.title.trim()) next["title"] = "Title is required";
 
     quiz.questions.forEach((q, idx) => {
       if (!q.text.trim()) next[`q_${q.id}`] = `Question ${idx + 1} is required`;
@@ -322,7 +310,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         next[`pts_${q.id}`] = `Question ${idx + 1} points must be ≥ 1`;
     });
 
-    // minutes + passing score sanity
     if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1) {
       next["time"] = "Time limit must be at least 1 minute";
     }
@@ -342,8 +329,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   const handleSave = () => {
     if (!validate()) return;
     const draft = toAssessmentDraft(quiz);
-    onTitleChange?.(draft.title);
-    onSave(draft);
+    onSave(draft); // parent sends exam-only fields
     onClose(false);
   };
   const handlePreview = () => {
@@ -355,12 +341,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     if (!quiz.questions.length) return;
 
     setExpandedQuestions((prev) => {
-      // if any previously expanded id still exists, keep it
       const ids = new Set(quiz.questions.map((q) => q.id));
       const hasValid = [...prev].some((id) => ids.has(id));
       if (hasValid) return prev;
-
-      // otherwise ensure the first question is expanded
       return new Set([quiz.questions[0].id]);
     });
   }, [quiz.questions]);
@@ -371,44 +354,40 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {quiz.type === "exam" ? "Exam Builder" : "Quiz Builder"}
+          {metaTitle || (quiz.type === "exam" ? "Exam" : "Quiz")}
         </h2>
-        <p className="text-gray-600">
-          Create engaging {quiz.type === "exam" ? "exams" : "quizzes"} with
-          multiple questions and answer options.
-        </p>
+        {!!metaDescription && (
+          <p className="text-gray-600">{metaDescription}</p>
+        )}
       </div>
 
       <div className="space-y-8">
-        {/* Quiz info */}
+        {/* Lesson meta + Quiz info */}
         <div className="bg-gray-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {quiz.type === "exam" ? "Exam Information" : "Quiz Information"}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* LESSON title (not exam field) */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Title *
               </label>
               <input
                 type="text"
-                value={quiz.title}
+                value={metaTitle}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setQuiz((p) => ({ ...p, title: v }));
-                  onTitleChange?.(v);
+                  setMetaTitle(v);
+                  onLessonTitleChange?.(v); // live reflect in parent UI
                 }}
+                onBlur={(e) => onLessonTitleBlur?.(e.target.value)}
                 placeholder={`Enter ${
                   quiz.type === "exam" ? "exam" : "quiz"
                 } title`}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.title ? "border-red-300" : "border-gray-300"
-                }`}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent border-gray-300"
               />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-              )}
             </div>
 
             <div>
@@ -466,16 +445,20 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               )}
             </div>
 
+            {/* LESSON description (not exam field) */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Description (optional)
               </label>
               <textarea
                 rows={3}
-                value={quiz.description || ""}
-                onChange={(e) =>
-                  setQuiz((p) => ({ ...p, description: e.target.value }))
-                }
+                value={metaDescription}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setMetaDescription(v);
+                  onLessonDescriptionChange?.(v); // live reflect
+                }}
+                onBlur={(e) => onLessonDescriptionBlur?.(e.target.value)}
                 placeholder={`Brief description of the ${
                   quiz.type === "exam" ? "exam" : "quiz"
                 }`}
@@ -484,6 +467,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Questions ... (unchanged UI below this line) */}
+        {/* --- keep your existing questions UI exactly as-is --- */}
 
         {/* Questions */}
         <div>
@@ -682,7 +668,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                           <input
                             type="number"
                             min={1}
-                            // max={100}
                             value={q?.points}
                             onChange={(e) =>
                               updateQuestion(q.id, {
@@ -815,7 +800,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               }}
               className="bg-transparent text-gray-600 px-6 py-3 w-full rounded-lg border border-gray-200 transition-colors flex items-center justify-center"
             >
-              {/* <X className="w-4 h-4 mr-2" /> */}
               Cancel
             </button>
           </div>

@@ -40,7 +40,11 @@ type RawQuiz = {
   description?: string;
   questions?: RawQuestion[];
   totalPoints?: number;
-  totalTimeLimit?: number;
+  totalTimeLimit?: number; // seconds
+  // NEW back-end fields
+  type?: "quiz" | "exam";
+  time_limit?: number; // minutes
+  passing_score?: number; // 0-100
 };
 
 interface QuizPreviewProps {
@@ -62,15 +66,17 @@ type SQuestion = {
   points: number;
   type: "mcq" | "short_answer" | string;
   options: SAnswer[];
-  answer?: string; // for short_answer
+  answer?: string; // for short_answer (legacy)
 };
 
 type SQuiz = {
   id: string;
   title: string;
   description: string;
-  totalTimeLimit: number;
-  totalPoints: number; // <-- we store and use this, removing the ESLint warning
+  totalTimeLimit: number; // seconds
+  totalPoints: number;
+  type: "quiz" | "exam";
+  passingScore: number; // 0-100
   questions: SQuestion[];
 };
 
@@ -80,26 +86,35 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
 
     const questions: SQuestion[] = qRaw.map((q, qi) => {
       const qid = q.id ?? `q-${qi}`;
-      const qtype = (q.question_type ?? q.type ?? "mcq")
+      const qtypeRaw = (q.question_type ?? q.type ?? "mcq")
         .toString()
         .toLowerCase();
+      const qtype = qtypeRaw.includes("short") ? "short_answer" : qtypeRaw;
 
       const optsRaw = Array.isArray(q.options)
         ? q.options!
         : Array.isArray(q.choices)
         ? q.choices!
         : [];
+
       const options: SAnswer[] = optsRaw.map((o, oi) => ({
         id: o.id ?? `q-${qid}-o-${oi}`,
         text: (o.text ?? o.label ?? "").toString(),
         isCorrect: Boolean(o.isCorrect ?? o.is_correct ?? false),
       }));
 
+      const points =
+        typeof q.points === "number"
+          ? q.points
+          : typeof q.point === "number"
+          ? q.point
+          : typeof q.score === "number"
+          ? q.score
+          : 1;
+
       return {
         id: qid,
-        type: (qtype.includes("short")
-          ? "short_answer"
-          : qtype) as SQuestion["type"],
+        type: qtype as SQuestion["type"],
         question: (
           q.question ??
           q.text ??
@@ -107,15 +122,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
           `Question ${qi + 1}`
         ).toString(),
         explanation: (q.explanation ?? "").toString(),
-        points: Number(
-          typeof q.points === "number"
-            ? q.points
-            : typeof q.point === "number"
-            ? q.point
-            : typeof q.score === "number"
-            ? q.score
-            : 1
-        ),
+        points: Number(points) || 1,
         options,
         answer: (q.answer ?? q.correct_answer ?? "").toString(),
       };
@@ -129,12 +136,29 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
             0
           );
 
+    // Prefer new field time_limit (mins) → convert to seconds.
+    // Fallback to legacy totalTimeLimit (already seconds).
+    const totalTimeLimit =
+      typeof quiz.time_limit === "number"
+        ? Math.max(0, Math.floor(quiz.time_limit) * 60)
+        : Math.max(0, Math.floor(quiz.totalTimeLimit ?? 0));
+
+    const passingScore =
+      typeof quiz.passing_score === "number"
+        ? Math.min(100, Math.max(0, Math.floor(quiz.passing_score)))
+        : 0;
+
+    const type: "quiz" | "exam" =
+      quiz.type === "exam" ? "exam" : ("quiz" as const);
+
     return {
       id: quiz.id ?? "",
-      title: quiz.title ?? "Quiz",
+      title: quiz.title ?? (type === "exam" ? "Exam" : "Quiz"),
       description: quiz.description ?? "",
-      totalTimeLimit: Number(quiz.totalTimeLimit ?? 0),
-      totalPoints, // <-- used later
+      totalTimeLimit,
+      totalPoints,
+      type,
+      passingScore,
       questions,
     };
   }, [quiz]);
@@ -179,12 +203,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     setSelectedAnswers((prev) => {
       const cur = prev[qid] ?? new Set<string>();
       const next = new Set(cur);
-      if (next.has(oid)) {
-        next.delete(oid);
-      } else {
-        next.add(oid);
-      }
-
+      if (next.has(oid)) next.delete(oid);
+      else next.add(oid);
       return { ...prev, [qid]: next };
     });
   };
@@ -216,7 +236,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
 
     let total = 0;
     const qres: Record<string, boolean> = {};
-    const max = safeQuiz.totalPoints; // <-- use the normalized total points
+    const max = safeQuiz.totalPoints;
 
     safeQuiz.questions.forEach((q) => {
       if (q.type === "short_answer") {
@@ -228,7 +248,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
         return;
       }
 
-      // mcq
+      // mcq (supports multi-correct)
       const user = selectedAnswers[q.id] ?? new Set<string>();
       const correctOpts = q.options.filter((o) => o.isCorrect).map((o) => o.id);
       const sameSize = user.size === correctOpts.length;
@@ -271,16 +291,20 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {safeQuiz.title}
+                {safeQuiz.title}{" "}
+                <span className="text-sm font-semibold text-gray-500">
+                  ({safeQuiz.type === "exam" ? "Exam" : "Quiz"})
+                </span>
               </h2>
-              {!!quiz.description && (
-                <p className="text-gray-600 mt-1">{quiz.description}</p>
+              {!!safeQuiz.description && (
+                <p className="text-gray-600 mt-1">{safeQuiz.description}</p>
               )}
               <p className="text-sm text-gray-500 mt-2">
                 {safeQuiz.questions.length} question
                 {safeQuiz.questions.length !== 1 ? "s" : ""} •{" "}
                 {safeQuiz.totalPoints} total point
-                {safeQuiz.totalPoints !== 1 ? "s" : ""}
+                {safeQuiz.totalPoints !== 1 ? "s" : ""} • Passing{" "}
+                {safeQuiz.passingScore}%
               </p>
             </div>
 
@@ -371,7 +395,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
               !hasQuestions ? (
                 <div className="p-8 text-center text-gray-600">
                   <p className="mb-2 font-semibold">No questions yet</p>
-                  <p>Add at least one question to preview this quiz.</p>
+                  <p>
+                    Add at least one question to preview this {safeQuiz.type}.
+                  </p>
                 </div>
               ) : (
                 <>
@@ -491,7 +517,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                           onClick={handleSubmit}
                           className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                         >
-                          Submit Quiz
+                          Submit {safeQuiz.type === "exam" ? "Exam" : "Quiz"}
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </button>
                       ) : (
@@ -512,7 +538,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
               <div>
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                    Quiz Complete!
+                    {safeQuiz.type === "exam" ? "Exam" : "Quiz"} Complete!
                   </h3>
                   <div
                     className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold ${
@@ -655,7 +681,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                 onClick={onEdit}
                 className="px-4 py-2 text-purple-600 hover:text-purple-800 transition-colors"
               >
-                Edit Quiz
+                Edit {safeQuiz.type === "exam" ? "Exam" : "Quiz"}
               </button>
             </div>
             {showResults && (

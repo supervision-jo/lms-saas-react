@@ -3,14 +3,14 @@ import { ChevronRight, Download } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
 import { useTranslation } from "react-i18next";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
 
 interface LessonContentProps {
   modules: Module[];
   currentLessonId: string;
   handleComplete: () => void;
   onLessonSelect: (lessonId: string) => void;
-  assessment: Exam | null;
-  setAssessment: React.Dispatch<React.SetStateAction<Exam | null>>;
   onAssessmentSubmit?: () => void; // called when learner finishes a quiz/exam
 }
 
@@ -30,8 +30,6 @@ export default function LessonContentPlayer({
   currentLessonId,
   handleComplete,
   onLessonSelect,
-  assessment,
-  setAssessment,
   onAssessmentSubmit,
 }: LessonContentProps) {
   const allLessons = useMemo(
@@ -103,13 +101,11 @@ export default function LessonContentPlayer({
     try {
       setDownloading(true);
 
-      // get a clean filename from the URL path, ignoring the query string
       const u = new URL(rawUrl);
-      const pathname = u.pathname; // /shabab/media/lessons/files/upload_HROQAmu.pdf
+      const pathname = u.pathname;
       const base = pathname.substring(pathname.lastIndexOf("/") + 1) || "file";
       const filename = base.includes(".") ? base : `${base}.download`;
 
-      // fetch → blob → download
       const res = await fetch(rawUrl, { method: "GET" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
@@ -123,7 +119,6 @@ export default function LessonContentPlayer({
       a.remove();
       URL.revokeObjectURL(blobUrl);
     } catch (e: any) {
-      // fallback: just open the signed URL
       console.log(e);
       window.open(rawUrl, "_blank");
     } finally {
@@ -131,41 +126,50 @@ export default function LessonContentPlayer({
     }
   };
 
+  // NEW: fetch quiz/exam by *lesson id* when lesson is assessment
+  const isAssessment =
+    (currentLessonData?.content_type || "").toLowerCase() === "quiz" ||
+    (currentLessonData?.content_type || "").toLowerCase() === "exam";
+
+  const { data: examResp, isFetching: loadingExam } = useCustomQuery(
+    isAssessment ? `${API_ENDPOINTS.exams}${currentLessonId}/` : "",
+    ["exam-by-lesson", currentLessonId],
+    undefined,
+    isAssessment && !!currentLessonId
+  );
+
+  const exam: Exam | null = useMemo(() => {
+    const raw = examResp?.data ?? null;
+    if (raw && typeof raw === "object") {
+      return {
+        id: raw.id,
+        type: raw.type,
+        title: raw.title ?? currentLessonData?.title ?? "",
+        description: raw.description ?? currentLessonData?.description ?? "",
+        lesson: currentLessonId,
+        time_limit: raw.time_limit ?? 0,
+        passing_score: raw.passing_score ?? 0,
+        questions: Array.isArray(raw.questions) ? raw.questions : [],
+      } as any;
+    }
+    return null;
+  }, [examResp, currentLessonData, currentLessonId]);
+
   const renderAssessment = () => {
-    if (!assessment) return null;
+    if (!isAssessment) return null;
 
-    const safeExam: Exam = {
-      id: assessment.id,
-      type: assessment.type,
-      title: assessment.title ?? "Quiz",
-      description: assessment.description ?? "",
-      lesson: assessment.lesson ?? currentLessonId,
-      time_limit: assessment.time_limit ?? 0,
-      passing_score: assessment.passing_score ?? 0,
-      questions: Array.isArray(assessment.questions)
-        ? assessment.questions
-        : [],
-    } as any;
-
-    if (!safeExam.questions.length) {
+    if (loadingExam || !exam) {
       return (
         <div className="bg-white rounded-lg p-6 shadow-lg">
-          <div className="text-gray-600">Loading quiz…</div>
-          <button
-            className="mt-4 px-4 py-2 text-black rounded border"
-            onClick={() => setAssessment(null)}
-          >
-            {t("content.back")}
-          </button>
+          <div className="text-gray-600">{t("content.loadingQuiz")}</div>
         </div>
       );
     }
 
     return (
       <ExamSection
-        exam={safeExam}
+        exam={exam}
         onClose={() => {
-          // Treat as finish → call parent if provided
           onAssessmentSubmit?.();
         }}
       />
@@ -177,14 +181,13 @@ export default function LessonContentPlayer({
       <div className="max-w-5xl mx-auto">
         <div className="relative">
           {(() => {
-            if (assessment) return renderAssessment();
+            if (isAssessment) return renderAssessment();
 
             if (currentLessonData?.content_type?.toLowerCase() === "article") {
               return (
                 <div
                   className={`rounded-lg flex flex-col items-start p-8 max-h-[70vh] overflow-y-auto transition-colors duration-200 bg-white text-gray-900`}
                 >
-                  {/* Theme Toggle */}
                   <div className="flex justify-between items-center mb-6">
                     <h1 className={`text-3xl font-bold text-gray-900`}>
                       {currentLessonData?.title}
@@ -195,7 +198,7 @@ export default function LessonContentPlayer({
                     <div
                       className="space-y-6"
                       dangerouslySetInnerHTML={{
-                        __html: currentLessonData?.description_html,
+                        __html: (currentLessonData as any)?.description_html,
                       }}
                     />
 
@@ -218,7 +221,7 @@ export default function LessonContentPlayer({
             }
 
             if (currentLessonData?.content_type?.toLowerCase() === "material") {
-              const fileUrl = currentLessonData?.file ?? "";
+              const fileUrl = (currentLessonData as any)?.file ?? "";
 
               return (
                 <div className="bg-white rounded-lg p-8 shadow-lg">
@@ -242,7 +245,6 @@ export default function LessonContentPlayer({
                     </p>
                     {fileUrl && (
                       <div className="text-sm text-gray-500 break-all">
-                        {/* show the basename to the user */}
                         {decodeURIComponent(
                           new URL(fileUrl).pathname.split("/").pop() || ""
                         )}
@@ -254,7 +256,9 @@ export default function LessonContentPlayer({
             }
 
             // video / default
-            const rawUrl = currentLessonData?.url as string | undefined;
+            const rawUrl = (currentLessonData as any)?.url as
+              | string
+              | undefined;
             const safeUrl = isPlayableUrl(rawUrl) ? rawUrl! : "";
             const poster =
               (currentLessonData as any)?.poster ||

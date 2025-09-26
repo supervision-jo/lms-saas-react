@@ -1,3 +1,5 @@
+// src/pages/CourseBuilder.tsx
+
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Eye, Users, UserCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
@@ -16,7 +18,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import IssuesModal from "./IssuesModal";
 import { useTranslation } from "react-i18next";
 
-// Simple modal for the validation issues
 const CourseBuilderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("course-info");
   const { courseId } = useParams();
@@ -33,40 +34,43 @@ const CourseBuilderPage: React.FC = () => {
 
   const course: Course = courseData?.data;
 
-  // === publish state (defaults to draft until server says otherwise) ===
+  // publish flag
   const [published, setPublished] = useState<boolean>(!!course?.is_published);
   useEffect(() => {
     setPublished(!!course?.is_published);
   }, [course?.is_published]);
 
-  // === validation modal state ===
+  // validation modal
   const [issues, setIssues] = useState<string[]>([]);
   const [showIssues, setShowIssues] = useState(false);
 
-  // ---- helpers to fetch modules & exams quickly for validation ----
+  // helpers
   async function fetchModulesForCourse(cid: string): Promise<Module[]> {
     const resp = await get(`${API_ENDPOINTS.modules}?course=${cid}`);
     return resp?.data?.data ?? resp?.data ?? resp ?? [];
   }
 
-  async function fetchExamsForLesson(lessonId: string): Promise<any[]> {
-    // backend supports ?lesson=
-    const resp = await get(`${API_ENDPOINTS.exams}?lesson=${lessonId}`);
-    const arr =
-      (Array.isArray(resp) && resp) || resp?.data || resp?.results || [];
-    return Array.isArray(arr) ? arr : [];
+  // === NEW: fetch single exam/quiz by lesson id ===
+  async function fetchAssessmentForLesson(
+    lessonId: string
+  ): Promise<any | null> {
+    try {
+      const resp = await get(`${API_ENDPOINTS.exams}/${lessonId}`);
+      return resp ?? null;
+    } catch {
+      return null;
+    }
   }
 
-  // ---- validation logic ----
+  // validation: course + modules + (standalone) assessment lessons
   async function validateCourseReady(cid: string): Promise<string[]> {
     const problems: string[] = [];
 
     // 1) Course fields
-    const c = course; // already fetched via react-query
+    const c = course;
     const titleOK = !!c?.title?.trim();
     const descOK = !!c?.description?.trim();
     const levelOK = !!c?.level?.trim();
-    // is_paid: infer from price if the server doesn’t send it
     const isPaid =
       typeof c?.is_paid === "boolean" ? c.is_paid : (c?.price ?? 0) > 0;
     const subcatOK =
@@ -80,7 +84,7 @@ const CourseBuilderPage: React.FC = () => {
       problems.push(t("validateCourseReady.isPaidOK"));
     }
 
-    // 2) Sections (modules)
+    // 2) Modules
     const modules = await fetchModulesForCourse(cid);
     if (!Array.isArray(modules) || modules.length === 0) {
       problems.push(t("validateCourseReady.modulesOK"));
@@ -94,7 +98,6 @@ const CourseBuilderPage: React.FC = () => {
           (m as any)?.description != null &&
           !String((m as any).description).trim()
         ) {
-          // treat empty string as missing; if you don't require description, remove this check
           problems.push(
             t("validateCourseReady.moduleDescrOK", { idx: idx + 1 })
           );
@@ -107,32 +110,28 @@ const CourseBuilderPage: React.FC = () => {
       });
     }
 
-    // 3) Exams/quizzes (only validate ones that exist)
-    // collect all content lessons’ ids
-    const lessonIds: string[] = [];
+    // 3) Assessments: each quiz/exam is its own lesson now
+    const assessmentLessonIds: string[] = [];
     modules.forEach((m: any) =>
       (m.lessons || []).forEach((l: any) => {
-        const t = l?.content_type;
-        if (t === "video" || t === "article" || t === "material") {
-          lessonIds.push(l.id);
+        if (l?.content_type === "quiz" || l?.content_type === "exam") {
+          assessmentLessonIds.push(l.id);
         }
       })
     );
 
-    // Fetch exams for each lesson concurrently
     const settled = await Promise.allSettled(
-      Array.from(new Set(lessonIds)).map((id) => fetchExamsForLesson(id))
+      Array.from(new Set(assessmentLessonIds)).map((id) =>
+        fetchAssessmentForLesson(id)
+      )
     );
 
-    // Flatten and validate any returned assessments
-    const exams: any[] = [];
+    const assessments: any[] = [];
     settled.forEach((res) => {
-      if (res.status === "fulfilled" && Array.isArray(res.value)) {
-        exams.push(...res.value);
-      }
+      if (res.status === "fulfilled" && res.value) assessments.push(res.value);
     });
 
-    exams.forEach((ex, idx) => {
+    assessments.forEach((ex, idx) => {
       const label =
         ex?.type === "exam"
           ? t("labels.exam")
@@ -142,22 +141,19 @@ const CourseBuilderPage: React.FC = () => {
       const prefix = `${label} "${ex?.title || `#${idx + 1}`}"`;
       const titleOK = !!ex?.title?.trim();
       const descOK = !!ex?.description?.trim();
-      const tlimOK = Number.isFinite(
-        Number(ex?.time_limit_mins ?? ex?.time_limit)
-      );
+      const tlimOK = Number.isFinite(Number(ex?.time_limit));
       const passOK =
         Number.isFinite(Number(ex?.passing_score)) &&
         Number(ex?.passing_score) >= 0 &&
         Number(ex?.passing_score) <= 100;
       const questions = Array.isArray(ex?.questions) ? ex.questions : [];
 
-      if (!titleOK) problems.push(t("missingValues.title", { prefix: prefix }));
-      if (!descOK) problems.push(t("missingValues.descr", { prefix: prefix }));
-      if (!tlimOK) problems.push(t("missingValues.limit", { prefix: prefix }));
-      if (!passOK)
-        problems.push(t("missingValues.passingScore", { prefix: prefix }));
+      if (!titleOK) problems.push(t("missingValues.title", { prefix }));
+      if (!descOK) problems.push(t("missingValues.descr", { prefix }));
+      if (!tlimOK) problems.push(t("missingValues.limit", { prefix }));
+      if (!passOK) problems.push(t("missingValues.passingScore", { prefix }));
       if (!questions.length) {
-        problems.push(t("missingValues.questions", { prefix: prefix }));
+        problems.push(t("missingValues.questions", { prefix }));
       } else {
         questions.forEach((q: any, qidx: number) => {
           if (!q?.text?.trim()) {
@@ -198,7 +194,7 @@ const CourseBuilderPage: React.FC = () => {
     return problems;
   }
 
-  // ---- guarded publish handlers ----
+  // guarded publish
   const tryPublish = async () => {
     if (!courseId) return;
     const problems = await validateCourseReady(courseId);
@@ -207,9 +203,7 @@ const CourseBuilderPage: React.FC = () => {
       setShowIssues(true);
       return;
     }
-    // All good → go to catalog (or patch is_published here if you want)
     try {
-      // Mark published on server
       const fd = new FormData();
       fd.append("is_published", "true");
       await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
@@ -224,7 +218,7 @@ const CourseBuilderPage: React.FC = () => {
 
   const handleSettingsChange = async (next: boolean) => {
     if (!courseId) return;
-    // Going to draft is always allowed immediately
+
     if (!next) {
       try {
         const fd = new FormData();
@@ -241,12 +235,10 @@ const CourseBuilderPage: React.FC = () => {
       return;
     }
 
-    // next === true → validate first
     const problems = await validateCourseReady(courseId);
     if (problems.length) {
       setIssues(problems);
       setShowIssues(true);
-      // keep UI toggle on draft
       setPublished(false);
       return;
     }
@@ -331,7 +323,7 @@ const CourseBuilderPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Main contentss */}
+          {/* Main */}
           <div className="col-span-12 lg:col-span-9 space-y-6">
             {activeTab === "course-info" && (
               <CourseInformationForm course={course} />

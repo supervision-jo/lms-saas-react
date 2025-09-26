@@ -1,13 +1,3 @@
-/* utils/courseBuilder.ts */
-
-import { get } from "../api";
-
-const QUIZ_CACHE_TTL = 5 * 60 * 1000; // 5 mins
-type CacheEntry = { ts: number; data: any[] };
-const quizCache = new Map<string, CacheEntry>();
-
-const CONCURRENCY = 3;
-
 export const isYouTubeUrl = (url: string) =>
   /(?:youtube\.com\/watch\?v=|youtu\.be\/)/i.test(url || "");
 
@@ -123,19 +113,8 @@ export const estimateReadingDurationHoursFromHtml = (
 export const isContent = (t?: string | null): boolean =>
   !!t && ["video", "article", "material"].includes(t);
 
-export const isAssessment = (t?: string | null): boolean =>
-  !!t && ["quiz", "exam"].includes(t);
-
 export const reindexOrders1Based = <T extends { order?: number }>(arr: T[]) =>
   arr.map((x, i) => ({ ...x, order: i + 1 }));
-
-/** Find the nearest content lesson above the given index */
-export const anchorAbove = (lessons: any[], idx: number): string | null => {
-  for (let i = idx - 1; i >= 0; i--) {
-    if (isContent(lessons[i]?.content_type)) return lessons[i]?.id ?? null;
-  }
-  return null;
-};
 
 export const nextAssessmentTitle = (
   module: { lessons?: any[] },
@@ -154,94 +133,4 @@ export async function fileToBase64(file: File): Promise<string> {
   for (let i = 0; i < bytes.byteLength; i++)
     binary += String.fromCharCode(bytes[i]);
   return btoa(binary); // raw base64, no data: prefix
-}
-
-export async function fetchAssessmentsForLessons(
-  lessonIds: string[],
-  examsEndpoint: string
-): Promise<Map<string, any[]>> {
-  const unique = Array.from(new Set(lessonIds.filter(Boolean)));
-
-  // pull cached first
-  const out = new Map<string, any[]>();
-  const toFetch: string[] = [];
-  const now = Date.now();
-
-  unique.forEach((id) => {
-    const cached = quizCache.get(id);
-    if (cached && now - cached.ts < QUIZ_CACHE_TTL) {
-      out.set(id, cached.data);
-    } else {
-      toFetch.push(id);
-    }
-  });
-
-  // nothing to fetch => done
-  if (!toFetch.length) return out;
-
-  // fetch in small parallel batches
-  const chunks: string[][] = [];
-  for (let i = 0; i < toFetch.length; i += CONCURRENCY) {
-    chunks.push(toFetch.slice(i, i + CONCURRENCY));
-  }
-
-  for (const chunk of chunks) {
-    const pairs = await Promise.allSettled(
-      chunk.map((id) => get(`${examsEndpoint}?lesson=${id}`))
-    );
-
-    pairs.forEach((res, idx) => {
-      const id = chunk[idx];
-      if (res.status === "fulfilled") {
-        const payload = res.value;
-        const arr =
-          (Array.isArray(payload) && payload) ||
-          payload?.data ||
-          payload?.results ||
-          [];
-        const safe: any[] = Array.isArray(arr) ? arr : [];
-        quizCache.set(id, { ts: Date.now(), data: safe });
-        out.set(id, safe);
-      } else {
-        quizCache.set(id, { ts: Date.now(), data: [] });
-        out.set(id, []);
-      }
-    });
-  }
-
-  return out;
-}
-
-export function invalidateAssessmentsCacheForLesson(lessonId: string) {
-  quizCache.delete(lessonId);
-}
-
-// Inject assessments right after their anchor lesson
-export function injectAssessmentsIntoModules(
-  mods: Module[],
-  byLesson: Map<string, any[]>
-) {
-  return mods.map((m) => {
-    const nextLessons: any[] = [];
-    (m.lessons || []).forEach((lesson: any) => {
-      nextLessons.push(lesson);
-      // only content lessons can be anchors
-      const maybe = byLesson.get(lesson.id) || [];
-      if (maybe.length) {
-        maybe.forEach((exam) => {
-          // Normalize into a "lesson-like" row
-          nextLessons.push({
-            id: exam.id,
-            title: exam.title ?? (exam.type === "exam" ? "Exam" : "Quiz"),
-            description: exam.description ?? "",
-            description_html: null,
-            content_type: (exam.type as "quiz" | "exam") || "quiz",
-            order: (lesson.order || 0) + 1, // will reindex below
-            _anchor: lesson.id,
-          });
-        });
-      }
-    });
-    return { ...m, lessons: reindexOrders1Based(nextLessons) as any };
-  });
 }

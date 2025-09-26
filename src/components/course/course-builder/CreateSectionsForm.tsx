@@ -1,3 +1,5 @@
+// src/components/course/course-builder/CreateSectionsForm.tsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
@@ -14,7 +16,7 @@ import {
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { useCustomPost } from "../../../hooks/useMutation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { patch, remove, get } from "../../../api";
+import { patch, remove } from "../../../api";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
@@ -23,31 +25,23 @@ import EditArticle from "./EditArticle";
 import UploadingMaterial from "./UploadingMaterial";
 import {
   isContent,
-  isAssessment,
   nextAssessmentTitle,
-  anchorAbove,
   reindexOrders1Based,
-  fetchAssessmentsForLessons,
-  injectAssessmentsIntoModules,
-  invalidateAssessmentsCacheForLesson,
 } from "../../../utils/courseBuilder";
 import { makeKeyedDebouncer } from "../../../utils/netCoalesce";
 import QuizBuilder, { AssessmentDraft } from "../../quizes/QuizBuilder";
 import QuizPreview from "../../quizes/QuizPreview";
 import { AxiosResponse } from "axios";
 
-// ⬇️ NEW imports (split files + helpers)
 import ModuleItem from "./ModuleItem";
 import LessonItem from "./LessonItem";
 import Modal from "../../reusable-components/Modal";
-import { buildLessonsPayload } from "../../../utils/lessonNormalize";
+// ⬅ removed buildLessonsPayload import
 import { useExamsByLesson } from "../../../hooks/useExamsByLesson";
-import { invalidateLessonExams } from "../../../utils/builderQueries";
-import { qk } from "../../../utils/builderQueries";
+import { invalidateLessonExams, qk } from "../../../utils/builderQueries";
 import { useTranslation } from "react-i18next";
 
 const debounceLessons = makeKeyedDebouncer(450);
-const debounceAssessments = makeKeyedDebouncer(450);
 const debounceCommit = makeKeyedDebouncer(450);
 
 export default function CreateSectionsForm({ courseId }: { courseId: string }) {
@@ -63,7 +57,13 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       menuRefs.current[id] = el;
     };
 
-  const assessmentCacheRef = useRef<Record<string, AssessmentDraft>>({});
+  // Track last committed order so a drag with no actual movement won't save
+  const dragBaselineRef = useRef<Record<string, string[]>>({});
+  const lastCommittedLessonOrderRef = useRef<Record<string, string[]>>({});
+
+  const arraysEqual = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((x, i) => x === b[i]);
+
   const { t } = useTranslation("courseBuilder");
 
   useEffect(() => {
@@ -88,65 +88,47 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     () => modulesData?.data?.data ?? [],
     [modulesData]
   );
-
   const [modules, setModules] = useState<Module[]>(serverModules);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!Array.isArray(serverModules)) return;
-      // collect all content lesson ids (anchors)
-      const lessonIds: string[] = [];
-      serverModules.forEach((mod) =>
-        (mod.lessons || []).forEach((l: any) => {
-          if (isContent(l?.content_type)) lessonIds.push(l.id);
-        })
-      );
-      // fetch exams/quizzes by anchor lesson id
-      const byLesson = await fetchAssessmentsForLessons(
-        lessonIds,
-        API_ENDPOINTS.exams
-      );
-      const stitched = injectAssessmentsIntoModules(serverModules, byLesson);
-      if (!cancelled) setModules(stitched);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [serverModules]);
+  useEffect(
+    () => setModules(Array.isArray(serverModules) ? serverModules : []),
+    [serverModules]
+  );
 
   const { mutateAsync: createSection } = useCustomPost(
     API_ENDPOINTS.createSection,
     ["modules", courseId!]
   );
 
-  const { mutateAsync: createExam } = useCustomPost(API_ENDPOINTS.createExam, [
-    "exams",
-    courseId!,
-  ]);
+  useEffect(() => {
+    const next = Array.isArray(serverModules) ? serverModules : [];
+    setModules(next);
 
-  type Values = {
-    id: any;
-    payload: any;
-    lessonIdHint?: string; // ⬅️ add hint for surgical invalidation
-  };
+    // seed last committed order snapshot from server
+    const map: Record<string, string[]> = {};
+    next.forEach((m) => {
+      map[m.id] = (m.lessons || []).map((l: any) => l.id);
+    });
+    lastCommittedLessonOrderRef.current = map;
+  }, [serverModules]);
+
+  type Values = { id: any; payload: any; silent?: boolean };
 
   const { mutateAsync: mutateSection } = useMutation<
     AxiosResponse<any>,
     any,
     Values
   >({
-    mutationFn: async ({ id, payload }: Values) => {
-      return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
+    mutationFn: async ({ id, payload }: Values) =>
+      patch(`${API_ENDPOINTS.updateSection}${id}/`, payload),
+
+    onSuccess: (_res, vars) => {
+      if (!vars?.silent) {
+        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: qk.modules(courseId),
-      });
-    },
+
     onError: (e) => {
-      const error = e.response?.data?.error;
-      handleErrorAlerts(error);
+      handleErrorAlerts(e.response?.data?.error);
     },
   });
 
@@ -155,74 +137,66 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     any,
     Partial<Values>
   >({
-    mutationFn: async ({ id }: Partial<Values>) => {
-      return remove(`${API_ENDPOINTS.deleteSection}${id}/`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: qk.modules(courseId),
-      });
-    },
-    onError: (e) => {
-      const error = e.response?.data?.error;
-      handleErrorAlerts(error);
-    },
+    mutationFn: async ({ id }) =>
+      remove(`${API_ENDPOINTS.deleteSection}${id}/`),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) }),
+    onError: (e) => handleErrorAlerts(e.response?.data?.error),
   });
 
-  // ⬇️ exam update → invalidate only ["exams", lessonId]
+  // exams/quizzes are edited via /updateExam/<lessonId>
   const { mutateAsync: mutateExam } = useMutation<
     AxiosResponse<any>,
     any,
     Values
   >({
-    mutationFn: async ({ id, payload }: Values) => {
-      return patch(`${API_ENDPOINTS.updateExam}${id}/`, payload);
-    },
-    onSuccess: (res, vars) => {
-      const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
-      const lessonId = ex?.lesson ?? vars.lessonIdHint;
-      invalidateLessonExams(queryClient, lessonId);
-    },
-    onError: (e) => {
-      const error = e.response?.data?.error;
-      handleErrorAlerts(error);
-    },
+    mutationFn: async ({ id, payload }) =>
+      patch(`${API_ENDPOINTS.updateExam}${id}/`, payload),
+    onSuccess: (_res, vars) => invalidateLessonExams(queryClient, vars.id),
+    onError: (e) => handleErrorAlerts(e.response?.data?.error),
   });
 
-  // ⬇️ exam delete → invalidate only ["exams", lessonId]
-  const { mutateAsync: removeExam } = useMutation<
-    AxiosResponse<any>,
-    any,
-    Partial<Values>
-  >({
-    mutationFn: async ({ id }: Partial<Values>) => {
-      return remove(`${API_ENDPOINTS.updateExam}${id}/`);
-    },
-    onSuccess: (res, vars) => {
-      const ex = res?.data?.data?.[0] ?? res?.data?.data ?? res?.data ?? {};
-      const lessonId = (ex as any)?.lesson ?? (vars as any)?.lessonIdHint;
-      invalidateLessonExams(queryClient, lessonId);
-    },
-    onError: (e) => {
-      const error = e.response?.data?.error;
-      handleErrorAlerts(error);
-    },
-  });
+  /** ========= Local payload normalizer (replaces buildLessonsPayload) ========= */
+  function lessonsToPayload(sourceLessons: any[]) {
+    const lessons = (sourceLessons ?? []).map((l, idx) => {
+      const base: any = {
+        title: l?.title ?? "",
+        description: l?.description ?? "",
+        free_preview: !!l?.free_preview,
+        order: l?.order ?? idx + 1, // <- trust the current order (or idx+1)
+        content_type: l?.content_type,
+      };
+      if (l?.id && !String(l.id).startsWith("tmp-")) base.id = l.id;
+
+      if (l?.content_type === "video") {
+        base.url = l?.url ?? "";
+        base.duration_hours = l?.duration_hours ?? null;
+      } else if (l?.content_type === "article") {
+        base.description_html = l?.description_html ?? null;
+      } else if (l?.content_type === "material") {
+        base.string_file = l?.string_file ?? null;
+      }
+      return base;
+    });
+
+    return { lessons };
+  }
 
   /** =============== Normalization =============== */
   const saveSectionLessons = async (
     moduleId: string,
-    lessonsOverride?: any[]
+    lessonsOverride?: any[],
+    silent?: boolean
   ) => {
     const mod = modules.find((m) => m.id === moduleId);
     if (!mod) return;
 
     const sourceLessons = lessonsOverride ?? mod.lessons ?? [];
-    const payload = buildLessonsPayload(sourceLessons);
+    const reindexed = reindexOrders1Based(sourceLessons); // <- ensure 1-based, in current array order
+    const payload = lessonsToPayload(reindexed);
 
-    // debounce by moduleId
     return debounceLessons(moduleId, () =>
-      mutateSection({ id: moduleId, payload })
+      mutateSection({ id: moduleId, payload, silent })
     );
   };
 
@@ -240,12 +214,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     value: string
   ) => {
     const last = lastSavedRef.current[id]?.[field] ?? "";
-    if (String(last) === String(value)) return; // only skip if same as server
-
+    if (String(last) === String(value)) return;
     await mutateSection({ id, payload: { [field]: value } });
     toast.success("Saved");
-
-    // update last-saved snapshot so subsequent blurs don’t re-send
     lastSavedRef.current[id] = {
       title: field === "title" ? value : lastSavedRef.current[id]?.title ?? "",
       description:
@@ -253,126 +224,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           ? value
           : lastSavedRef.current[id]?.description ?? "",
     };
-
-    // invalidate if you still need a refetch to sync other fields
     queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-  };
-
-  const getCachedAssessment = (id: string) => assessmentCacheRef.current[id];
-
-  const setCachedAssessment = (id: string, draft: AssessmentDraft) => {
-    // ensure points & choices shape are present
-    assessmentCacheRef.current[id] = {
-      ...draft,
-      questions: (draft.questions || []).map((q) => ({
-        text: q.text,
-        question_type: q.question_type || "mcq",
-        explanation: q.explanation || "",
-        // default defensively
-        choices: (q.choices || []).map((c) => ({
-          text: c.text,
-          is_correct: !!c.is_correct,
-        })),
-        points: typeof (q as any).points === "number" ? (q as any).points : 1,
-      })),
-    };
-  };
-
-  function normalizeAssessmentFromServer(server: any): AssessmentDraft {
-    const timeLimit =
-      typeof server?.time_limit_mins === "number"
-        ? server.time_limit_mins
-        : typeof server?.time_limit === "number"
-        ? server.time_limit
-        : 10;
-
-    const questions = Array.isArray(server?.questions) ? server.questions : [];
-
-    return {
-      title: server?.title ?? "",
-      description: server?.description ?? "",
-      type: server?.type === "exam" ? "exam" : "quiz",
-      time_limit: Math.max(1, Number(timeLimit) || 10),
-      passing_score: Math.max(
-        0,
-        Math.min(100, Number(server?.passing_score ?? 70))
-      ),
-      questions: questions.map((q: any) => ({
-        text: String(q?.text ?? ""),
-        question_type: (q?.question_type as "mcq") || "mcq",
-        explanation: String(q?.explanation ?? ""),
-        choices: Array.isArray(q?.choices)
-          ? q.choices.map((c: any) => ({
-              text: String(c?.text ?? ""),
-              is_correct: !!c?.is_correct,
-            }))
-          : [],
-        points: Number.isFinite(q?.points) ? Number(q.points) : 1,
-      })),
-    };
-  }
-
-  const fetchAssessmentByAnchor = async (
-    anchorLessonId: string,
-    preferType?: "quiz" | "exam"
-  ): Promise<AssessmentDraft | null> => {
-    const resp = await get(`${API_ENDPOINTS.exams}?lesson=${anchorLessonId}`);
-    const list = resp?.data ?? resp?.results ?? resp ?? [];
-    if (!Array.isArray(list) || !list.length) return null;
-    const server =
-      (preferType ? list.find((x: any) => x?.type === preferType) : null) ||
-      list[0];
-    const full = normalizeAssessmentFromServer(server);
-    if (!Array.isArray(full.questions) || full.questions.length === 0)
-      return null;
-    return full;
-  };
-
-  // GET from read endpoints only → then PATCH to update endpoint
-  const patchAssessmentField = async (
-    id: string,
-    field: string,
-    value: string | number | boolean,
-    anchorLessonId: string,
-    preferType?: "quiz" | "exam"
-  ) => {
-    let full = getCachedAssessment(id);
-    if (!full) {
-      const fetched = await fetchAssessmentByAnchor(anchorLessonId, preferType);
-      if (!fetched) {
-        toast.error(t("createSections.patchAssessmentFieldToastError"));
-        throw new Error(t("createSections.patchAssessmentFieldError"));
-      }
-      full = fetched;
-      setCachedAssessment(id, full);
-    }
-
-    const merged: any = { ...full, [field]: value, lesson: anchorLessonId };
-    if (merged.time_limit_mins && !merged.time_limit) {
-      merged.time_limit = merged.time_limit_mins;
-    }
-
-    return debounceAssessments(String(id), async () => {
-      await mutateExam({ id, payload: merged, lessonIdHint: anchorLessonId });
-      setCachedAssessment(id, merged);
-      toast.success(t("createSections.patchAssessmentFieldSuccess"));
-    });
-  };
-
-  const addModule = async () => {
-    try {
-      const body = {
-        course: courseId,
-        title: t("createSections.newModuleTitle", { l: modules.length + 1 }),
-        description: "",
-        order: modules.length + 1, // 1-based
-      };
-      await createSection(body);
-      toast.success(t("createSections.addModuleSuccess"));
-      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    } catch (error: any) {
-      handleErrorAlerts(error?.response?.data?.error);
-    }
   };
 
   const updateLessonLocal = (
@@ -409,7 +261,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
 
   // Assessment editing / preview
   const [editingAssessment, setEditingAssessment] = useState<{
-    id: string;
+    id: string; // lessonId
     moduleId: string;
     type: "quiz" | "exam";
   } | null>(null);
@@ -417,165 +269,125 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     null
   );
 
-  const anchorIdForEditingAssessment = useMemo(() => {
-    if (!editingAssessment) return null;
-    const mod = modules.find((m) => m.id === editingAssessment.moduleId);
-    if (!mod) return null;
-    const idx = mod.lessons.findIndex((l) => l.id === editingAssessment.id);
-    if (idx < 0) return null;
-    return anchorAbove(mod.lessons as any, idx);
-  }, [editingAssessment, modules]);
-
-  // fetch exams/quiz list for the parent lesson, then pick the one we need
-  const { data: examsByLessonResp } = useExamsByLesson(
-    anchorIdForEditingAssessment ?? undefined
+  // fetch exam/quiz by LESSON id
+  const { data: examResp } = useExamsByLesson(
+    editingAssessment?.id ?? undefined
   );
-
-  // Normalize returned list (array from the collection endpoint)
   const assessmentDetail = useMemo(() => {
-    const arr =
-      examsByLessonResp?.data ??
-      examsByLessonResp?.results ??
-      examsByLessonResp ??
-      [];
-    if (!Array.isArray(arr) || !arr.length) return null;
-    const wantType = editingAssessment?.type;
-    const byType = wantType ? arr.find((x: any) => x?.type === wantType) : null;
-    return byType || arr[0];
-  }, [examsByLessonResp, editingAssessment?.type]);
+    const obj = examResp?.data ?? examResp ?? null;
+    return obj && typeof obj === "object" ? obj : null;
+  }, [examResp]);
+
+  // ===== add lessons =====
+  const addModule = async () => {
+    try {
+      const body = {
+        course: courseId,
+        title: t("createSections.newModuleTitle", { l: modules.length + 1 }),
+        description: "",
+        order: modules.length + 1,
+      };
+      await createSection(body);
+      toast.success(t("createSections.addModuleSuccess"));
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+    } catch (error: any) {
+      handleErrorAlerts(error?.response?.data?.error);
+    }
+  };
 
   const addContentLesson = (
     moduleId: string,
     type: "video" | "article" | "material"
   ) => {
+    const mod = modules.find((m) => m.id === moduleId);
+    if (!mod) return;
+
+    const tempId = `tmp-${Date.now()}`;
+    const stub: any = {
+      id: tempId,
+      _draft: true,
+      title:
+        type === "video"
+          ? t("createSections.newVideoTitle")
+          : type === "article"
+          ? t("createSections.newArticleTitle")
+          : t("createSections.newMaterialTitle"),
+      description: "",
+      description_html: null,
+      content_type: type,
+      free_preview: false,
+      order: (mod.lessons?.length ?? 0) + 1,
+      url: "",
+      string_file: null,
+      duration_hours: null,
+    };
+
+    const nextLessons = [...(mod.lessons || []), stub];
+
+    // optimistic UI
     setModules((prev) =>
-      prev.map((m) => {
-        if (m.id !== moduleId) return m;
-        const tempId = `tmp-${Date.now()}`;
-        const stub: any = {
-          id: tempId,
-          _draft: true,
-          title:
-            type === "video"
-              ? t("createSections.newVideoTitle")
-              : type === "article"
-              ? t("createSections.newArticleTitle")
-              : t("createSections.newMaterialTitle"),
-          description: "",
-          description_html: null,
-          content_type: type,
-          free_preview: false,
-          order: (m.lessons?.length ?? 0) + 1, // 1-based
-          url: "",
-          string_file: null,
-          duration_hours: null,
-        };
-        const lessons = [...(m.lessons || []), stub];
-
-        // Open editor
-        setTimeout(() => {
-          if (type === "video")
-            setEditingLesson({ moduleId, lessonId: tempId });
-          if (type === "article")
-            setEditingArticle({ moduleId, lessonId: tempId });
-          if (type === "material")
-            setUploadingMaterial({ moduleId, lessonId: tempId });
-        }, 0);
-
-        return { ...m, lessons };
-      })
+      prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
     );
+
+    // persist section with full lessons snapshot
+    saveSectionLessons(moduleId, nextLessons)
+      .then(() =>
+        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) })
+      )
+      .catch(() =>
+        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) })
+      );
+
+    // open editor
+    setTimeout(() => {
+      if (type === "video") setEditingLesson({ moduleId, lessonId: tempId });
+      if (type === "article") setEditingArticle({ moduleId, lessonId: tempId });
+      if (type === "material")
+        setUploadingMaterial({ moduleId, lessonId: tempId });
+    }, 0);
   };
 
   const addAssessment = async (moduleId: string, type: "quiz" | "exam") => {
     const mod = modules.find((m) => m.id === moduleId);
     if (!mod) return;
 
-    const lastContentIndex =
-      [...(mod.lessons || [])]
-        .map((l, i) => ({ l, i }))
-        .reverse()
-        .find(({ l }) => isContent((l as any).content_type))?.i ?? -1;
-
-    if (lastContentIndex < 0) {
-      toast.error(t("createSections.addAssessementSuccess"));
-      return;
-    }
-
-    const anchorId = mod.lessons[lastContentIndex].id;
     const title = nextAssessmentTitle(mod as any, type);
+    const tempId = `tmp-${Date.now()}`;
 
-    try {
-      const body = {
-        title,
-        type,
-        lesson: anchorId,
-        time_limit: 10,
-        passing_score: 70,
-        questions: [
-          {
-            text: t("createSections.sampleQuestion"),
-            question_type: "mcq",
-            points: 1,
-            explanation: "",
-            choices: [
-              { text: t("createSections.option1"), is_correct: true },
-              { text: t("createSections.option2"), is_correct: false },
-            ],
-          },
-        ],
-      };
-      const created = await createExam(body);
-      const newId = created?.data?.id ?? created?.id;
-
-      setCachedAssessment(newId, {
+    const nextLessonsRaw = [
+      ...(mod.lessons || []),
+      {
+        id: tempId,
+        _draft: true,
         title,
         description: "",
-        type,
-        time_limit: 10,
-        passing_score: 70,
-        questions: [
-          {
-            text: t("createSections.sampleQuestion"),
-            question_type: "mcq",
-            explanation: "",
-            choices: [
-              { text: t("createSections.option1"), is_correct: true },
-              { text: t("createSections.option2"), is_correct: false },
-            ],
-            points: 1,
-          },
-        ],
-      });
+        description_html: null,
+        content_type: type,
+        free_preview: false,
+        order: (mod.lessons?.length ?? 0) + 1,
+        url: "",
+        string_file: null,
+        duration_hours: null,
+      } as any,
+    ];
 
-      if (!newId) throw new Error(t("createSections.noIdReturned"));
+    const nextLessons = reindexOrders1Based(nextLessonsRaw); // <- ensure 1-based order
 
-      setModules((prev) =>
-        prev.map((m) => {
-          if (m.id !== moduleId) return m;
-          const stub: any = {
-            id: newId,
-            title,
-            description: "",
-            description_html: null,
-            content_type: type,
-            order: lastContentIndex + 2,
-          };
-          const next = [...m.lessons];
-          next.splice(lastContentIndex + 1, 0, stub);
-          return { ...m, lessons: reindexOrders1Based(next) };
-        })
-      );
+    setModules((prev) =>
+      prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
+    );
 
+    try {
+      await saveSectionLessons(moduleId, nextLessons);
       toast.success(
         `${
           type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
         } ${t("createSections.created")}`
       );
-      invalidateAssessmentsCacheForLesson(anchorId);
-    } catch (e: any) {
-      const payload = e?.response?.data?.error;
-      handleErrorAlerts(payload);
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+    } catch {
+      toast.error(t("createSections.failedUpdateSomeAttachments"));
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
 
@@ -597,9 +409,8 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         if (m.order === idx + 1) return null;
         return mutateSection({
           id: m.id,
-          payload: {
-            order: idx + 1,
-          },
+          payload: { order: idx + 1 },
+          silent: true,
         });
       })
       .filter(Boolean) as Promise<any>[];
@@ -607,9 +418,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     try {
       await Promise.all(ops);
       toast.success(t("createSections.commitModulesOrderSuccess"));
-      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch {
       toast.error(t("createSections.commitModulesOrderError"));
+    } finally {
+      // single refetch no matter how many patches
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
@@ -618,109 +430,58 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     setModules((prev) =>
       prev.map((m) => {
         if (m.id !== moduleId) return m;
+
+        // Record baseline once per drag gesture
+        if (!dragBaselineRef.current[moduleId]) {
+          dragBaselineRef.current[moduleId] = (m.lessons || []).map(
+            (l: any) => l.id
+          );
+        }
+
         const lessons = [...m.lessons];
-        let d = lessons.findIndex((l: any) => l.id === dragId);
-        let h = lessons.findIndex((l: any) => l.id === hoverId);
+        const d = lessons.findIndex((l: any) => l.id === dragId);
+        const h = lessons.findIndex((l: any) => l.id === hoverId);
         if (d < 0 || h < 0 || d === h) return m;
 
-        // If dragging an assessment, convert to its anchor so you only move the group
-        const dIsAssessment = isAssessment((lessons[d] as any)?.content_type);
-        if (dIsAssessment) {
-          for (let i = d - 1; i >= 0; i--) {
-            if (isContent((lessons[i] as any)?.content_type)) {
-              d = i;
-              break;
-            }
-          }
-        }
+        const [dragged] = lessons.splice(d, 1);
+        lessons.splice(h, 0, dragged);
 
-        // If hovering over an assessment, normalize drop target to its anchor content
-        const hIsAssessment = isAssessment((lessons[h] as any)?.content_type);
-        if (hIsAssessment) {
-          for (let i = h - 1; i >= 0; i--) {
-            if (isContent((lessons[i] as any)?.content_type)) {
-              h = i;
-              break;
-            }
-          }
-        }
-
-        if (d === h) return m;
-
-        // Determine the group slice: anchor content + all contiguous assessments until next content
-        const start = d;
-        if (!isContent((lessons[start] as any)?.content_type)) return m;
-        let endExclusive = start + 1;
-        while (
-          endExclusive < lessons.length &&
-          isAssessment((lessons[endExclusive] as any)?.content_type)
-        ) {
-          endExclusive++;
-        }
-
-        // Extract the group
-        const group = lessons.slice(start, endExclusive);
-        lessons.splice(start, group.length);
-
-        // After removal, target index may shift
-        if (start < h) {
-          h -= group.length;
-        }
-
-        // Insert group before the hover anchor
-        lessons.splice(h, 0, ...group);
-
-        return { ...m, lessons };
+        return { ...m, lessons: reindexOrders1Based(lessons) };
       })
     );
   };
 
-  const commitLessonOrderAndAnchors = async (moduleId: string) => {
+  const commitLessonOrder = async (moduleId: string) => {
     return debounceCommit(moduleId, async () => {
       const mod = modules.find((m) => m.id === moduleId);
       if (!mod) return;
 
-      try {
-        await saveSectionLessons(moduleId);
-      } catch {
-        toast.error(t("createSections.commitLessonOrderAndAnchorsError"));
-        await queryClient.invalidateQueries({
-          queryKey: qk.modules(courseId),
-        });
+      // Determine "before" order:
+      // 1) if we have a live drag baseline (we moved over at least one item), use it
+      // 2) otherwise fall back to last committed order snapshot (covers drag-drop in same place)
+      const baseline =
+        dragBaselineRef.current[moduleId] ??
+        lastCommittedLessonOrderRef.current[moduleId];
+
+      const currentIds = (mod.lessons || []).map((l: any) => l.id);
+
+      // Clear the live baseline after drag ends
+      delete dragBaselineRef.current[moduleId];
+
+      // If nothing changed, skip the network call
+      if (baseline && arraysEqual(baseline, currentIds)) {
         return;
       }
 
-      const patches: Promise<any>[] = [];
-      const affectedAnchors = new Set<string>();
-
-      const nextLessons = [...(mod.lessons || [])];
-      nextLessons.forEach((l, idx) => {
-        if (!isAssessment((l as any).content_type)) return;
-        const newAnchor = anchorAbove(nextLessons as any, idx);
-        const oldAnchor = (l as any)._anchor;
-        if (!newAnchor || newAnchor === oldAnchor) return;
-        patches.push(
-          mutateExam({
-            id: l.id,
-            payload: { lesson: newAnchor },
-            lessonIdHint: newAnchor,
-          })
-        );
-        if (oldAnchor) affectedAnchors.add(oldAnchor);
-        affectedAnchors.add(newAnchor);
-        (l as any)._anchor = newAnchor;
-      });
-
-      if (patches.length) {
-        try {
-          await Promise.allSettled(patches);
-          affectedAnchors.forEach((a) =>
-            invalidateAssessmentsCacheForLesson(a)
-          );
-          toast.success(t("createSections.attachmentsUpdated"));
-        } catch {
-          toast.error(t("createSections.failedUpdateSomeAttachments"));
-        }
+      try {
+        await saveSectionLessons(moduleId, [], true);
+        // Update last committed snapshot on success
+        lastCommittedLessonOrderRef.current[moduleId] = currentIds;
+        toast.success(t("createSections.commitModulesOrderSuccess"));
+      } catch {
+        toast.error(t("createSections.commitModulesOrderError"));
+      } finally {
+        await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
       }
     });
   };
@@ -729,12 +490,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     try {
       await removeSection({ id });
       toast.success(t("createSections.moduleDeleted"));
-      await queryClient.invalidateQueries({
-        queryKey: qk.modules(courseId),
-      });
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch (e: any) {
-      const payload = e?.response?.data?.error;
-      handleErrorAlerts(payload);
+      handleErrorAlerts(e?.response?.data?.error);
     }
   };
 
@@ -754,7 +512,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     try {
       await saveSectionLessons(moduleId);
       toast.success(t("createSections.lessonRemoved"));
-      await commitLessonOrderAndAnchors(moduleId);
+      await commitLessonOrder(moduleId);
     } catch {
       toast.error(t("createSections.failedRemoveLesson"));
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
@@ -762,30 +520,24 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   };
 
   const deleteExamOrQuiz = async (id: string, moduleId: string) => {
-    try {
-      const mod = modules.find((m) => m.id === moduleId);
-      let anchorIdForDeleted: string | null = null;
-      if (mod) {
-        const idx = mod.lessons.findIndex((l: any) => l.id === id);
-        if (idx >= 0) {
-          anchorIdForDeleted = anchorAbove(mod.lessons as any, idx);
-        }
-      }
-      await removeExam({ id, lessonIdHint: anchorIdForDeleted ?? undefined });
-      setModules((prev) =>
-        prev.map((m) =>
-          m.id !== moduleId
-            ? m
-            : { ...m, lessons: m.lessons.filter((l) => l.id !== id) }
-        )
-      );
-      if (anchorIdForDeleted)
-        invalidateAssessmentsCacheForLesson(anchorIdForDeleted);
+    const mod = modules.find((m) => m.id === moduleId);
+    if (!mod) return;
 
+    const nextLessons = reindexOrders1Based(
+      (mod.lessons || []).filter((l) => l.id !== id)
+    ); // <- reindex
+
+    setModules((prev) =>
+      prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
+    );
+
+    try {
+      await saveSectionLessons(moduleId, nextLessons);
       toast.success(t("createSections.assessmentDeleted"));
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch (e: any) {
-      const payload = e?.response?.data?.error;
-      handleErrorAlerts(payload);
+      handleErrorAlerts(e?.response?.data?.error);
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
 
@@ -823,398 +575,367 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           </div>
         ) : (
           <div className="space-y-6">
-            {modules.map((module, mIndex) => {
-              const hasAnyContent = (module.lessons ?? []).some((l) =>
-                isContent((l as any).content_type)
-              );
-              return (
-                <ModuleItem
-                  key={module.id}
-                  module={{ ...module, order: mIndex + 1 }}
-                  index={mIndex}
-                  moveModule={moveModule}
-                  onDragEnd={commitModulesOrder}
-                >
-                  <div className="border border-gray-200 rounded-lg overflow-visible">
-                    <div className="sm:p-4 p-2 bg-gray-50 border-b border-gray-200 relative">
-                      <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
-                          </div>
-                          <div className="flex-1 flex flex-col">
-                            <input
-                              type="text"
-                              value={module.title ?? ""}
-                              onChange={(e) =>
-                                setModules((prev) =>
-                                  prev.map((m) =>
-                                    m.id === module.id
-                                      ? { ...m, title: e.target.value }
-                                      : m
-                                  )
-                                )
-                              }
-                              onBlur={(e) =>
-                                patchModuleField(
-                                  module.id,
-                                  "title",
-                                  e.target.value
-                                ).catch(() => {})
-                              }
-                              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0"
-                            />
-                            <input
-                              type="text"
-                              value={module.description ?? ""}
-                              onChange={(e) =>
-                                setModules((prev) =>
-                                  prev.map((m) =>
-                                    m.id === module.id
-                                      ? { ...m, description: e.target.value }
-                                      : m
-                                  )
-                                )
-                              }
-                              onBlur={(e) =>
-                                patchModuleField(
-                                  module.id,
-                                  "description",
-                                  e.target.value
-                                ).catch(() => {})
-                              }
-                              placeholder="Module description"
-                              className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 sm:max-w-full max-w-60 mt-1"
-                            />
-                          </div>
+            {modules.map((module, mIndex) => (
+              <ModuleItem
+                key={module.id}
+                module={{ ...module, order: mIndex + 1 }}
+                index={mIndex}
+                moveModule={moveModule}
+                onDragEnd={commitModulesOrder}
+              >
+                <div className="border border-gray-200 rounded-lg overflow-visible">
+                  <div className="sm:p-4 p-2 bg-gray-50 border-b border-gray-200 relative">
+                    <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
                         </div>
-                        <div className="flex sm:self-center self-end items-center space-x-2">
-                          <div className="relative" ref={setMenuRef(module.id)}>
-                            <button
-                              type="button"
-                              aria-label="Add"
-                              onClick={() =>
-                                setOpenMenuFor((id) =>
-                                  id === module.id ? null : module.id
+                        <div className="flex-1 flex flex-col">
+                          <input
+                            type="text"
+                            value={module.title ?? ""}
+                            onChange={(e) =>
+                              setModules((prev) =>
+                                prev.map((m) =>
+                                  m.id === module.id
+                                    ? { ...m, title: e.target.value }
+                                    : m
                                 )
-                              }
-                              className="text-purple-600 hover:text-purple-800 p-2 rounded-lg border border-purple-200 hover:border-purple-300"
-                              title={t("createSections.add")}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                            {openMenuFor === module.id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    addContentLesson(module.id, "video");
-                                    setOpenMenuFor(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
-                                >
-                                  <Video className="w-4 h-4 mr-2" />
-                                  {t("createSections.video")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    addContentLesson(module.id, "article");
-                                    setOpenMenuFor(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  {t("createSections.article")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    addContentLesson(module.id, "material");
-                                    setOpenMenuFor(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
-                                >
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  {t("createSections.material")}
-                                </button>
-                                <div className="my-1 border-t border-gray-200" />
-                                <button
-                                  type="button"
-                                  disabled={!hasAnyContent}
-                                  onClick={() => {
-                                    if (!hasAnyContent) return;
-                                    addAssessment(module.id, "quiz");
-                                    setOpenMenuFor(null);
-                                  }}
-                                  className={`w-full text-left px-4 py-2 flex items-center ${
-                                    hasAnyContent
-                                      ? "hover:bg-gray-50"
-                                      : "opacity-50 cursor-not-allowed"
-                                  }`}
-                                  title={
-                                    hasAnyContent
-                                      ? "Attach a Quiz to the last content lesson"
-                                      : "Create a lesson first"
-                                  }
-                                >
-                                  <HelpCircle className="w-4 h-4 mr-2" />
-                                  Quiz
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!hasAnyContent}
-                                  onClick={() => {
-                                    if (!hasAnyContent) return;
-                                    addAssessment(module.id, "exam");
-                                    setOpenMenuFor(null);
-                                  }}
-                                  className={`w-full text-left px-4 py-2 flex items-center rounded-b-lg ${
-                                    hasAnyContent
-                                      ? "hover:bg-gray-50"
-                                      : "opacity-50 cursor-not-allowed"
-                                  }`}
-                                  title={
-                                    hasAnyContent
-                                      ? "Attach an Exam to the last content lesson"
-                                      : "Create a lesson first"
-                                  }
-                                >
-                                  <Award className="w-4 h-4 mr-2" />
-                                  Exam
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => deleteModule(module.id)}
-                            className="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"
-                            title="Delete Module"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                              )
+                            }
+                            onBlur={(e) =>
+                              patchModuleField(
+                                module.id,
+                                "title",
+                                e.target.value
+                              ).catch(() => {})
+                            }
+                            className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                          />
+                          <input
+                            type="text"
+                            value={module.description ?? ""}
+                            onChange={(e) =>
+                              setModules((prev) =>
+                                prev.map((m) =>
+                                  m.id === module.id
+                                    ? { ...m, description: e.target.value }
+                                    : m
+                                )
+                              )
+                            }
+                            onBlur={(e) =>
+                              patchModuleField(
+                                module.id,
+                                "description",
+                                e.target.value
+                              ).catch(() => {})
+                            }
+                            placeholder="Module description"
+                            className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 sm:max-w-full max-w-60 mt-1"
+                          />
                         </div>
                       </div>
+                      <div className="flex sm:self-center self-end items-center space-x-2">
+                        <div className="relative" ref={setMenuRef(module.id)}>
+                          <button
+                            type="button"
+                            aria-label="Add"
+                            onClick={() =>
+                              setOpenMenuFor((id) =>
+                                id === module.id ? null : module.id
+                              )
+                            }
+                            className="text-purple-600 hover:text-purple-800 p-2 rounded-lg border border-purple-200 hover:border-purple-300"
+                            title={t("createSections.add")}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                          {openMenuFor === module.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  addContentLesson(module.id, "video");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                              >
+                                <Video className="w-4 h-4 mr-2" />
+                                {t("createSections.video")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  addContentLesson(module.id, "article");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                {t("createSections.article")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  addContentLesson(module.id, "material");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                {t("createSections.material")}
+                              </button>
+                              <div className="my-1 border-t border-gray-200" />
+                              {/* Quiz & Exam: standalone lessons */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  addAssessment(module.id, "quiz");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full text-left px-4 py-2 flex items-center hover:bg-gray-50"
+                                title="Create a quiz lesson"
+                              >
+                                <HelpCircle className="w-4 h-4 mr-2" />
+                                Quiz
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  addAssessment(module.id, "exam");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full text-left px-4 py-2 flex items-center rounded-b-lg hover:bg-gray-50"
+                                title="Create an exam lesson"
+                              >
+                                <Award className="w-4 h-4 mr-2" />
+                                Exam
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteModule(module.id)}
+                          className="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"
+                          title="Delete Module"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+                  </div>
 
-                    {(module.lessons?.length ?? 0) > 0 && (
-                      <div className="p-4 space-y-2">
-                        {module.lessons!.map((lesson, lIndex) => {
-                          const isContentLesson = isContent(
-                            (lesson as any).content_type
-                          );
-                          const videoUrlPreview = (lesson as any)?.url || "";
+                  {(module.lessons?.length ?? 0) > 0 && (
+                    <div className="p-4 space-y-2">
+                      {module.lessons!.map((lesson, lIndex) => {
+                        const isContentLesson = isContent(
+                          (lesson as any).content_type
+                        );
+                        const videoUrlPreview = (lesson as any)?.url || "";
 
-                          return (
-                            <LessonItem
-                              key={lesson.id}
-                              moduleId={module.id}
-                              lesson={lesson}
-                              index={lIndex}
-                              moveLesson={moveLesson}
-                              onDragEnd={() =>
-                                commitLessonOrderAndAnchors(module.id)
-                              }
-                              canDrag={isContentLesson}
-                            >
-                              <div className="flex sm:items-center items-start sm:flex-row flex-col sm:gap-0 gap-4 justify-between sm:p-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                <div className="flex items-center gap-3 w-full">
-                                  <div>
-                                    {isContentLesson ? (
-                                      <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
-                                    ) : (
-                                      <div className="w-4 h-4" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    {isContentLesson ? (
-                                      (lesson as any).content_type ===
-                                      "video" ? (
-                                        <Video className="w-4 h-4" />
-                                      ) : (lesson as any).content_type ===
-                                        "article" ? (
-                                        <FileText className="w-4 h-4" />
-                                      ) : (
-                                        <Upload className="w-4 h-4" />
-                                      )
+                        return (
+                          <LessonItem
+                            key={lesson.id}
+                            moduleId={module.id}
+                            lesson={lesson}
+                            index={lIndex}
+                            moveLesson={moveLesson}
+                            onDragEnd={() => commitLessonOrder(module.id)}
+                            canDrag={true}
+                          >
+                            <div className="flex sm:items-center items-start sm:flex-row flex-col sm:gap-0 gap-4 justify-between sm:p-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              <div className="flex items-center gap-3 w-full">
+                                <div>
+                                  <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+                                </div>
+                                <div>
+                                  {isContentLesson ? (
+                                    (lesson as any).content_type === "video" ? (
+                                      <Video className="w-4 h-4" />
                                     ) : (lesson as any).content_type ===
-                                      "quiz" ? (
-                                      <HelpCircle className="w-4 h-4" />
+                                      "article" ? (
+                                      <FileText className="w-4 h-4" />
                                     ) : (
-                                      <Award className="w-4 h-4" />
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <input
-                                      type="text"
-                                      value={(lesson as any).title}
-                                      onChange={(e) =>
-                                        updateLessonLocal(
+                                      <Upload className="w-4 h-4" />
+                                    )
+                                  ) : (lesson as any).content_type ===
+                                    "quiz" ? (
+                                    <HelpCircle className="w-4 h-4" />
+                                  ) : (
+                                    <Award className="w-4 h-4" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <input
+                                    type="text"
+                                    value={(lesson as any).title}
+                                    onChange={(e) =>
+                                      updateLessonLocal(module.id, lesson.id, {
+                                        title: e.target.value,
+                                      } as any)
+                                    }
+                                    onBlur={async (e) => {
+                                      try {
+                                        const mod = modules.find(
+                                          (m) => m.id === module.id
+                                        );
+                                        if (!mod) return;
+                                        const nextLessons = (
+                                          mod.lessons ?? []
+                                        ).map((l) =>
+                                          l.id === lesson.id
+                                            ? { ...l, title: e.target.value }
+                                            : l
+                                        );
+                                        setModules((prev) =>
+                                          prev.map((m) =>
+                                            m.id !== module.id
+                                              ? m
+                                              : { ...m, lessons: nextLessons }
+                                          )
+                                        );
+                                        await saveSectionLessons(
                                           module.id,
-                                          lesson.id,
-                                          { title: e.target.value } as any
-                                        )
+                                          nextLessons
+                                        );
+                                        toast.success("Saved");
+                                      } catch {
+                                        /* ignore */
                                       }
-                                      onBlur={async (e) => {
-                                        if (!isContentLesson) {
-                                          const anchor = anchorAbove(
-                                            module.lessons as any,
-                                            lIndex
-                                          );
-                                          try {
-                                            await patchAssessmentField(
-                                              (lesson as any).id,
-                                              "title",
-                                              e.target.value,
-                                              anchor ?? "",
-                                              (lesson as any).content_type as
-                                                | "quiz"
-                                                | "exam"
-                                            );
-                                          } catch {
-                                            //
-                                          }
-                                          return;
-                                        }
-                                        try {
-                                          await saveSectionLessons(module.id);
-                                          toast.success("Saved");
-                                        } catch {
-                                          //
-                                        }
-                                      }}
-                                      className="font-medium max-w-full bg-transparent border-none focus:outline-none focus:ring-0 p-0"
-                                    />
-                                    <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
-                                      <span className="inline-flex items-center flex-wrap">
-                                        {isContentLesson &&
-                                        (lesson as any).content_type ===
-                                          "video" ? (
-                                          <>
-                                            <Link className="w-3 h-3 mr-1" />
-                                            {videoUrlPreview
-                                              ? String(videoUrlPreview).slice(
-                                                  0,
-                                                  20
-                                                )
-                                              : "No URL"}
-                                          </>
-                                        ) : null}
-                                      </span>
-                                    </div>
+                                    }}
+                                    className="font-medium max-w-full bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                                  />
+                                  <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
+                                    <span className="inline-flex items-center flex-wrap">
+                                      {isContentLesson &&
+                                      (lesson as any).content_type ===
+                                        "video" ? (
+                                        <>
+                                          <Link className="w-3 h-3 mr-1" />
+                                          {videoUrlPreview
+                                            ? String(videoUrlPreview).slice(
+                                                0,
+                                                20
+                                              )
+                                            : "No URL"}
+                                        </>
+                                      ) : null}
+                                    </span>
                                   </div>
                                 </div>
+                              </div>
 
-                                <div className="flex items-center space-x-2 sm:self-center self-end">
-                                  {isContentLesson ? (
-                                    <>
+                              <div className="flex items-center space-x-2 sm:self-center self-end">
+                                {isContentLesson ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deleteContentLesson(
+                                          module.id,
+                                          lesson.id
+                                        )
+                                      }
+                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+
+                                    {(lesson as any).content_type ===
+                                      "video" && (
                                       <button
                                         type="button"
                                         onClick={() =>
-                                          deleteContentLesson(
-                                            module.id,
-                                            lesson.id
-                                          )
-                                        }
-                                        className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                        title="Delete"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-
-                                      {(lesson as any).content_type ===
-                                        "video" && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setEditingLesson({
-                                              moduleId: module.id,
-                                              lessonId: lesson.id,
-                                            })
-                                          }
-                                          className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                                          title="Edit Video"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
-                                      )}
-
-                                      {(lesson as any).content_type ===
-                                        "article" && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setEditingArticle({
-                                              moduleId: module.id,
-                                              lessonId: lesson.id,
-                                            })
-                                          }
-                                          className="p-1 text-green-400 hover:text-green-600 transition-colors"
-                                          title="Edit Article"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
-                                      )}
-
-                                      {(lesson as any).content_type ===
-                                        "material" && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setUploadingMaterial({
-                                              moduleId: module.id,
-                                              lessonId: lesson.id,
-                                            })
-                                          }
-                                          className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                          title="Upload Material"
-                                        >
-                                          <Upload className="w-4 h-4" />
-                                        </button>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setEditingAssessment({
-                                            id: lesson.id,
+                                          setEditingLesson({
                                             moduleId: module.id,
-                                            type: (lesson as any)
-                                              .content_type as "quiz" | "exam",
+                                            lessonId: lesson.id,
                                           })
                                         }
-                                        className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
-                                        title="Edit"
+                                        className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                                        title="Edit Video"
                                       >
                                         <Edit className="w-4 h-4" />
                                       </button>
+                                    )}
+
+                                    {(lesson as any).content_type ===
+                                      "article" && (
                                       <button
                                         type="button"
                                         onClick={() =>
-                                          deleteExamOrQuiz(lesson.id, module.id)
+                                          setEditingArticle({
+                                            moduleId: module.id,
+                                            lessonId: lesson.id,
+                                          })
                                         }
-                                        className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                        title="Delete"
+                                        className="p-1 text-green-400 hover:text-green-600 transition-colors"
+                                        title="Edit Article"
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Edit className="w-4 h-4" />
                                       </button>
-                                    </>
-                                  )}
-                                </div>
+                                    )}
+
+                                    {(lesson as any).content_type ===
+                                      "material" && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setUploadingMaterial({
+                                            moduleId: module.id,
+                                            lessonId: lesson.id,
+                                          })
+                                        }
+                                        className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
+                                        title="Upload Material"
+                                      >
+                                        <Upload className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingAssessment({
+                                          id: lesson.id, // lesson id
+                                          moduleId: module.id,
+                                          type: (lesson as any).content_type as
+                                            | "quiz"
+                                            | "exam",
+                                        })
+                                      }
+                                      className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
+                                      title="Edit"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deleteExamOrQuiz(lesson.id, module.id)
+                                      }
+                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                            </LessonItem>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </ModuleItem>
-              );
-            })}
+                            </div>
+                          </LessonItem>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </ModuleItem>
+            ))}
           </div>
         )}
       </div>
@@ -1253,13 +974,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               const nextLessons = (mod.lessons ?? []).map((l) =>
                 l.id === editingLesson.lessonId ? { ...l, _draft: false } : l
               );
-
               setModules((prev) =>
                 prev.map((m) =>
                   m.id !== mod.id ? m : { ...m, lessons: nextLessons }
                 )
               );
-
               await saveSectionLessons(mod.id, nextLessons);
               toast.success("Video saved");
             } finally {
@@ -1305,13 +1024,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               const nextLessons = (mod.lessons ?? []).map((l) =>
                 l.id === editingArticle.lessonId ? { ...l, _draft: false } : l
               );
-
               setModules((prev) =>
                 prev.map((m) =>
                   m.id !== mod.id ? m : { ...m, lessons: nextLessons }
                 )
               );
-
               await saveSectionLessons(mod.id, nextLessons);
               toast.success("Article saved");
             } finally {
@@ -1361,13 +1078,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                   ? { ...l, _draft: false }
                   : l
               );
-
               setModules((prev) =>
                 prev.map((m) =>
                   m.id !== mod.id ? m : { ...m, lessons: nextLessons }
                 )
               );
-
               await saveSectionLessons(mod.id, nextLessons);
               toast.success("Material saved");
             } finally {
@@ -1378,6 +1093,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       )}
 
       {/* Quiz / Exam Builder & Preview */}
+      {/* Quiz / Exam Builder & Preview */}
       {editingAssessment && (
         <Modal
           isOpen={!!editingAssessment}
@@ -1387,54 +1103,94 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           }
           size="xl"
         >
-          <QuizBuilder
-            initialQuiz={assessmentDetail ?? { type: editingAssessment?.type }}
-            onTitleChange={(t) =>
-              updateLessonLocal(
-                editingAssessment.moduleId,
-                editingAssessment.id,
-                { title: t } as any
-              )
-            }
-            onSave={async (draft) => {
-              try {
-                await mutateExam({
-                  id: editingAssessment.id,
-                  payload: {
-                    ...draft,
-                    type: editingAssessment.type,
-                    lesson: anchorIdForEditingAssessment,
-                    time_limit: draft.time_limit,
-                  },
-                  lessonIdHint: anchorIdForEditingAssessment ?? undefined,
-                });
-                // cache the full draft we just saved
-                setCachedAssessment(editingAssessment.id, draft);
+          {(() => {
+            const mod = modules.find(
+              (m) => m.id === editingAssessment.moduleId
+            );
+            const les = mod?.lessons.find(
+              (l) => l.id === editingAssessment.id
+            ) as any;
 
-                updateLessonLocal(
-                  editingAssessment.moduleId,
-                  editingAssessment.id,
-                  { title: draft.title } as any
-                );
+            // helper to persist a single lesson field on blur
+            const persistLessonField = async (
+              field: "title" | "description",
+              value: string
+            ) => {
+              if (!mod || !les) return;
+              const nextLessons = (mod.lessons ?? []).map((l) =>
+                l.id === les.id ? { ...l, [field]: value } : l
+              );
+              // reflect immediately (in case blur fires before React batch settles)
+              setModules((prev) =>
+                prev.map((m) =>
+                  m.id !== mod.id ? m : { ...m, lessons: nextLessons }
+                )
+              );
+              await saveSectionLessons(mod.id, nextLessons);
+            };
 
-                if (anchorIdForEditingAssessment) {
-                  invalidateAssessmentsCacheForLesson(
-                    anchorIdForEditingAssessment
-                  );
+            return (
+              <QuizBuilder
+                // server exam object (may be empty defaults)
+                initialQuiz={
+                  assessmentDetail ?? { type: editingAssessment?.type }
                 }
+                // 🔹 Lesson meta shown/edited in builder header + info card
+                lessonTitle={les?.title ?? ""}
+                lessonDescription={les?.description ?? ""}
+                // live UI sync (no network)
+                onLessonTitleChange={(t) =>
+                  updateLessonLocal(
+                    editingAssessment.moduleId,
+                    editingAssessment.id,
+                    {
+                      title: t,
+                    } as any
+                  )
+                }
+                onLessonDescriptionChange={(d) =>
+                  updateLessonLocal(
+                    editingAssessment.moduleId,
+                    editingAssessment.id,
+                    {
+                      description: d,
+                    } as any
+                  )
+                }
+                // persist on blur (patch section with full lessons array)
+                onLessonTitleBlur={(t) => persistLessonField("title", t)}
+                onLessonDescriptionBlur={(d) =>
+                  persistLessonField("description", d)
+                }
+                // exam save -> patch exam-only fields
+                onSave={async (draft) => {
+                  try {
+                    const payload = {
+                      type: editingAssessment.type,
+                      time_limit: draft.time_limit,
+                      passing_score: draft.passing_score,
+                      questions: draft.questions,
+                    };
+                    await mutateExam({
+                      id: editingAssessment.id, // lessonId
+                      payload,
+                    });
 
-                toast.success("Saved");
-                // if you still keep the old "exams-by-lesson" read somewhere, keep this too:
-                queryClient.invalidateQueries({
-                  queryKey: ["exams-by-lesson", anchorIdForEditingAssessment],
-                });
-              } catch {
-                toast.error("Failed to save");
-              }
-            }}
-            onPreview={(draft) => setPreviewDraft(draft)}
-            onClose={() => setEditingAssessment(null)}
-          />
+                    // keep lesson row title in list in sync (already handled by onChange)
+                    invalidateLessonExams(queryClient, editingAssessment.id);
+                    toast.success("Saved");
+                    queryClient.invalidateQueries({
+                      queryKey: qk.modules(courseId),
+                    });
+                  } catch {
+                    toast.error("Failed to save");
+                  }
+                }}
+                onPreview={(draft) => setPreviewDraft(draft)}
+                onClose={() => setEditingAssessment(null)}
+              />
+            );
+          })()}
         </Modal>
       )}
 

@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
   courseUsers: "course/get-student-courses/",
   submitExam: "exam/exam-quiz/",
   getStudentAnswers: "exam/get-student-answers/",
-  exams: "course/git-quizs/",
+  exams: "course/quiz/",
   categories: "course/categories/",
   subCategories: "course/get-sub-categories/",
   featuredCourses: "course/best-sellers/",
