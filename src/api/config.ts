@@ -14,12 +14,18 @@ declare module "axios" {
 }
 // Public endpoints (no Authorization header should be sent)
 const PUBLIC_ENDPOINT_PREFIXES: string[] = [
-  API_ENDPOINTS.courses,
   API_ENDPOINTS.categories,
-  API_ENDPOINTS.featuredCourses,
+  API_ENDPOINTS.subCategories,
+  API_ENDPOINTS.oldCourses,
+  API_ENDPOINTS.courses,
   API_ENDPOINTS.modules,
-  API_ENDPOINTS.instructor,
+  API_ENDPOINTS.exams,
+  API_ENDPOINTS.featuredCourses,
   API_ENDPOINTS.courseReviews,
+  API_ENDPOINTS.reviewReasons,
+  API_ENDPOINTS.courseStudentReview,
+  API_ENDPOINTS.enrolledCourses,
+  API_ENDPOINTS.instructor,
   API_ENDPOINTS.login,
   API_ENDPOINTS.signup,
   API_ENDPOINTS.refreshToken,
