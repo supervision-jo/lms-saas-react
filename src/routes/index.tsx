@@ -73,7 +73,27 @@ export default function AppRoutes() {
           {shouldShowHomePage ? (
             <Route path="/" element={<HomePage />} />
           ) : (
-            <Route path="/" element={<Navigate to="/catalog" replace />} />
+            <>
+              {isAuthenticated ? (
+                <>
+                  <Route
+                    path="login"
+                    element={<Navigate to="/catalog" replace />}
+                  />
+
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route
+                    path="catalog"
+                    element={<Navigate to="/login" replace />}
+                  />
+
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                </>
+              )}
+            </>
           )}
 
           {(registrationError || registrationFetching || registrationLoading) &&
@@ -123,10 +143,6 @@ export default function AppRoutes() {
         )} */}
 
         {/* {!isAuthenticated && <Route path="login" element={<LoginPage />} />} */}
-
-        {/* {isAuthenticated && (
-          <Route path="login" element={<Navigate to="/dashboard" replace />} />
-        )} */}
 
         <Route
           path="*"
