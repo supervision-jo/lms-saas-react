@@ -7,7 +7,7 @@ import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 import { Award, RotateCcw, X } from "lucide-react";
-import { useNavigate } from "react-router";
+import blankCertificateImage from "../../../assets/blank_certificat.png";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -29,7 +29,6 @@ interface StudentAnswers {
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const { t, i18n } = useTranslation("coursePlayer");
-  const navigate = useNavigate();
 
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
@@ -153,7 +152,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const handleViewCertificate = () => {
     if (!passed) return;
     setShowResultModal(false);
-    navigate("/profile?tab=certificates");
+    window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
   };
 
   const submitDisabled =
