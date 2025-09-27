@@ -37,7 +37,21 @@
     "noRetake": "Passed — No Retake",
     "noAttemptsLeft": "No Attempts Left",
     "retake": "Retake",
-    "continue": "Continue Learning"
+    "continue": "Continue Learning",
+    "viewResult": "View result details",
+    "resultModal": {
+      "close": "Close result dialog",
+      "attemptLabel": "Attempt #{{attempt}}",
+      "title": "{{type}} result",
+      "subtitle": "{{correct}} out of {{total}} correct answers",
+      "scoreLabel": "Score",
+      "passed": "Congratulations! You passed this {{type}}.",
+      "failed": "Keep going! You can retake this {{type}}.",
+      "passedTag": "Passed",
+      "failedTag": "Failed",
+      "viewCertificate": "View certificate",
+      "retake": "Retake exam"
+    }
   },
   "notesSection": {
     "handleSave": {

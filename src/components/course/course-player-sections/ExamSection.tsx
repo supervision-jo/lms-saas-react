@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
+import { Award, RotateCcw, X } from "lucide-react";
+import { useNavigate } from "react-router";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -27,6 +29,7 @@ interface StudentAnswers {
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const { t, i18n } = useTranslation("coursePlayer");
+  const navigate = useNavigate();
 
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
@@ -62,6 +65,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [submitted, setSubmitted] = useState(false);
   const [isRetaking, setIsRetaking] = useState<boolean>(() => !latest?.id);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   useEffect(() => {
     setIsRetaking(!latest?.id);
@@ -74,6 +78,8 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
     ? Math.round((correct / Math.max(1, totalQuestions)) * 100)
     : 0;
   const passed = latest?.passed ?? false;
+  const examTypeLabel =
+    exam.type === "quiz" ? t("examSection.quiz") : t("examSection.exam");
 
   const reachedMaxAttempts = attemptsCount >= MAX_ATTEMPTS;
   const canRetake = !reachedMaxAttempts;
@@ -126,6 +132,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
       setSubmitted(true);
       setIsRetaking(false);
       await refetchSummary();
+      setShowResultModal(true);
       toast.success(t("examSection.submitExam.success", { nextAttempt }));
     } catch (err: any) {
       handleErrorAlerts(err?.response?.data?.error);
@@ -137,7 +144,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
     setAnswers({});
     setSubmitted(false);
     setIsRetaking(true);
+    setShowResultModal(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCloseResultModal = () => setShowResultModal(false);
+
+  const handleViewCertificate = () => {
+    if (!passed) return;
+    setShowResultModal(false);
+    navigate("/profile?tab=certificates");
   };
 
   const submitDisabled =
@@ -242,11 +258,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
             >
               {isPending
                 ? t("examSection.submitting")
-                : `${t("examSection.submit")} ${
-                    exam.type === "quiz"
-                      ? t("examSection.quiz")
-                      : t("examSection.exam")
-                  }`}
+                : `${t("examSection.submit")}  `}
             </button>
           </>
         ) : (
@@ -260,15 +272,13 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                   )}`}
             </div>
 
-            <div
-              className={`md:text-lg text-sm font-semibold ${
-                passed ? "text-green-700" : "text-red-700"
-              }`}
+            <button
+              onClick={() => setShowResultModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium hover:bg-purple-100 transition-colors"
             >
-              {t("examSection.score")}: {correct}/{totalQuestions} ({percent}%)
-              — {passed ? t("examSection.passed") : t("examSection.failed")} (
-              {t("examSection.pass")} {passing}%)
-            </div>
+              <Award className="w-4 h-4" />
+              {t("examSection.viewResult")}
+            </button>
 
             <div className="text-sm text-gray-500">
               {t("examSection.correct")}: {correct} ·{" "}
@@ -296,6 +306,116 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
           </div>
         )}
       </div>
+
+      {showResultModal && latest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <button
+              onClick={handleCloseResultModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={t("examSection.resultModal.close")}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-purple-400 text-white px-8 pt-10 pb-12 text-center">
+              <p className="uppercase tracking-wide text-xs font-semibold opacity-80">
+                {t("examSection.resultModal.attemptLabel", {
+                  attempt: latest?.attempt ?? nextAttempt,
+                })}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold">
+                {t("examSection.resultModal.title", { type: examTypeLabel })}
+              </h2>
+              <p className="mt-3 text-sm text-purple-100">
+                {t("examSection.resultModal.subtitle", {
+                  correct,
+                  total: totalQuestions,
+                })}
+              </p>
+
+              <div className="mt-8 mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/40 bg-white/10 backdrop-blur-sm">
+                <div className="text-center">
+                  <span className="block text-3xl font-extrabold">
+                    {percent}%
+                  </span>
+                  <span className="text-xs uppercase tracking-wide">
+                    {t("examSection.resultModal.scoreLabel")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 text-sm font-medium">
+                {passed
+                  ? t("examSection.resultModal.passed", { type: examTypeLabel })
+                  : t("examSection.resultModal.failed", {
+                      type: examTypeLabel,
+                    })}
+              </div>
+            </div>
+
+            <div className="px-8 py-6 space-y-4">
+              <div className="flex items-center justify-center gap-3 text-sm text-gray-600">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                    passed
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {passed
+                    ? t("examSection.resultModal.passedTag")
+                    : t("examSection.resultModal.failedTag")}
+                </span>
+                <span>
+                  {t("examSection.score")}: {correct}/{totalQuestions} ·{" "}
+                  {percent}%
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={handleViewCertificate}
+                  disabled={!passed}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors ${
+                    passed
+                      ? "bg-purple-600 text-white hover:bg-purple-700"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  <Award className="w-4 h-4" />
+                  {t("examSection.resultModal.viewCertificate")}
+                </button>
+                <button
+                  onClick={() => {
+                    handleCloseResultModal();
+                    retake();
+                  }}
+                  disabled={!canRetake}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors border ${
+                    canRetake
+                      ? "border-purple-200 text-purple-700 hover:bg-purple-50"
+                      : "border-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {t("examSection.resultModal.retake")}
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  handleCloseResultModal();
+                  onClose();
+                }}
+                className="w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                {t("examSection.continue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

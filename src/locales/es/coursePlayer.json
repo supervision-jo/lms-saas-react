@@ -37,7 +37,21 @@
     "noRetake": "Aprobado — sin reintento",
     "noAttemptsLeft": "No hay intentos restantes",
     "retake": "Reintentar",
-    "continue": "Continuar aprendiendo"
+    "continue": "Continuar aprendiendo",
+    "viewResult": "Ver detalles del resultado",
+    "resultModal": {
+      "close": "Cerrar ventana de resultados",
+      "attemptLabel": "Intento #{{attempt}}",
+      "title": "Resultado del {{type}}",
+      "subtitle": "{{correct}} de {{total}} respuestas correctas",
+      "scoreLabel": "Puntuación",
+      "passed": "¡Felicidades! Aprobaste este {{type}}.",
+      "failed": "¡Sigue intentando! Puedes repetir este {{type}}.",
+      "passedTag": "Aprobado",
+      "failedTag": "Reprobado",
+      "viewCertificate": "Ver certificado",
+      "retake": "Repetir examen"
+    }
   },
   "notesSection": {
     "handleSave": {

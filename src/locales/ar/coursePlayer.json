@@ -24,7 +24,7 @@
     "noAttempts": "لا توجد محاولات أخرى متبقية.",
     "submitting": "جارٍ الإرسال...",
     "submit": "إرسال",
-    "quiz": "اختبار قصير",
+    "quiz": "اختبار ",
     "exam": "اختبار",
     "loadRes": "جارٍ تحميل النتائج...",
     "submittedAt": "تم الإرسال في",
@@ -37,7 +37,21 @@
     "noRetake": "تم الاجتياز — لا إعادة",
     "noAttemptsLeft": "لا توجد محاولات متبقية",
     "retake": "إعادة المحاولة",
-    "continue": "متابعة التعلّم"
+    "continue": "متابعة التعلّم",
+    "viewResult": "عرض تفاصيل النتيجة",
+    "resultModal": {
+      "close": "إغلاق نافذة النتيجة",
+      "attemptLabel": "المحاولة #{{attempt}}",
+      "title": "نتيجة {{type}}",
+      "subtitle": "{{correct}} من {{total}} إجابات صحيحة",
+      "scoreLabel": "الدرجة",
+      "passed": "أحسنت! لقد اجتزت هذا {{type}}.",
+      "failed": "واصل المحاولة! يمكنك إعادة هذا {{type}}.",
+      "passedTag": "ناجح",
+      "failedTag": "راسب",
+      "viewCertificate": "عرض الشهادة",
+      "retake": "إعادة الاختبار"
+    }
   },
   "notesSection": {
     "handleSave": {
@@ -54,7 +68,7 @@
       "save": "حفظ"
     }
   },
-  "qaSection": { 
+  "qaSection": {
     "replyForm": {
       "answerUpdated": "تم تحديث الإجابة",
       "replyPosted": "تم نشر الرد",
