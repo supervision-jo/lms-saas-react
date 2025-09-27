@@ -12,6 +12,7 @@ interface AppSettings {
   logo_type: "text" | "image";
   logo_text: string;
   logo_file: string;
+  login_type: "email" | "phone";
   languages: LanguageEntry[];
   default_language: LanguageEntry;
   version?: string;
@@ -29,6 +30,7 @@ const BOOLEAN_FLAGS = [
   "logo_type",
   "logo_text",
   "logo_file",
+  "login_type",
 ] as const;
 
 type BooleanFlagKey = (typeof BOOLEAN_FLAGS)[number];
