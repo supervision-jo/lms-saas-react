@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
 
   const { data, isLoading } = useSettings();
   const loginType = data?.login_type ?? "email";
-  const isPhoneLogin = loginType !== "phone";
+  const isPhoneLogin = loginType === "phone";
 
   const loginFieldValidation = isPhoneLogin
     ? {
