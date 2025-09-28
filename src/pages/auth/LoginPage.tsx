@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
 
   const { data, isLoading } = useSettings();
   const loginType = data?.login_type ?? "email";
-  const isPhoneLogin = loginType === "phone";
+  const isPhoneLogin = loginType !== "phone";
 
   const loginFieldValidation = isPhoneLogin
     ? {
@@ -94,7 +94,9 @@ const LoginPage: React.FC = () => {
     } catch (error: any) {
       const payload = error?.response?.data;
       handleErrorAlerts(
-        payload?.message || "There is an unexpected error occured."
+        payload?.error ||
+          payload.non_field_errors ||
+          "There is an unexpected error occured."
       );
     }
   };

@@ -1,5 +1,3 @@
-// src/components/course/course-builder/CreateSectionsForm.tsx
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
@@ -36,7 +34,6 @@ import { AxiosResponse } from "axios";
 import ModuleItem from "./ModuleItem";
 import LessonItem from "./LessonItem";
 import Modal from "../../reusable-components/Modal";
-// ⬅ removed buildLessonsPayload import
 import { useExamsByLesson } from "../../../hooks/useExamsByLesson";
 import { invalidateLessonExams, qk } from "../../../utils/builderQueries";
 import { useTranslation } from "react-i18next";
@@ -88,18 +85,44 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     () => modulesData?.data?.data ?? [],
     [modulesData]
   );
+
+  // Local editable state
   const [modules, setModules] = useState<Module[]>(serverModules);
-  useEffect(
-    () => setModules(Array.isArray(serverModules) ? serverModules : []),
-    [serverModules]
+
+  // Editing states
+  const [editingLesson, setEditingLesson] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
+  const [editingArticle, setEditingArticle] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
+  const [uploadingMaterial, setUploadingMaterial] = useState<{
+    moduleId: string;
+    lessonId: string;
+  } | null>(null);
+
+  // Assessment editing / preview
+  const [editingAssessment, setEditingAssessment] = useState<{
+    id: string; // lessonId
+    moduleId: string;
+    type: "quiz" | "exam";
+  } | null>(null);
+  const [previewDraft, setPreviewDraft] = useState<AssessmentDraft | null>(
+    null
   );
 
-  const { mutateAsync: createSection } = useCustomPost(
-    API_ENDPOINTS.createSection,
-    ["modules", courseId!]
+  const isEditingAny = !!(
+    editingLesson ||
+    editingArticle ||
+    uploadingMaterial ||
+    editingAssessment
   );
 
+  // Seed local state & snapshot from server — but don't override while any editor is open
   useEffect(() => {
+    if (isEditingAny) return;
     const next = Array.isArray(serverModules) ? serverModules : [];
     setModules(next);
 
@@ -109,7 +132,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       map[m.id] = (m.lessons || []).map((l: any) => l.id);
     });
     lastCommittedLessonOrderRef.current = map;
-  }, [serverModules]);
+  }, [serverModules, isEditingAny]);
+
+  const { mutateAsync: createSection } = useCustomPost(
+    API_ENDPOINTS.createSection,
+    ["modules", courseId!]
+  );
 
   type Values = { id: any; payload: any; silent?: boolean };
 
@@ -144,7 +172,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     onError: (e) => handleErrorAlerts(e.response?.data?.error),
   });
 
-  // exams/quizzes are edited via /updateExam/<lessonId>
+  // exams/quizzes are edited via /updateExam/:lessonId
   const { mutateAsync: mutateExam } = useMutation<
     AxiosResponse<any>,
     any,
@@ -156,14 +184,14 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     onError: (e) => handleErrorAlerts(e.response?.data?.error),
   });
 
-  /** ========= Local payload normalizer (replaces buildLessonsPayload) ========= */
+  // Local payload normalizer (replaces buildLessonsPayload)
   function lessonsToPayload(sourceLessons: any[]) {
     const lessons = (sourceLessons ?? []).map((l, idx) => {
       const base: any = {
         title: l?.title ?? "",
         description: l?.description ?? "",
         free_preview: !!l?.free_preview,
-        order: l?.order ?? idx + 1, // <- trust the current order (or idx+1)
+        order: l?.order ?? idx + 1,
         content_type: l?.content_type,
       };
       if (l?.id && !String(l.id).startsWith("tmp-")) base.id = l.id;
@@ -175,6 +203,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         base.description_html = l?.description_html ?? null;
       } else if (l?.content_type === "material") {
         base.string_file = l?.string_file ?? null;
+        base.url = l?.url ?? null;
       }
       return base;
     });
@@ -182,7 +211,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     return { lessons };
   }
 
-  /** =============== Normalization =============== */
+  /**  Normalization  */
   const saveSectionLessons = async (
     moduleId: string,
     lessonsOverride?: any[],
@@ -192,7 +221,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     if (!mod) return;
 
     const sourceLessons = lessonsOverride ?? mod.lessons ?? [];
-    const reindexed = reindexOrders1Based(sourceLessons); // <- ensure 1-based, in current array order
+    const reindexed = reindexOrders1Based(sourceLessons); // ensure 1-based, in current array order
     const payload = lessonsToPayload(reindexed);
 
     return debounceLessons(moduleId, () =>
@@ -246,39 +275,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     );
   };
 
-  const [editingLesson, setEditingLesson] = useState<{
-    moduleId: string;
-    lessonId: string;
-  } | null>(null);
-  const [editingArticle, setEditingArticle] = useState<{
-    moduleId: string;
-    lessonId: string;
-  } | null>(null);
-  const [uploadingMaterial, setUploadingMaterial] = useState<{
-    moduleId: string;
-    lessonId: string;
-  } | null>(null);
-
-  // Assessment editing / preview
-  const [editingAssessment, setEditingAssessment] = useState<{
-    id: string; // lessonId
-    moduleId: string;
-    type: "quiz" | "exam";
-  } | null>(null);
-  const [previewDraft, setPreviewDraft] = useState<AssessmentDraft | null>(
-    null
-  );
-
-  // fetch exam/quiz by LESSON id
-  const { data: examResp } = useExamsByLesson(
-    editingAssessment?.id ?? undefined
-  );
-  const assessmentDetail = useMemo(() => {
-    const obj = examResp?.data ?? examResp ?? null;
-    return obj && typeof obj === "object" ? obj : null;
-  }, [examResp]);
-
-  // ===== add lessons =====
+  // add lessons
   const addModule = async () => {
     try {
       const body = {
@@ -329,14 +326,8 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
     );
 
-    // persist section with full lessons snapshot
-    saveSectionLessons(moduleId, nextLessons)
-      .then(() =>
-        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) })
-      )
-      .catch(() =>
-        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) })
-      );
+    // no invalidation to avoid replacing the tmp lesson while modal is open
+    saveSectionLessons(moduleId, nextLessons, true).catch(() => {});
 
     // open editor
     setTimeout(() => {
@@ -371,24 +362,30 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       } as any,
     ];
 
-    const nextLessons = reindexOrders1Based(nextLessonsRaw); // <- ensure 1-based order
+    const nextLessons = reindexOrders1Based(nextLessonsRaw); // ensure 1-based order
 
     setModules((prev) =>
       prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
     );
 
     try {
-      await saveSectionLessons(moduleId, nextLessons);
+      // no invalidation to keep the temp item while builder opens
+      await saveSectionLessons(moduleId, nextLessons, true);
       toast.success(
         `${
           type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
         } ${t("createSections.created")}`
       );
-      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     } catch {
       toast.error(t("createSections.failedUpdateSomeAttachments"));
-      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
+
+    // open builder
+    setEditingAssessment({
+      id: tempId,
+      moduleId,
+      type,
+    });
   };
 
   const moveModule = (dragId: string, hoverId: string) => {
@@ -456,9 +453,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       const mod = modules.find((m) => m.id === moduleId);
       if (!mod) return;
 
-      // Determine "before" order:
-      // 1) if we have a live drag baseline (we moved over at least one item), use it
-      // 2) otherwise fall back to last committed order snapshot (covers drag-drop in same place)
       const baseline =
         dragBaselineRef.current[moduleId] ??
         lastCommittedLessonOrderRef.current[moduleId];
@@ -474,7 +468,8 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       }
 
       try {
-        await saveSectionLessons(moduleId, [], true);
+        // send the full lessons array not []
+        await saveSectionLessons(moduleId, undefined, true);
         // Update last committed snapshot on success
         lastCommittedLessonOrderRef.current[moduleId] = currentIds;
         toast.success(t("createSections.commitModulesOrderSuccess"));
@@ -525,7 +520,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
 
     const nextLessons = reindexOrders1Based(
       (mod.lessons || []).filter((l) => l.id !== id)
-    ); // <- reindex
+    ); // reindex
 
     setModules((prev) =>
       prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
@@ -540,6 +535,15 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
     }
   };
+
+  //  fetch exam/quiz by LESSON id (for builder initialQuiz)
+  const { data: examResp } = useExamsByLesson(
+    editingAssessment?.id ?? undefined
+  );
+  const assessmentDetail = useMemo(() => {
+    const obj = examResp?.data ?? examResp ?? null;
+    return obj && typeof obj === "object" ? obj : null;
+  }, [examResp]);
 
   return (
     <div className="sm:space-y-6 space-y-3">
@@ -1098,7 +1102,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       )}
 
       {/* Quiz / Exam Builder & Preview */}
-      {/* Quiz / Exam Builder & Preview */}
       {editingAssessment && (
         <Modal
           isOpen={!!editingAssessment}
@@ -1136,6 +1139,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               await saveSectionLessons(mod.id, nextLessons);
             };
 
+            // fetch the assessment details
             return (
               <QuizBuilder
                 // server exam object (may be empty defaults)
