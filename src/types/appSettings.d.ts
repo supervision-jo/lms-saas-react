@@ -8,6 +8,11 @@ interface AppSettings {
   is_Q_and_A_enabled: boolean;
   is_chat_group_enabled: boolean;
   is_lesson_notes_enabled: boolean;
+  index_page: "home" | "login";
+  logo_type: "text" | "image";
+  logo_text: string;
+  logo_file: string;
+  login_type: "email" | "phone";
   languages: LanguageEntry[];
   default_language: LanguageEntry;
   version?: string;
@@ -21,6 +26,11 @@ const BOOLEAN_FLAGS = [
   "is_Q_and_A_enabled",
   "is_chat_group_enabled",
   "is_lesson_notes_enabled",
+  "index_page",
+  "logo_type",
+  "logo_text",
+  "logo_file",
+  "login_type",
 ] as const;
 
 type BooleanFlagKey = (typeof BOOLEAN_FLAGS)[number];

@@ -5,7 +5,7 @@ import MobileNav from "./MobileNav";
 import { NavItems } from "../../layout/dashboard/Layout";
 import { readUserFromStorage } from "../../services/auth";
 import LocaleSwitcher from "../reusable-components/LocaleSwitcher";
-import { useFeatureFlag } from "../../hooks/useSettings";
+import { useFeatureFlag, useSettings } from "../../hooks/useSettings";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -43,6 +43,8 @@ const Header: React.FC<HeaderProps> = ({
 
   const currentUser: User = readUserFromStorage();
 
+  const { data, isLoading: settingsLoading } = useSettings();
+
   // useEffect(() => {
   //   if (mobileSearchOpen) {
   //     const id = setTimeout(() => mobileInputRef.current?.focus(), 10);
@@ -59,6 +61,10 @@ const Header: React.FC<HeaderProps> = ({
   //   return () => window.removeEventListener("keydown", onKey);
   // }, [mobileSearchOpen]);
 
+  if (settingsLoading) {
+    return "loading...";
+  }
+
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,7 +78,11 @@ const Header: React.FC<HeaderProps> = ({
                 }}
                 className="cursor-pointer text-2xl font-bold text-purple-600"
               >
-                LearnHub
+                {data?.logo_type === "text" ? (
+                  data?.logo_text
+                ) : (
+                  <img src={data?.logo_file} alt="logo" />
+                )}
               </button>
             </div>
 

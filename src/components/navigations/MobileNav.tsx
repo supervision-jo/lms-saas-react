@@ -5,16 +5,16 @@ import { readUserFromStorage } from "../../services/auth";
 import { useTranslation } from "react-i18next";
 
 interface Props {
-  setIsMenuOpen: (s: boolean) => void;
-  mainNavigationItems: NavItems[];
   authNavigationItems: NavItems[];
+  mainNavigationItems: NavItems[];
+  setIsMenuOpen: (s: boolean) => void;
   onLogout?: () => void;
 }
 
 export default function MobileNav({
-  setIsMenuOpen,
   authNavigationItems,
   mainNavigationItems,
+  setIsMenuOpen,
   onLogout,
 }: Props) {
   const navigate = useNavigate();
@@ -52,6 +52,7 @@ export default function MobileNav({
                         : "text-gray-700 hover:text-purple-600"
                     }`
                   }
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   {i.label}
                 </NavLink>
@@ -66,8 +67,8 @@ export default function MobileNav({
                 <button
                   key={idx + 5000}
                   onClick={() => {
-                    navigate(i.id);
                     setIsMenuOpen(false);
+                    navigate(i.id);
                   }}
                   className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600"
                 >
@@ -86,8 +87,8 @@ export default function MobileNav({
         {currentUser && onLogout && (
           <button
             onClick={() => {
-              onLogout();
               setIsMenuOpen(false);
+              onLogout();
             }}
             className="block w-full text-left px-3 py-2 text-red-600 hover:text-red-700"
           >

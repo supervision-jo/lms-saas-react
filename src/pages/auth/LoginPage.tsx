@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  Phone,
+} from "lucide-react";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
@@ -10,6 +18,7 @@ import { useCustomPost } from "../../hooks/useMutation";
 import { storeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
+import { useSettings } from "../../hooks/useSettings";
 
 interface FormValues {
   email: string;
@@ -38,6 +47,26 @@ const LoginPage: React.FC = () => {
   });
 
   const login = useCustomPost(API_ENDPOINTS.login, ["login"]);
+
+  const { data, isLoading } = useSettings();
+  const loginType = data?.login_type ?? "email";
+  const isPhoneLogin = loginType === "phone";
+
+  const loginFieldValidation = isPhoneLogin
+    ? {
+        required: t("Login.phone.error.required"),
+        pattern: {
+          value: /^\+?[0-9\s-]{7,15}$/,
+          message: t("Login.phone.error.valid"),
+        },
+      }
+    : {
+        required: t("Login.email.error.required"),
+        pattern: {
+          value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+          message: t("Login.email.error.valid"),
+        },
+      };
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -74,6 +103,9 @@ const LoginPage: React.FC = () => {
   //   return;
   // };
 
+  if (isLoading) {
+    return "loading...";
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
@@ -88,28 +120,29 @@ const LoginPage: React.FC = () => {
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Email Field */}
+            {/* Login Identifier Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t("Login.email.label")}
+                {t(`Login.${isPhoneLogin ? "phone" : "email"}.label`)}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  {isPhoneLogin ? (
+                    <Phone className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  )}
                 </div>
                 <input
-                  type="email"
-                  {...register("email", {
-                    required: t("Login.email.error.required"),
-                    pattern: {
-                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: t("Login.email.error.valid"),
-                    },
-                  })}
+                  type={isPhoneLogin ? "tel" : "email"}
+                  inputMode={isPhoneLogin ? "tel" : undefined}
+                  {...register("email", loginFieldValidation)}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder={t("Login.email.placeholder")}
+                  placeholder={t(
+                    `Login.${isPhoneLogin ? "phone" : "email"}.placeholder`
+                  )}
                 />
               </div>
               {errors.email && (

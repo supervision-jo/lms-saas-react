@@ -40,12 +40,62 @@ export default function AppRoutes() {
     isLoading: registrationLoading,
   } = useFeatureFlag("is_registration_enabled", true);
 
+  const {
+    enabled: indexEnabled,
+    isError: indexError,
+    isFetching: indexFetching,
+    isLoading: indexLoading,
+  } = useFeatureFlag("index_page", true);
+
+  const shouldShowHomePage = indexError ? false : indexEnabled === "home";
+
+  if (
+    registrationLoading ||
+    registrationFetching ||
+    indexLoading ||
+    indexFetching
+  ) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Auth */}
         <Route path="" element={<Layout />}>
-          <Route path="/" element={<HomePage />} />
+          {shouldShowHomePage ? (
+            <Route path="/" element={<HomePage />} />
+          ) : (
+            <>
+              {isAuthenticated ? (
+                <>
+                  <Route
+                    path="login"
+                    element={<Navigate to="/catalog" replace />}
+                  />
+
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route
+                    path="catalog"
+                    element={<Navigate to="/login" replace />}
+                  />
+
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                </>
+              )}
+            </>
+          )}
+
           {(registrationError || registrationFetching || registrationLoading) &&
           !registrationEnabled ? (
             <Route path="/login" element={<LoginPage />} />
@@ -93,10 +143,6 @@ export default function AppRoutes() {
         )} */}
 
         {/* {!isAuthenticated && <Route path="login" element={<LoginPage />} />} */}
-
-        {/* {isAuthenticated && (
-          <Route path="login" element={<Navigate to="/dashboard" replace />} />
-        )} */}
 
         <Route
           path="*"

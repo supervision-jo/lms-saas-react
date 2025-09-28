@@ -216,7 +216,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     const last = lastSavedRef.current[id]?.[field] ?? "";
     if (String(last) === String(value)) return;
     await mutateSection({ id, payload: { [field]: value } });
-    toast.success("Saved");
+    toast.success(t("createSections.saved"));
     lastSavedRef.current[id] = {
       title: field === "title" ? value : lastSavedRef.current[id]?.title ?? "",
       description:
@@ -631,7 +631,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                 e.target.value
                               ).catch(() => {})
                             }
-                            placeholder="Module description"
+                            placeholder={t(
+                              "createSections.moduleDescPlaceholder"
+                            )}
                             className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 sm:max-w-full max-w-60 mt-1"
                           />
                         </div>
@@ -695,10 +697,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                   setOpenMenuFor(null);
                                 }}
                                 className="w-full text-left px-4 py-2 flex items-center hover:bg-gray-50"
-                                title="Create a quiz lesson"
+                                title={t("createSections.createQuizLesson")}
                               >
                                 <HelpCircle className="w-4 h-4 mr-2" />
-                                Quiz
+                                {t("createSections.quiz")}
                               </button>
                               <button
                                 type="button"
@@ -707,10 +709,11 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                   setOpenMenuFor(null);
                                 }}
                                 className="w-full text-left px-4 py-2 flex items-center rounded-b-lg hover:bg-gray-50"
-                                title="Create an exam lesson"
+                                title={t("createSections.createExamLesson")}
                               >
                                 <Award className="w-4 h-4 mr-2" />
-                                Exam
+
+                                {t("createSections.exam")}
                               </button>
                             </div>
                           )}
@@ -720,7 +723,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                           type="button"
                           onClick={() => deleteModule(module.id)}
                           className="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"
-                          title="Delete Module"
+                          title={t("createSections.deleteModule")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -801,7 +804,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                           module.id,
                                           nextLessons
                                         );
-                                        toast.success("Saved");
+                                        toast.success(
+                                          t("createSections.saved")
+                                        );
                                       } catch {
                                         /* ignore */
                                       }
@@ -820,7 +825,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                                 0,
                                                 20
                                               )
-                                            : "No URL"}
+                                            : t("createSections.noURL")}
                                         </>
                                       ) : null}
                                     </span>
@@ -840,7 +845,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                         )
                                       }
                                       className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                      title="Delete"
+                                      title={t("createSections.delete")}
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -856,7 +861,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                           })
                                         }
                                         className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                                        title="Edit Video"
+                                        title={t("createSections.editVideo")}
                                       >
                                         <Edit className="w-4 h-4" />
                                       </button>
@@ -873,7 +878,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                           })
                                         }
                                         className="p-1 text-green-400 hover:text-green-600 transition-colors"
-                                        title="Edit Article"
+                                        title={t("createSections.editArticle")}
                                       >
                                         <Edit className="w-4 h-4" />
                                       </button>
@@ -890,7 +895,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                           })
                                         }
                                         className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                        title="Upload Material"
+                                        title={t("createSections.edit")}
                                       >
                                         <Upload className="w-4 h-4" />
                                       </button>
@@ -980,7 +985,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 )
               );
               await saveSectionLessons(mod.id, nextLessons);
-              toast.success("Video saved");
+              toast.success(t("createSections.videoSaved"));
             } finally {
               setEditingLesson(null);
             }
@@ -1030,7 +1035,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 )
               );
               await saveSectionLessons(mod.id, nextLessons);
-              toast.success("Article saved");
+              toast.success(t("createSections.articleSaved"));
             } finally {
               setEditingArticle(null);
             }
@@ -1084,7 +1089,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 )
               );
               await saveSectionLessons(mod.id, nextLessons);
-              toast.success("Material saved");
+              toast.success(t("createSections.materialSaved"));
             } finally {
               setUploadingMaterial(null);
             }
@@ -1099,7 +1104,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           isOpen={!!editingAssessment}
           onClose={() => setEditingAssessment(null)}
           title={
-            editingAssessment?.type === "exam" ? "Exam Builder" : "Quiz Builder"
+            editingAssessment?.type === "exam"
+              ? t("createSections.examBuilder")
+              : t("createSections.quizBuilder")
           }
           size="xl"
         >
@@ -1178,12 +1185,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
 
                     // keep lesson row title in list in sync (already handled by onChange)
                     invalidateLessonExams(queryClient, editingAssessment.id);
-                    toast.success("Saved");
+                    toast.success(t("createSections.saved"));
                     queryClient.invalidateQueries({
                       queryKey: qk.modules(courseId),
                     });
                   } catch {
-                    toast.error("Failed to save");
+                    toast.error(t("createSections.failedToSave"));
                   }
                 }}
                 onPreview={(draft) => setPreviewDraft(draft)}
@@ -1198,7 +1205,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         <Modal
           isOpen={!!previewDraft}
           onClose={() => setPreviewDraft(null)}
-          title="Preview"
+          title={t("createSections.preview")}
           size="xl"
         >
           <QuizPreview
