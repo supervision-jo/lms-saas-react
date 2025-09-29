@@ -4,10 +4,10 @@ export const ACCESS_TOKEN_EXPIRES_AT_KEY = "lms-access-token-exp";
 export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const USER_KEY = "lms-user";
 // export const BASE_URL = "https://backend.iraqform.com/api/";
-export const BASE_URL = "https://ollms-api.vision-jo.com/api/";
+// export const BASE_URL = "https://ollms-api.vision-jo.com/api/";
 
-// const api_url = toApiURL(window.location.origin);
-// export const BASE_URL = `${api_url}api/`;
+const api_url = toApiURL(window.location.origin);
+export const BASE_URL = `${api_url}api/`;
 
 export function toApiURL(input: string) {
   const hasScheme = /^[a-zA-Z][\w+.-]*:\/\//.test(input);
