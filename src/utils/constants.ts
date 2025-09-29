@@ -3,7 +3,44 @@ export const REFRESH_TOKEN_KEY = "lms-refresh-token";
 export const ACCESS_TOKEN_EXPIRES_AT_KEY = "lms-access-token-exp";
 export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const USER_KEY = "lms-user";
-export const BASE_URL = "https://backend.iraqform.com/api/";
+// export const BASE_URL = "https://backend.iraqform.com/api/";
+export const BASE_URL = "https://ollms-api.vision-jo.com/api/";
+
+// const api_url = toApiURL(window.location.origin);
+// export const BASE_URL = `${api_url}api/`;
+
+export function toApiURL(input: string) {
+  const hasScheme = /^[a-zA-Z][\w+.-]*:\/\//.test(input);
+  const temp = hasScheme ? input : `http://${input}`;
+
+  const url = new URL(temp);
+  const port = url.port;
+  const host = url.hostname;
+
+  const parts = host.split(".");
+
+  let newHostname;
+
+  if (parts[0].toLowerCase() === "www") {
+    newHostname = ["api", ...parts.slice(1)].join(".");
+  } else if (parts.length > 2) {
+    const first = parts[0] + "-api";
+    newHostname = [first, ...parts.slice(1)].join(".");
+  } else if (parts.length === 2) {
+    newHostname = `api.${host}`;
+  } else {
+    newHostname = `api.${host}`;
+  }
+
+  url.hostname = newHostname;
+  if (port) url.port = port;
+
+  return hasScheme
+    ? url.toString()
+    : url.port
+    ? `${url.hostname}:${url.port}`
+    : url.hostname;
+}
 
 export const API_ENDPOINTS = {
   oldCourses: "course/courses/",
@@ -50,4 +87,5 @@ export const API_ENDPOINTS = {
   refreshToken: "users/refresh-token/",
   updateProfile: "users/update-profile/",
   settings: "tenant/settings",
+  studentPresence: "",
 };

@@ -33,7 +33,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
-      : 3;
+      : 9999999;
 
   const {
     data: ansResp,
@@ -80,8 +80,9 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const examTypeLabel =
     exam.type === "quiz" ? t("examSection.quiz") : t("examSection.exam");
 
-  const reachedMaxAttempts = attemptsCount >= MAX_ATTEMPTS;
-  const canRetake = !reachedMaxAttempts;
+  // const reachedMaxAttempts = attemptsCount >= MAX_ATTEMPTS;
+  // const canRetake = !reachedMaxAttempts;
+  const canRetake = true;
 
   const toggleAnswer = (qId: string, choiceId: string, isMulti: boolean) => {
     if (!isRetaking || submitted) return;
@@ -120,10 +121,10 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const submitExam = async () => {
     if (!allAnswered || isPending) return;
 
-    if (reachedMaxAttempts) {
-      toast.error(t("examSection.submitExam.error", { MAX_ATTEMPTS }));
-      return;
-    }
+    // if (reachedMaxAttempts) {
+    //   toast.error(t("examSection.submitExam.error", { MAX_ATTEMPTS }));
+    //   return;
+    // }
 
     try {
       const payload = buildSubmission();
@@ -155,8 +156,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
     window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
   };
 
-  const submitDisabled =
-    !allAnswered || isPending || reachedMaxAttempts || !isRetaking;
+  const submitDisabled = !allAnswered || isPending || !isRetaking;
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-lg">
@@ -291,9 +291,10 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 disabled={!canRetake}
                 className="px-4 py-2 rounded-lg border sm:w-52 w-full border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                {reachedMaxAttempts
+                {t("examSection.retake")}
+                {/* {reachedMaxAttempts
                   ? t("examSection.noAttemptsLeft")
-                  : t("examSection.retake")}
+                  : t("examSection.retake")} */}
               </button>
               <button
                 onClick={onClose}

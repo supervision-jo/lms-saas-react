@@ -56,7 +56,6 @@ const InstructorPage: React.FC = () => {
       if (res.status) {
         toast.success("Course created successfully!");
         navigate(`/course-builder/${res?.data?.id}`);
-        console.log(res);
       }
     } catch (error: any) {
       const payload = error?.response?.data?.error;

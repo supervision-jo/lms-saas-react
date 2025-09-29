@@ -26,9 +26,11 @@ import { readUserFromStorage } from "../../services/auth";
 import { getCookie } from "../../services/cookies";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../../components/settings/FeatureGate";
+// import { useStudentPresence } from "../../hooks/useStudentPresence";
 
 export default function CoursePlayerPage() {
   const { courseId } = useParams();
+  // useStudentPresence(courseId);
   const currentUser: User = readUserFromStorage();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

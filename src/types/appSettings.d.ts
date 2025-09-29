@@ -16,6 +16,7 @@ interface AppSettings {
   languages: LanguageEntry[];
   default_language: LanguageEntry;
   version?: string;
+  student_timer?: number;
 }
 
 const BOOLEAN_FLAGS = [
@@ -31,6 +32,7 @@ const BOOLEAN_FLAGS = [
   "logo_text",
   "logo_file",
   "login_type",
+  "student_timer",
 ] as const;
 
 type BooleanFlagKey = (typeof BOOLEAN_FLAGS)[number];
