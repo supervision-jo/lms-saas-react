@@ -46,7 +46,9 @@ const CourseBuilderPage: React.FC = () => {
 
   // helpers
   async function fetchModulesForCourse(cid: string): Promise<Module[]> {
-    const resp = await get(`${API_ENDPOINTS.modules}?course=${cid}`);
+    const resp = await get(
+      `${API_ENDPOINTS.modules}?course=${cid}&include_lessons=true`
+    );
     return resp?.data?.data ?? resp?.data ?? resp ?? [];
   }
 

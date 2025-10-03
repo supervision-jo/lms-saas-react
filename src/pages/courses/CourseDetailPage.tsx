@@ -75,7 +75,7 @@ const CourseDetailPage: React.FC = () => {
   const course: Course = courseData?.data?.data;
 
   const { data: modulesResp } = useCustomQuery(
-    `${API_ENDPOINTS.modules}?course=${courseId}`,
+    `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=true`,
     ["modules", courseId],
     undefined,
     !!courseId

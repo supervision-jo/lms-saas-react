@@ -1,6 +1,6 @@
 // src/components/course/quizes/QuizBuilder.tsx
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -21,8 +21,6 @@ type QuestionDraft = {
   choices: Choice[];
 };
 export type AssessmentDraft = {
-  // NOTE: title/description are *not* used for patching the exam;
-  // they are kept for compatibility but parent strips them out.
   title?: string;
   description?: string;
   time_limit: number;
@@ -37,13 +35,12 @@ interface QuizBuilderProps {
   onClose: (s: boolean) => void;
   initialQuiz?: any;
 
-  /** NEW: lesson meta shown/edited in the builder header + info card */
   lessonTitle?: string;
   lessonDescription?: string;
-  onLessonTitleChange?: (title: string) => void; // live UI sync
-  onLessonDescriptionChange?: (desc: string) => void; // live UI sync
-  onLessonTitleBlur?: (title: string) => void | Promise<void>; // persist lesson (section patch)
-  onLessonDescriptionBlur?: (desc: string) => void | Promise<void>; // persist lesson (section patch)
+  onLessonTitleChange?: (title: string) => void;
+  onLessonDescriptionChange?: (desc: string) => void;
+  onLessonTitleBlur?: (title: string) => void | Promise<void>;
+  onLessonDescriptionBlur?: (desc: string) => void | Promise<void>;
 }
 
 type UiOption = { id: string; text: string; is_correct: boolean };
@@ -87,7 +84,6 @@ function normalizeInitial(initial?: any): UiQuiz {
 
   if (!initial) return base;
 
-  // Treat anything with questions array as the new server shape
   if (
     Array.isArray(initial?.questions) &&
     (typeof initial?.time_limit === "number" || initial?.time_limit == null)
@@ -132,8 +128,6 @@ function normalizeInitial(initial?: any): UiQuiz {
           : base.questions,
     };
   }
-
-  // Legacy fallback
   return base;
 }
 
@@ -165,7 +159,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   initialQuiz,
   onClose,
 
-  // NEW lesson meta props
   lessonTitle = "",
   lessonDescription = "",
   onLessonTitleChange,
@@ -173,26 +166,42 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onLessonTitleBlur,
   onLessonDescriptionBlur,
 }) => {
-  // Exam/quiz payload state
   const [quiz, setQuiz] = useState<UiQuiz>(() => normalizeInitial(initialQuiz));
 
-  // Lesson meta state (local copy so inputs are controlled)
   const [metaTitle, setMetaTitle] = useState<string>(lessonTitle);
   const [metaDescription, setMetaDescription] =
     useState<string>(lessonDescription);
 
-  // keep lesson meta in sync when parent changes (opening different lesson)
-  useEffect(() => {
-    setMetaTitle(lessonTitle);
-  }, [lessonTitle]);
-  useEffect(() => {
-    setMetaDescription(lessonDescription);
-  }, [lessonDescription]);
+  useEffect(() => setMetaTitle(lessonTitle), [lessonTitle]);
+  useEffect(() => setMetaDescription(lessonDescription), [lessonDescription]);
 
-  // when server exam changes, normalize again
+  // ---- Debounced autosave & change detection ----
+  const saveTimerRef = useRef<any>(null);
+  const quizRef = useRef<UiQuiz>(quiz);
+  const lastEmittedRef = useRef<string>(""); // snapshot of last sent payload
+
   useEffect(() => {
-    setQuiz(normalizeInitial(initialQuiz));
+    quizRef.current = quiz;
+  }, [quiz]);
+
+  // When server data changes, reset local quiz + baseline snapshot
+  useEffect(() => {
+    const normalized = normalizeInitial(initialQuiz);
+    setQuiz(normalized);
+    lastEmittedRef.current = JSON.stringify(toAssessmentDraft(normalized));
   }, [initialQuiz]);
+
+  const triggerAutoSave = () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const draft = toAssessmentDraft(quizRef.current);
+      const snapshot = JSON.stringify(draft);
+      // Skip if nothing changed (prevents blur with no edits)
+      if (snapshot === lastEmittedRef.current) return;
+      onSave(draft);
+      lastEmittedRef.current = snapshot;
+    }, 450);
+  };
 
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
     () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
@@ -219,6 +228,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     };
     setQuiz((prev) => ({ ...prev, questions: [...prev.questions, q] }));
     setExpandedQuestions((s) => new Set([...s, q.id]));
+    triggerAutoSave();
   };
 
   const removeQuestion = (qid: string) => {
@@ -235,15 +245,21 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
       n.delete(qid);
       return n;
     });
+    triggerAutoSave();
   };
 
-  const updateQuestion = (qid: string, patch: Partial<UiQuestion>) => {
+  const updateQuestion = (
+    qid: string,
+    patch: Partial<UiQuestion>,
+    opts?: { autosave?: boolean }
+  ) => {
     setQuiz((prev) => ({
       ...prev,
       questions: prev.questions.map((q) =>
         q.id === qid ? { ...q, ...patch } : q
       ),
     }));
+    if (opts?.autosave) triggerAutoSave();
   };
 
   /** ---- option ops ---- */
@@ -252,6 +268,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     if (!q) return;
     const opt: UiOption = { id: uid(), text: "", is_correct: false };
     updateQuestion(qid, { options: [...q.options, opt] });
+    triggerAutoSave();
   };
 
   const removeOption = (qid: string, oid: string) => {
@@ -262,14 +279,21 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
       return;
     }
     updateQuestion(qid, { options: q.options.filter((o) => o.id !== oid) });
+    triggerAutoSave();
   };
 
-  const updateOption = (qid: string, oid: string, text: string) => {
+  const updateOption = (
+    qid: string,
+    oid: string,
+    text: string,
+    opts?: { autosave?: boolean }
+  ) => {
     const q = quiz.questions.find((x) => x.id === qid);
     if (!q) return;
     updateQuestion(qid, {
       options: q.options.map((o) => (o.id === oid ? { ...o, text } : o)),
     });
+    if (opts?.autosave) triggerAutoSave();
   };
 
   const toggleCorrect = (qid: string, oid: string) => {
@@ -280,6 +304,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         o.id === oid ? { ...o, is_correct: !o.is_correct } : o
       ),
     });
+    triggerAutoSave();
   };
 
   /** ---- ui helpers ---- */
@@ -310,16 +335,14 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         next[`pts_${q.id}`] = `Question ${idx + 1} points must be ≥ 1`;
     });
 
-    if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1) {
+    if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1)
       next["time"] = "Time limit must be at least 1 minute";
-    }
     if (
       !Number.isFinite(quiz.passing_score) ||
       quiz.passing_score < 0 ||
       quiz.passing_score > 100
-    ) {
+    )
       next["pass"] = "Passing score must be between 0 and 100";
-    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -328,18 +351,23 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   /** ---- actions ---- */
   const handleSave = () => {
     if (!validate()) return;
-    const draft = toAssessmentDraft(quiz);
-    onSave(draft); // parent sends exam-only fields
+    const draft = toAssessmentDraft(quizRef.current);
+    const snapshot = JSON.stringify(draft);
+    // Optional: also skip manual save if unchanged
+    if (snapshot !== lastEmittedRef.current) {
+      onSave(draft);
+      lastEmittedRef.current = snapshot;
+    }
     onClose(false);
   };
+
   const handlePreview = () => {
     if (!validate()) return;
-    onPreview(toAssessmentDraft(quiz));
+    onPreview(toAssessmentDraft(quizRef.current));
   };
 
   useEffect(() => {
     if (!quiz.questions.length) return;
-
     setExpandedQuestions((prev) => {
       const ids = new Set(quiz.questions.map((q) => q.id));
       const hasValid = [...prev].some((id) => ids.has(id));
@@ -348,7 +376,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     });
   }, [quiz.questions]);
 
-  /** ---- render ---- */
   return (
     <div className="bg-white rounded-xl md:p-8 p-4 max-w-6xl mx-auto">
       {/* Header */}
@@ -369,7 +396,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* LESSON title (not exam field) */}
+            {/* LESSON title */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Title *
@@ -380,7 +407,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 onChange={(e) => {
                   const v = e.target.value;
                   setMetaTitle(v);
-                  onLessonTitleChange?.(v); // live reflect in parent UI
+                  onLessonTitleChange?.(v);
                 }}
                 onBlur={(e) => onLessonTitleBlur?.(e.target.value)}
                 placeholder={`Enter ${
@@ -408,6 +435,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                     ),
                   }))
                 }
+                onBlur={triggerAutoSave}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.pass ? "border-red-300" : "border-gray-300"
                 }`}
@@ -436,6 +464,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                     ),
                   }))
                 }
+                onBlur={triggerAutoSave}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.time ? "border-red-300" : "border-gray-300"
                 }`}
@@ -445,7 +474,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               )}
             </div>
 
-            {/* LESSON description (not exam field) */}
+            {/* LESSON description */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Description (optional)
@@ -456,7 +485,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 onChange={(e) => {
                   const v = e.target.value;
                   setMetaDescription(v);
-                  onLessonDescriptionChange?.(v); // live reflect
+                  onLessonDescriptionChange?.(v);
                 }}
                 onBlur={(e) => onLessonDescriptionBlur?.(e.target.value)}
                 placeholder={`Brief description of the ${
@@ -468,9 +497,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           </div>
         </div>
 
-        {/* Questions ... (unchanged UI below this line) */}
-        {/* --- keep your existing questions UI exactly as-is --- */}
-
         {/* Questions */}
         <div>
           <div className="flex items-center justify-between sm:flex-row flex-col-reverse gap-2 sm:gap-0 mb-6">
@@ -478,6 +504,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               Questions ({quiz.questions.length})
             </h3>
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={addQuestion}
               className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center text-sm"
             >
@@ -498,6 +526,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => toggleExpanded(q.id)}
                         className="flex items-center space-x-3 flex-1 text-left"
                       >
@@ -523,6 +553,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       </button>
 
                       <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => removeQuestion(q.id)}
                         disabled={quiz.questions.length <= 1}
                         className={`p-2 rounded-lg transition-colors ${
@@ -554,6 +586,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                           onChange={(e) =>
                             updateQuestion(q.id, { text: e.target.value })
                           }
+                          onBlur={triggerAutoSave}
                           placeholder="Enter your question here…"
                           rows={3}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
@@ -576,7 +609,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                             Answer Options *
                           </label>
                           <button
+                            type="button"
                             onClick={() => addOption(q.id)}
+                            onMouseDown={(e) => e.preventDefault()}
                             className="self-center bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center"
                           >
                             <Plus className="w-3 h-3 mr-1" />
@@ -595,6 +630,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                   {String.fromCharCode(65 + oi)}.
                                 </span>
                                 <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => toggleCorrect(q.id, o.id)}
                                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                                     o.is_correct
@@ -620,6 +657,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                   onChange={(e) =>
                                     updateOption(q.id, o.id, e.target.value)
                                   }
+                                  onBlur={triggerAutoSave}
                                   placeholder={`Option ${String.fromCharCode(
                                     65 + oi
                                   )}`}
@@ -628,6 +666,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                               </div>
 
                               <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => removeOption(q.id, o.id)}
                                 disabled={q.options.length <= 2}
                                 className={`p-1 rounded transition-colors ${
@@ -677,6 +717,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                 ),
                               })
                             }
+                            onBlur={triggerAutoSave}
                             className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                               errors[`pts_${q.id}`]
                                 ? "border-red-300"
@@ -706,6 +747,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                   : undefined,
                               })
                             }
+                            onBlur={triggerAutoSave}
                             placeholder="Optional"
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
@@ -724,9 +766,10 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                               explanation: e.target.value,
                             })
                           }
+                          onBlur={triggerAutoSave}
                           placeholder="Provide an explanation for the correct answer…"
                           rows={2}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -780,6 +823,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
           <div className="sm:w-fit w-full flex gap-4 items-center sm:flex-row flex-col">
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={handlePreview}
               className="bg-gray-600 text-white px-6 py-3 w-full rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
@@ -787,6 +832,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               Preview
             </button>
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={handleSave}
               className="bg-purple-600 text-white px-6 py-3 w-full rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
             >
@@ -795,6 +842,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             </button>
 
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onClose(false);
               }}

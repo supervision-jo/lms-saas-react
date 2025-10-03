@@ -107,16 +107,17 @@ type ContentType = "video" | "article" | "material" | "quiz" | "exam";
 interface Lesson {
   id: string;
   title: string;
-  content_type: ContentType;
   description?: string | null;
-  description_html?: any;
-  free_preview?: boolean;
-  watched?: boolean;
-  order: number;
   url?: string | null;
   duration_hours?: number | null;
+  free_preview?: boolean;
+  order: number;
+  file?: any;
+  description_html?: any;
+  content_type: ContentType;
+  watched?: boolean;
   string_file?: string | null;
-  file: any;
+  section: string;
 }
 
 interface Module {

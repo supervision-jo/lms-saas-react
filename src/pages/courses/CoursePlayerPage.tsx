@@ -71,7 +71,7 @@ export default function CoursePlayerPage() {
   const token = getCookie(ACCESS_TOKEN_KEY);
 
   const { data: modulesData } = useCustomQuery(
-    `${API_ENDPOINTS.modules}?course=${courseId}`,
+    `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=true`,
     ["modules", courseId],
     {
       headers: {

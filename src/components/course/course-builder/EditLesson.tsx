@@ -1,3 +1,4 @@
+// src/components/course/builder/EditLesson.tsx
 import { Youtube } from "lucide-react";
 import {
   isYouTubeUrl,
@@ -15,15 +16,9 @@ interface Props {
     lessonId: string,
     updates: Partial<Lesson>
   ) => void;
-  editingLesson: {
-    moduleId: string;
-    lessonId: string;
-  };
+  editingLesson: { moduleId: string; lessonId: string };
   setEditingLesson: React.Dispatch<
-    React.SetStateAction<{
-      moduleId: string;
-      lessonId: string;
-    } | null>
+    React.SetStateAction<{ moduleId: string; lessonId: string } | null>
   >;
   onCancel?: () => void;
   onSave?: () => void;
@@ -45,7 +40,6 @@ export default function EditLesson({
   const videoId = isYT ? extractYouTubeVideoId(url) : null;
   const thumb = videoId ? getYouTubeThumbnail(videoId) : "";
 
-  // Valid if we have a syntactically valid URL
   const isValid = (() => {
     if (!url.trim()) return false;
     try {
@@ -93,6 +87,24 @@ export default function EditLesson({
 
         <div className="p-6">
           <div className="space-y-6">
+            {/* Title (NEW) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video Title
+              </label>
+              <input
+                type="text"
+                value={les?.title || ""}
+                onChange={(e) =>
+                  updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
+                    title: e.target.value,
+                  } as any)
+                }
+                placeholder="Enter video title"
+                className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
             {/* YouTube URL */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

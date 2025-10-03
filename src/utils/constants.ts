@@ -5,8 +5,13 @@ export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const USER_KEY = "lms-user";
 // export const BASE_URL = "https://backend.iraqform.com/api/";
 // export const BASE_URL = "https://ollms-api.vision-jo.com/api/";
+// export const BASE_URL = "https://test-lms-api.vision-jo.com/api/";
 
-const api_url = toApiURL(window.location.origin);
+const api_url =
+  window.location.href.includes("vercel") ||
+  window.location.href.includes("localhost")
+    ? "https://test-lms-api.vision-jo.com/"
+    : toApiURL(window.location.origin);
 export const BASE_URL = `${api_url}api/`;
 
 export function toApiURL(input: string) {
@@ -51,6 +56,8 @@ export const API_ENDPOINTS = {
   createSection: "course/create-section/",
   updateSection: "course/update-section/",
   deleteSection: "course/delete-section/",
+  lessons: "course/lessons/",
+  lesson: "course/lesson/",
   createExam: "course/create-exam/",
   updateExam: "course/update-exam/",
   courseUsers: "course/get-student-courses/",

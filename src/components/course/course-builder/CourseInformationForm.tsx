@@ -1,3 +1,4 @@
+// src/components/course/builder/CourseInformationForm.tsx
 import { Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useCustomQuery } from "../../../hooks/useQuery";
@@ -70,22 +71,16 @@ export default function CourseInformationForm({ course }: Props) {
     API_ENDPOINTS.subCategories,
     ["all-sub-categories"]
   );
-
   const allSubCategories: SubCategory[] = useMemo(
     () => allSubCategoriesData?.data || [],
     [allSubCategoriesData]
   );
 
-  // When category changes, clear sub_category
+  // When category changes, clear sub_category (only if invalid for category)
   useEffect(() => {
-    if (!selectedCategory) return;
-    // Only react if the user actually changed category
-    if (!dirtyFields?.category) return;
-
+    if (!selectedCategory || !dirtyFields?.category) return;
     const currentSub = getValues("sub_category");
     const currentSubObj = allSubCategories.find((sc) => sc.id === currentSub);
-
-    // Clear only if the current sub doesn't belong to the selected category
     if (!currentSubObj || currentSubObj.category !== selectedCategory) {
       setValue("sub_category", "", { shouldDirty: true });
     }
@@ -97,13 +92,12 @@ export default function CourseInformationForm({ course }: Props) {
     setValue,
   ]);
 
-  // Patch (autosave)
+  // PATCH
   const { mutateAsync: updateCourse } = useCustomPatch(
     `${API_ENDPOINTS.updateCourse}${course?.id}/`,
-    ["course", course?.id] // lets parent/other tabs refetch fresh course
+    ["course", course?.id]
   );
 
-  // Rehydrate helper (keeps UI-only `category`)
   const rehydrateFromServer = (serverCourse?: any) => {
     if (!serverCourse) return;
     const updated: Partial<FormValues> = {
@@ -122,23 +116,18 @@ export default function CourseInformationForm({ course }: Props) {
         serverCourse?.picture_url ??
         serverCourse?.picture ??
         getValues("picture"),
-      category: getValues("category"), // keep current UI-only
+      category: getValues("category"),
     };
     reset(updated, { keepDirtyValues: true });
   };
 
-  // PATCH only one text/select field
   const saveField = async (name: keyof FormValues) => {
-    // Category is UI-only → never send it
     if (name === "category") return;
-
-    // If the field isn't dirty, skip (optional)
     if (dirtyFields && !dirtyFields[name]) return;
 
     const value = getValues(name);
     const fd = new FormData();
 
-    // Only append the single field you’re updating
     switch (name) {
       case "title":
       case "description":
@@ -163,13 +152,10 @@ export default function CourseInformationForm({ course }: Props) {
           return;
         }
         fd.append("price", String(num));
-        // Only include is_paid when price itself is being updated
         fd.append("is_paid", num === 0 ? "false" : "true");
         break;
       }
 
-      // picture is handled by savePicture below
-      case "picture":
       default:
         return;
     }
@@ -193,7 +179,6 @@ export default function CourseInformationForm({ course }: Props) {
     }
   };
 
-  // PATCH only the image file
   const savePicture = async (file: File) => {
     const fd = new FormData();
     fd.append("picture", file);
@@ -217,7 +202,6 @@ export default function CourseInformationForm({ course }: Props) {
     }
   };
 
-  // Autosave on blur for any field
   const onBlurSave: React.FocusEventHandler<
     HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   > = async (e) => {
@@ -225,7 +209,6 @@ export default function CourseInformationForm({ course }: Props) {
     await saveField(name);
   };
 
-  // Local preview for new image
   useEffect(() => {
     if (!thumbnailFile) return;
     const url = URL.createObjectURL(thumbnailFile);
@@ -233,15 +216,17 @@ export default function CourseInformationForm({ course }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [thumbnailFile]);
 
-  // Pre fill info
+  // PRE-FILL — FIXED: handle both string ID and object for sub_category
   useEffect(() => {
     if (!course) return;
     if (!allSubCategories || allSubCategories.length === 0) return;
 
-    // course may carry sub_category as id or object; cover both
-    const courseSubId = course?.sub_category;
+    const subId =
+      typeof (course as any)?.sub_category === "string"
+        ? (course as any).sub_category
+        : (course as any)?.sub_category?.id ?? "";
 
-    const subCate = allSubCategories.find((sc) => sc.id === courseSubId);
+    const subCate = allSubCategories.find((sc) => sc.id === subId);
 
     const incoming: Partial<FormValues> = {
       title: course?.title ?? "",
@@ -269,9 +254,8 @@ export default function CourseInformationForm({ course }: Props) {
           if (
             e.key === "Enter" &&
             (e.target as HTMLElement).tagName !== "TEXTAREA"
-          ) {
+          )
             e.preventDefault();
-          }
         }}
         className="space-y-6"
         encType="multipart/form-data"
@@ -341,10 +325,9 @@ export default function CourseInformationForm({ course }: Props) {
             <select
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               {...register("category", {
-                onChange: (e) => {
-                  setValue("category", e.target.value, { shouldDirty: true });
-                },
-                onBlur: onBlurSave, // optional: save selection change
+                onChange: (e) =>
+                  setValue("category", e.target.value, { shouldDirty: true }),
+                onBlur: onBlurSave,
               })}
             >
               <option value="">{t("courseInfo.selectCategory")}</option>
@@ -434,13 +417,11 @@ export default function CourseInformationForm({ course }: Props) {
                 if (f) {
                   const url = URL.createObjectURL(f);
                   setThumbPreview(url);
-                  // upload ONLY the file
                   void savePicture(f);
                 }
               }}
             />
 
-            {/* Live preview */}
             {thumbPreview ? (
               <div className="mt-4 flex items-center justify-center">
                 <img
