@@ -1072,7 +1072,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               });
               toast.success(t("createSections.videoSaved"));
               // Refresh modules to get latest data from server
-              await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+              await queryClient.invalidateQueries({
+                queryKey: qk.modules(courseId),
+              });
             } finally {
               setEditingLesson(null);
             }
@@ -1106,7 +1108,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               });
               toast.success(t("createSections.articleSaved"));
               // Refresh modules to get latest data from server
-              await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+              await queryClient.invalidateQueries({
+                queryKey: qk.modules(courseId),
+              });
             } finally {
               setEditingArticle(null);
             }
@@ -1142,7 +1146,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               await patchLesson(les.id, payload);
               toast.success(t("createSections.materialSaved"));
               // Refresh modules to get latest data from server
-              await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+              await queryClient.invalidateQueries({
+                queryKey: qk.modules(courseId),
+              });
             } finally {
               setUploadingMaterial(null);
             }

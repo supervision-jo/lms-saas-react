@@ -12,7 +12,7 @@ import GroupManagement from "../../components/course/course-builder/GroupManagem
 import UserManagement from "../../components/course/course-builder/UserManagement";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { get, patch } from "../../api";
+import { patch } from "../../api";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import IssuesModal from "./IssuesModal";
