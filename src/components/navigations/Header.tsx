@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex items-center justify-between h-16">
+        <div className="relative flex items-center justify-between h-24">
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({
                 {data?.logo_type === "text" ? (
                   data?.logo_text
                 ) : (
-                  <img src={data?.logo_file} alt="logo" />
+                  <img src={data?.logo_file} alt="logo" className="w-24" />
                 )}
               </button>
             </div>
