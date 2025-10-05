@@ -56,6 +56,7 @@ export const API_ENDPOINTS = {
   createSection: "course/create-section/",
   updateSection: "course/update-section/",
   deleteSection: "course/delete-section/",
+  reorderSections: "course/reorder-sections/",
   lessons: "course/lessons/",
   lesson: "course/lesson/",
   createExam: "course/create-exam/",

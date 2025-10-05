@@ -1,7 +1,7 @@
 // src/pages/CourseBuilder.tsx
 
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Eye, Users, UserCheck } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import IssuesModal from "./IssuesModal";
 import { useTranslation } from "react-i18next";
+import { useFeatureFlag } from "../../hooks/useSettings";
 
 const CourseBuilderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("course-info");
@@ -258,21 +259,30 @@ const CourseBuilderPage: React.FC = () => {
     }
   };
 
+  const { enabled: chatGroupEnabled, isLoading: chatGroupLoading } =
+    useFeatureFlag("is_chat_group_enabled", true);
+
   const TABS = [
     { id: "course-info", label: t("tabs.info") },
     { id: "curriculum", label: t("tabs.curriculum") },
     {
       id: "users",
       label: t("tabs.users"),
-      icon: <Users className="w-4 h-4 ltr:mr-2 rtl:ml-2" />,
     },
-    {
-      id: "groups",
-      label: t("tabs.groups"),
-      icon: <UserCheck className="w-4 h-4 ltr:mr-2 rtl:ml-2" />,
-    },
+    ...(chatGroupEnabled
+      ? [
+          {
+            id: "groups",
+            label: t("tabs.groups"),
+          },
+        ]
+      : []),
     { id: "settings", label: t("tabs.settings") },
   ];
+
+  if (chatGroupLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -317,7 +327,7 @@ const CourseBuilderPage: React.FC = () => {
                   }`}
                 >
                   <span className="flex items-center">
-                    {tab.icon ?? null}
+                    {/* {tab.icon ?? null} */}
                     {tab.label}
                   </span>
                 </button>

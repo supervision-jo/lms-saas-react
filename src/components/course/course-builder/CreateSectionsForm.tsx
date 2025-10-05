@@ -470,10 +470,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               }
         )
       );
-      
+
       // Refresh cache
       queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-      
+
       toast.success(
         `${
           type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
@@ -511,20 +511,20 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   };
 
   const commitModulesOrder = async () => {
-    // Only PATCH changed modules' order (silent)
-    const ops = modules
-      .map((m, idx) => {
-        if (m.order === idx + 1) return null;
-        return patchModule({ id: m.id, payload: { order: idx + 1 } });
-      })
-      .filter(Boolean) as Promise<any>[];
-    if (!ops.length) return;
+    // Use the new reorder endpoint to update all sections at once
+    const sections = modules.map((m, idx) => ({
+      section_id: m.id,
+      order: idx + 1,
+    }));
+
     try {
-      await Promise.all(ops);
+      const { edit } = await import("../../../api");
+      await edit(API_ENDPOINTS.reorderSections, { sections });
       toast.success(t("createSections.commitModulesOrderSuccess"));
       queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    } catch {
+    } catch (error: any) {
       toast.error(t("createSections.commitModulesOrderError"));
+      handleErrorAlerts(error?.response?.data?.error);
     }
   };
 
