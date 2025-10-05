@@ -277,7 +277,7 @@ const CourseBuilderPage: React.FC = () => {
               className={`inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors ${
                 published
                   ? "bg-green-600 hover:bg-green-700"
-                  : "bg-purple-600 hover:bg-purple-700"
+                  : "bg-gray-600 hover:bg-gray-700"
               }`}
             >
               <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
