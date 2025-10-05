@@ -113,10 +113,18 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-purple-600 mb-2">
-            LearnHub
+          <div className="text-3xl font-bold text-purple-600 mb-2 text-center">
+            {data?.logo_type === "text" ? (
+              data?.logo_text
+            ) : (
+              <img
+                src={data?.logo_file}
+                alt="logo"
+                className="w-24 block m-auto rounded-full"
+              />
+            )}
           </div>
-          <p className="text-gray-600">{t("Login.welcome")}</p>
+          <p className="text-gray-600 mt-2">{t("Login.welcome")}</p>
         </div>
 
         {/* Login Form */}
