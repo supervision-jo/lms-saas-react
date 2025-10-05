@@ -233,7 +233,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       content_type: base.content_type!,
       order: base.order ?? 1,
       url: base.url ?? null,
-      string_file: base.string_file ?? null,
+      // string_file: base.string_file ?? null,
       duration_hours: base.duration_hours ?? null,
       free_preview: !!base.free_preview,
     });
@@ -264,7 +264,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         "free_preview",
         "order",
         "content_type",
-        "string_file",
+        // "string_file",
       ] as const
     ).forEach((k) => {
       // only include if provided in payload AND changed vs snapshot
@@ -363,7 +363,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       free_preview: false,
       order: (mod.lessons?.length ?? 0) + 1,
       url: "",
-      string_file: null,
+      // string_file: null,
       duration_hours: null,
       file: null as any,
       watched: false,
@@ -394,6 +394,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               }
         )
       );
+
+      // Refresh cache
+      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
 
       // open editor
       setTimeout(() => {
@@ -435,7 +438,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       free_preview: false,
       order: (mod.lessons?.length ?? 0) + 1,
       url: "",
-      string_file: null,
+      // string_file: null,
       duration_hours: null,
       file: null as any,
       watched: false,
@@ -467,6 +470,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               }
         )
       );
+      
+      // Refresh cache
+      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+      
       toast.success(
         `${
           type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
@@ -1125,7 +1132,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 title: les.title,
                 description: les.description ?? "",
                 content_type: "material",
-                string_file: les.string_file ?? null,
+                // string_file: les.string_file ?? null,
                 url: les.string_file ? null : les.url ?? null,
               };
               await patchLesson(les.id, payload);
