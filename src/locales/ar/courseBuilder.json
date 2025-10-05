@@ -2,6 +2,8 @@
   "question": "سؤال",
   "back": "رجوع",
   "publish": "نشر",
+  "published": "منشور",
+  "unpublish": "إلغاء النشر",
   "validateCourseReady": {
     "titleOK": "عنوان الكورس مطلوب.",
     "descOK": "وصف الكورس مطلوب.",
@@ -32,6 +34,9 @@
   "tryPublish": {
     "success": "تم نشر الكورس!",
     "error": "فشل في النشر"
+  },
+  "tryUnpublish": {
+    "success": "تم إلغاء نشر الكورس"
   },
   "handleSettingsChange": {
     "success": "تم النقل للمسودة",

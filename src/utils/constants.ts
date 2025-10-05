@@ -49,10 +49,12 @@ export function toApiURL(input: string) {
 
 export const API_ENDPOINTS = {
   oldCourses: "course/courses/",
+  courseInstructor: "course/course-instructor/",
   courses: "course/v2/courses/",
   createCourse: "course/create-course/",
   updateCourse: "course/update-course/",
   deleteCourse: "course/delete-course/",
+  publishCourse: "course/update-course/",
   createSection: "course/create-section/",
   updateSection: "course/update-section/",
   deleteSection: "course/delete-section/",

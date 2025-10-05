@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Eye } from "lucide-react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import CourseInformationForm from "../../components/course/course-builder/CourseInformationForm";
@@ -23,11 +23,10 @@ const CourseBuilderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("course-info");
   const { courseId } = useParams();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { t } = useTranslation("courseBuilder");
 
   const { data: courseData } = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}`,
+    `${API_ENDPOINTS.courseInstructor}${courseId}`,
     ["course", courseId],
     undefined,
     !!courseId
@@ -197,66 +196,36 @@ const CourseBuilderPage: React.FC = () => {
     return problems;
   }
 
-  // guarded publish
-  const tryPublish = async () => {
+  // publish/unpublish course
+  const togglePublish = async (shouldPublish: boolean) => {
     if (!courseId) return;
-    const problems = await validateCourseReady(courseId);
-    if (problems.length) {
-      setIssues(problems);
-      setShowIssues(true);
-      return;
-    }
+
     try {
       const fd = new FormData();
-      fd.append("is_published", "true");
-      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
+      fd.append("is_published", shouldPublish ? "true" : "false");
+      await patch(`${API_ENDPOINTS.publishCourse}${courseId}/`, fd);
       await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      setPublished(true);
-      toast.success(t("tryPublish.success"));
-      navigate(`/catalog/${course?.id}`);
+      setPublished(shouldPublish);
+      toast.success(
+        shouldPublish ? t("tryPublish.success") : t("tryUnpublish.success")
+      );
     } catch (e: any) {
       toast.error(e?.response?.data?.error || t("tryPublish.error"));
     }
   };
 
+  // toggle publish/unpublish
+  const tryPublish = async () => {
+    console.log("🔍 Course ID:", courseId);
+    console.log("🔍 Current published state:", published);
+    console.log("🔍 Will toggle to:", !published);
+    console.log("🔍 Endpoint:", `${API_ENDPOINTS.publishCourse}${courseId}/`);
+    // Toggle: if published -> unpublish, if not published -> publish
+    await togglePublish(!published);
+  };
+
   const handleSettingsChange = async (next: boolean) => {
-    if (!courseId) return;
-
-    if (!next) {
-      try {
-        const fd = new FormData();
-        fd.append("is_published", "false");
-        await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
-        await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-        setPublished(false);
-        toast.success(t("handleSettingsChange.success"));
-      } catch (e: any) {
-        toast.error(
-          e?.response?.data?.error || t("handleSettingsChange.error")
-        );
-      }
-      return;
-    }
-
-    const problems = await validateCourseReady(courseId);
-    if (problems.length) {
-      setIssues(problems);
-      setShowIssues(true);
-      setPublished(false);
-      return;
-    }
-
-    try {
-      const fd = new FormData();
-      fd.append("is_published", "true");
-      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
-      await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      setPublished(true);
-      toast.success(t("tryPublish.success"));
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("tryPublish.error"));
-      setPublished(false);
-    }
+    await togglePublish(next);
   };
 
   const { enabled: chatGroupEnabled, isLoading: chatGroupLoading } =
@@ -305,9 +274,14 @@ const CourseBuilderPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={tryPublish}
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className={`inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors ${
+                published
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-purple-600 hover:bg-purple-700"
+              }`}
             >
-              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" /> {t("publish")}
+              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {published ? t("unpublish") : t("publish")}
             </button>
           </div>
         </div>

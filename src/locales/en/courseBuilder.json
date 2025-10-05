@@ -2,6 +2,8 @@
   "question": "Question",
   "back": "Back",
   "publish": "Publish",
+  "published": "Published",
+  "unpublish": "Unpublish",
   "validateCourseReady": {
     "titleOK": "Course title is required.",
     "descOK": "Course description is required.",
@@ -32,6 +34,9 @@
   "tryPublish": {
     "success": "Course Published!",
     "error": "Failed to publish"
+  },
+  "tryUnpublish": {
+    "success": "Course Unpublished"
   },
   "handleSettingsChange": {
     "success": "Moved to draft",

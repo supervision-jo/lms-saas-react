@@ -2,6 +2,8 @@
   "question": "Pregunta",
   "back": "Atrás",
   "publish": "Publicar",
+  "published": "Publicado",
+  "unpublish": "Despublicar",
   "validateCourseReady": {
     "titleOK": "El título del curso es obligatorio.",
     "descOK": "La descripción del curso es obligatoria.",
@@ -32,6 +34,9 @@
   "tryPublish": {
     "success": "¡Curso publicado!",
     "error": "Error al publicar"
+  },
+  "tryUnpublish": {
+    "success": "Curso despublicado"
   },
   "handleSettingsChange": {
     "success": "Movido a borrador",

@@ -152,7 +152,6 @@ export default function CourseInformationForm({ course }: Props) {
           return;
         }
         fd.append("price", String(num));
-        fd.append("is_paid", num === 0 ? "false" : "true");
         break;
       }
 
