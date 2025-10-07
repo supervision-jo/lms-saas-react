@@ -295,7 +295,7 @@ const SimpleEditor = forwardRef<SimpleEditorHandle, Props>(
                 ) : (
                   "P"
                 )}
-                <ChevronDown className="w-2 h-2 ml-1" />
+                <ChevronDown className="w-2 h-2 ltr:ml-1 rtl:mr-1" />
               </button>
               {showHeadings && (
                 <div className="absolute z-20 mt-1 w-44 rounded-lg border shadow-sm bg-white border-gray-200">
@@ -309,7 +309,7 @@ const SimpleEditor = forwardRef<SimpleEditorHandle, Props>(
                     <button
                       key={String(h.level ?? "p")}
                       onClick={() => applyHeading(h.level as any)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                      className="w-full ltr:text-left rtl:text-right px-3 py-2 hover:bg-gray-100 text-sm"
                     >
                       {h.label}
                     </button>
@@ -382,7 +382,7 @@ const SimpleEditor = forwardRef<SimpleEditorHandle, Props>(
                     onClick={() =>
                       editor.chain().focus().toggleBulletList().run()
                     }
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                    className="w-full ltr:text-left rtl:text-right px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
                   >
                     <List className="w-4 h-4" /> Bullet list
                   </button>
@@ -390,7 +390,7 @@ const SimpleEditor = forwardRef<SimpleEditorHandle, Props>(
                     onClick={() =>
                       editor.chain().focus().toggleOrderedList().run()
                     }
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                    className="w-full ltr:text-left rtl:text-right px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
                   >
                     <ListOrdered className="w-4 h-4" /> Ordered list
                   </button>
@@ -398,7 +398,7 @@ const SimpleEditor = forwardRef<SimpleEditorHandle, Props>(
                     onClick={() =>
                       editor.chain().focus().toggleTaskList().run()
                     }
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                    className="w-full ltr:text-left rtl:text-right px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
                   >
                     <ListChecks className="w-4 h-4" /> Task list
                   </button>

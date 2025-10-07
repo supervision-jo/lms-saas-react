@@ -79,7 +79,7 @@ const InstructorPage: React.FC = () => {
             }}
             className="bg-purple-600 text-white sm:px-6 px-3 py-2 sm:py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
-            <Plus className="w-5 h-5 mr-2" />
+            <Plus className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
             {t("createCourse")}
           </button>
         </div>
@@ -90,7 +90,7 @@ const InstructorPage: React.FC = () => {
         {/* Tabs */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex gap-8">
               {[
                 { id: "courses", label: `${t("tabs.myCourses")}` },
                 { id: "analytics", label: `${t("tabs.analytics")}` },
@@ -187,7 +187,7 @@ const InstructorPage: React.FC = () => {
             </ul>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={() => {
                 setIsCreateCourseModalOpen(false);
@@ -204,12 +204,12 @@ const InstructorPage: React.FC = () => {
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ltr:mr-2 rtl:ml-2"></div>
                   {t("createCourseModal.creating")}
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                   {t("createCourse")}
                 </>
               )}

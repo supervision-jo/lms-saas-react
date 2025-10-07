@@ -40,6 +40,14 @@ const CourseBuilderPage: React.FC = () => {
     setPublished(!!course?.is_published);
   }, [course?.is_published]);
 
+  // sequential flag
+  const [sequential, setSequential] = useState<boolean>(
+    !!course?.is_sequential
+  );
+  useEffect(() => {
+    setSequential(!!course?.is_sequential);
+  }, [course?.is_sequential]);
+
   // validation modal
   const [issues] = useState<string[]>([]);
   const [showIssues, setShowIssues] = useState(false);
@@ -203,7 +211,7 @@ const CourseBuilderPage: React.FC = () => {
     try {
       const fd = new FormData();
       fd.append("is_published", shouldPublish ? "true" : "false");
-      await patch(`${API_ENDPOINTS.publishCourse}${courseId}/`, fd);
+      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
       await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       setPublished(shouldPublish);
       toast.success(
@@ -214,18 +222,40 @@ const CourseBuilderPage: React.FC = () => {
     }
   };
 
+  // sequential/unsequential course
+  const toggleSequential = async (shouldSequential: boolean) => {
+    if (!courseId) return;
+
+    try {
+      const fd = new FormData();
+      fd.append("is_sequential", shouldSequential ? "true" : "false");
+      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
+      await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+      setPublished(shouldSequential);
+      toast.success(
+        shouldSequential ? t("courseInfo.success") : t("courseInfo.error")
+      );
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || t("courseInfo.error"));
+    }
+  };
+
   // toggle publish/unpublish
   const tryPublish = async () => {
     console.log("🔍 Course ID:", courseId);
     console.log("🔍 Current published state:", published);
     console.log("🔍 Will toggle to:", !published);
-    console.log("🔍 Endpoint:", `${API_ENDPOINTS.publishCourse}${courseId}/`);
+    console.log("🔍 Endpoint:", `${API_ENDPOINTS.updateCourse}${courseId}/`);
     // Toggle: if published -> unpublish, if not published -> publish
     await togglePublish(!published);
   };
 
-  const handleSettingsChange = async (next: boolean) => {
+  const handleIsPublishedChange = async (next: boolean) => {
     await togglePublish(next);
+  };
+
+  const handleIsSequentialChange = async (next: boolean) => {
+    await toggleSequential(next);
   };
 
   const { enabled: chatGroupEnabled, isLoading: chatGroupLoading } =
@@ -336,7 +366,9 @@ const CourseBuilderPage: React.FC = () => {
             {activeTab === "settings" && (
               <SettingsForm
                 isPublished={published}
-                onChange={handleSettingsChange}
+                onIsPublishedChange={handleIsPublishedChange}
+                isSequential={sequential}
+                onIsSequentialChange={handleIsSequentialChange}
               />
             )}
           </div>

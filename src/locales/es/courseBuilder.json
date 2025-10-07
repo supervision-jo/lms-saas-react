@@ -202,6 +202,172 @@
     "published": "Publicado",
     "enrollment": "Inscripción",
     "autoApproveEnrollments": "Aprobar inscripciones automáticamente",
-    "studentsCanEnrollDesc": "Los estudiantes pueden inscribirse inmediatamente"
+    "studentsCanEnrollDesc": "Los estudiantes pueden inscribirse inmediatamente",
+    "sequential": "Modo en Cadena",
+    "sequentialSubtitle": "Controla cómo se desbloquean las lecciones",
+    "sequentialParagraph": "Al activar, el alumno debe terminar cada lección para abrir la siguiente—ideal para un aprendizaje estructurado. Al desactivar, todas las lecciones están disponibles desde el inicio."
+  },
+  "editArticle": {
+    "title": "Editar artículo",
+    "subTitle": "Crea contenido de texto enriquecido para tu lección",
+    "label": "Título del artículo",
+    "placeholder": "Ingresa el título del artículo",
+    "content": "Contenido del artículo",
+    "contentPlaceholder": "Escribe aquí el contenido de tu artículo…",
+    "contentP1": "Esto se enviará como",
+    "contentP2": "en la carga útil de thelessons.",
+    "time": "Tiempo de lectura (horas)",
+    "cancel": "Cancelar",
+    "save": "Guardar artículo"
+  },
+  "editLesson": {
+    "title": "Agregar enlace de video",
+    "subTitle": "Agrega un enlace de YouTube (lo guardaremos como",
+    "label": "Título del video",
+    "placeholder": "Ingresa el título del video",
+    "youtube": "URL del video de YouTube",
+    "youtubePlaceholder": "Completamos la duración automáticamente cuando es posible.",
+    "videoPreview": "Vista previa del video",
+    "noPreviewUrl": "No hay vista previa para URL que no sean de YouTube",
+    "noPreview": "Sin vista previa",
+    "time": "Duración del video (horas)",
+    "cancel": "Cancelar",
+    "save": "Guardar video"
+  },
+  "uploadingMaterial": {
+    "title": "Subir material",
+    "subTitle": "Añade recursos descargables para tus estudiantes",
+    "label": "Título del material",
+    "placeholder": "Ingresa el título del material",
+    "uploadFile": "Subir archivo",
+    "clickOrDrop": "Haz clic para subir o arrastra y suelta.",
+    "fail": "No se pudo leer el archivo",
+    "selected": "Seleccionado:",
+    "ready": "Listo para codificar en base64",
+    "downloadLink": "O proporciona un enlace de descarga",
+    "downloadURL": "URL de descarga",
+    "description": "Descripción",
+    "descriptionP": "Describe qué contiene este material...",
+    "cancel": "Cancelar",
+    "save": "Guardar material"
+  },
+  "quizBuilder": {
+    "title": {
+      "quiz": "Cuestionario",
+      "exam": "Examen"
+    },
+    "infoTitle": {
+      "quiz": "Información del cuestionario",
+      "exam": "Información del examen"
+    },
+    "labels": {
+      "lessonTitle": "Título *",
+      "passingScore": "Nota de aprobación (%)",
+      "totalTimeLimit": "Límite de tiempo total (minutos) *",
+      "lessonDescription": "Descripción (opcional)",
+      "questionText": "Texto de la pregunta *",
+      "answerOptions": "Opciones de respuesta *",
+      "points": "Puntos *",
+      "perQuestionTime": "Tiempo por pregunta (segundos, opcional)",
+      "explanation": "Explicación (opcional)"
+    },
+    "placeholders": {
+      "lessonTitle": {
+        "quiz": "Ingresa el título del cuestionario",
+        "exam": "Ingresa el título del examen"
+      },
+      "lessonDescription": {
+        "quiz": "Breve descripción del cuestionario",
+        "exam": "Breve descripción del examen"
+      },
+      "questionText": "Escribe tu pregunta aquí…",
+      "option": "Opción {{letter}}",
+      "perQuestionTime": "Opcional",
+      "explanation": "Proporciona una explicación de la respuesta correcta…"
+    },
+    "questions": {
+      "heading": "Preguntas ({{count}})",
+      "questionLabel": "Pregunta {{index}}",
+      "optionsAndPoints": "{{options}} opciones • {{points}} punto{{plural}}"
+    },
+    "buttons": {
+      "addQuestion": "Agregar pregunta",
+      "addOption": "Agregar opción",
+      "preview": "Vista previa",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "tooltips": {
+      "minOneQuestion": "Se requiere al menos 1 pregunta",
+      "removeQuestion": "Eliminar pregunta",
+      "minTwoOptions": "Se requieren al menos 2 opciones",
+      "removeOption": "Eliminar opción",
+      "correctAnswer": "Respuesta correcta",
+      "markAsCorrect": "Marcar como correcta"
+    },
+    "summary": {
+      "title": {
+        "quiz": "Resumen del cuestionario",
+        "exam": "Resumen del examen"
+      },
+      "questions": "Preguntas:",
+      "totalPoints": "Puntos totales:",
+      "totalOptions": "Opciones totales:",
+      "timeLimit": "Límite de tiempo:",
+      "minutesSuffix": "min"
+    },
+    "footer": {
+      "stats": "{{count}} pregunta{{qPlural}} • {{points}} punto{{pPlural}} en total"
+    },
+    "errors": {
+      "questionRequired": "La pregunta {{index}} es obligatoria",
+      "optionsTextRequired": "Todas las opciones en la pregunta {{index}} deben tener texto",
+      "correctRequired": "La pregunta {{index}} debe tener al menos una respuesta correcta",
+      "pointsMin": "Los puntos de la pregunta {{index}} deben ser ≥ 1",
+      "timeMin": "El límite de tiempo debe ser al menos 1 minuto",
+      "passRange": "La nota de aprobación debe estar entre 0 y 100"
+    },
+    "alerts": {
+      "minOneQuestion": "Un cuestionario debe tener al menos 1 pregunta",
+      "minTwoOptions": "Una pregunta debe tener al menos 2 opciones"
+    }
+  },
+  "quizPreview": {
+    "type": {
+      "quiz": "Cuestionario",
+      "exam": "Examen"
+    },
+    "completed": "Completado",
+    "questions": "Preguntas",
+    "qShort": "P",
+    "point": "punto",
+    "pts": "pts",
+    "finalScore": "Puntuación final",
+    "finalScoreInline": "Puntuación final: {{total}}/{{max}} ({{percent}}%)",
+    "noQuestionsYet": "Aún no hay preguntas",
+    "addOneToPreview": "Agrega al menos una pregunta para previsualizar este {{type}}.",
+    "questionOf": "Pregunta {{current}} de {{total}}",
+    "timesUp": "¡Se acabó el tiempo! Tus respuestas se enviaron automáticamente.",
+    "placeholder": {
+      "typeYourAnswer": "Escribe tu respuesta…"
+    },
+    "correctHidden": "La respuesta correcta está configurada (oculta durante el intento).",
+    "noOptions": "No hay opciones configuradas para esta pregunta.",
+    "prev": "Anterior",
+    "nextQuestion": "Siguiente pregunta",
+    "submitType": "Enviar {{type}}",
+    "completeTitle": "¡{{type}} completado!",
+    "yourAnswer": "Tu respuesta",
+    "correct": "Correcta:",
+    "explanation": "Explicación:",
+    "close": "Cerrar",
+    "editType": "Editar {{type}}",
+    "takeAgain": "Volver a intentar",
+    "meta": "{{count}} pregunta{{qPlural}} • {{points}} punto{{pPlural}} en total • Aprobación {{passing}}%",
+    "misc": {
+      "sPlural": "s",
+      "untitled": "Pregunta sin título",
+      "untitledQuestion": "Pregunta {{index}}"
+    }
   }
 }

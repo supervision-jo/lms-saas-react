@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Choice = { text: string; is_correct: boolean };
 type QuestionDraft = {
@@ -166,6 +167,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   onLessonTitleBlur,
   onLessonDescriptionBlur,
 }) => {
+  const { t } = useTranslation("courseBuilder");
   const [quiz, setQuiz] = useState<UiQuiz>(() => normalizeInitial(initialQuiz));
 
   const [metaTitle, setMetaTitle] = useState<string>(lessonTitle);
@@ -233,7 +235,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
   const removeQuestion = (qid: string) => {
     if (quiz.questions.length <= 1) {
-      alert("A quiz must have at least 1 question");
+      alert(t("quizBuilder.alerts.minOneQuestion"));
       return;
     }
     setQuiz((prev) => ({
@@ -275,7 +277,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     const q = quiz.questions.find((x) => x.id === qid);
     if (!q) return;
     if (q.options.length <= 2) {
-      alert("A question must have at least 2 options");
+      alert(t("quizBuilder.alerts.minTwoOptions"));
       return;
     }
     updateQuestion(qid, { options: q.options.filter((o) => o.id !== oid) });
@@ -322,27 +324,32 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     const next: Record<string, string> = {};
 
     quiz.questions.forEach((q, idx) => {
-      if (!q.text.trim()) next[`q_${q.id}`] = `Question ${idx + 1} is required`;
+      if (!q.text.trim())
+        next[`q_${q.id}`] = t("quizBuilder.errors.questionRequired", {
+          index: idx + 1,
+        });
       if (q.options.some((o) => !o.text.trim()))
-        next[`opts_${q.id}`] = `All options in question ${
-          idx + 1
-        } must have text`;
+        next[`opts_${q.id}`] = t("quizBuilder.errors.optionsTextRequired", {
+          index: idx + 1,
+        });
       if (!q.options.some((o) => o.is_correct))
-        next[`corr_${q.id}`] = `Question ${
-          idx + 1
-        } must have at least one correct answer`;
+        next[`corr_${q.id}`] = t("quizBuilder.errors.correctRequired", {
+          index: idx + 1,
+        });
       if (!Number.isFinite(q.points) || q.points < 1)
-        next[`pts_${q.id}`] = `Question ${idx + 1} points must be ≥ 1`;
+        next[`pts_${q.id}`] = t("quizBuilder.errors.pointsMin", {
+          index: idx + 1,
+        });
     });
 
     if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1)
-      next["time"] = "Time limit must be at least 1 minute";
+      next["time"] = t("quizBuilder.errors.timeMin");
     if (
       !Number.isFinite(quiz.passing_score) ||
       quiz.passing_score < 0 ||
       quiz.passing_score > 100
     )
-      next["pass"] = "Passing score must be between 0 and 100";
+      next["pass"] = t("quizBuilder.errors.passRange");
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -381,7 +388,10 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {metaTitle || (quiz.type === "exam" ? "Exam" : "Quiz")}
+          {metaTitle ||
+            (quiz.type === "exam"
+              ? t("quizBuilder.title.exam")
+              : t("quizBuilder.title.quiz"))}
         </h2>
         {!!metaDescription && (
           <p className="text-gray-600">{metaDescription}</p>
@@ -392,14 +402,16 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         {/* Lesson meta + Quiz info */}
         <div className="bg-gray-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            {quiz.type === "exam" ? "Exam Information" : "Quiz Information"}
+            {quiz.type === "exam"
+              ? t("quizBuilder.infoTitle.exam")
+              : t("quizBuilder.infoTitle.quiz")}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* LESSON title */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title *
+                {t("quizBuilder.labels.lessonTitle")}
               </label>
               <input
                 type="text"
@@ -410,16 +422,18 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   onLessonTitleChange?.(v);
                 }}
                 onBlur={(e) => onLessonTitleBlur?.(e.target.value)}
-                placeholder={`Enter ${
-                  quiz.type === "exam" ? "exam" : "quiz"
-                } title`}
+                placeholder={t(
+                  `quizBuilder.placeholders.lessonTitle.${
+                    quiz.type === "exam" ? "exam" : "quiz"
+                  }`
+                )}
                 className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent border-gray-300"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Passing Score (%)
+                {t("quizBuilder.labels.passingScore")}
               </label>
               <input
                 type="number"
@@ -427,13 +441,15 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 max={100}
                 value={quiz.passing_score}
                 onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    passing_score: Math.max(
-                      0,
-                      Math.min(100, Number(e.target.value || 0))
-                    ),
-                  }))
+                  setQuiz((p) => {
+                    return {
+                      ...p,
+                      passing_score: Math.max(
+                        0,
+                        Math.min(100, Number(e.target.value || 0))
+                      ),
+                    };
+                  })
                 }
                 onBlur={triggerAutoSave}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
@@ -449,7 +465,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Time Limit (minutes) *
+                {t("quizBuilder.labels.totalTimeLimit")}
               </label>
               <input
                 type="number"
@@ -477,7 +493,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             {/* LESSON description */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description (optional)
+                {t("quizBuilder.labels.lessonDescription")}
               </label>
               <textarea
                 rows={3}
@@ -488,9 +504,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   onLessonDescriptionChange?.(v);
                 }}
                 onBlur={(e) => onLessonDescriptionBlur?.(e.target.value)}
-                placeholder={`Brief description of the ${
-                  quiz.type === "exam" ? "exam" : "quiz"
-                }`}
+                placeholder={t(
+                  `quizBuilder.placeholders.lessonDescription.${
+                    quiz.type === "exam" ? "exam" : "quiz"
+                  }`
+                )}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               />
             </div>
@@ -501,7 +519,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         <div>
           <div className="flex items-center justify-between sm:flex-row flex-col-reverse gap-2 sm:gap-0 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 sm:self-center self-start">
-              Questions ({quiz.questions.length})
+              {t("quizBuilder.questions.heading", {
+                count: quiz.questions.length,
+              })}
             </h3>
             <button
               type="button"
@@ -509,14 +529,17 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               onClick={addQuestion}
               className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center text-sm"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
+              <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {t("quizBuilder.buttons.addQuestion")}
             </button>
           </div>
 
           <div className="space-y-4">
             {quiz.questions.map((q, idx) => {
               const expanded = expandedQuestions.has(q.id);
+              const letter = (i: number) =>
+                String.fromCharCode(65 + i) as string;
+
               return (
                 <div
                   key={q.id}
@@ -529,7 +552,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => toggleExpanded(q.id)}
-                        className="flex items-center space-x-3 flex-1 text-left"
+                        className="flex items-center gap-3 flex-1 ltr:text-left rtl:text-right"
                       >
                         <GripVertical className="w-4 h-4 text-gray-400" />
                         {expanded ? (
@@ -539,15 +562,20 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                         )}
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">
-                            Question {idx + 1}
+                            {t("quizBuilder.questions.questionLabel", {
+                              index: idx + 1,
+                            })}
                             {q.text &&
                               `: ${q.text.substring(0, 50)}${
                                 q.text.length > 50 ? "…" : ""
                               }`}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {q.options.length} options • {q.points} point
-                            {q.points !== 1 ? "s" : ""}
+                            {t("quizBuilder.questions.optionsAndPoints", {
+                              options: q.options.length,
+                              points: q.points,
+                              plural: q.points !== 1 ? "s" : "",
+                            })}
                           </p>
                         </div>
                       </button>
@@ -564,8 +592,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                         }`}
                         title={
                           quiz.questions.length <= 1
-                            ? "Minimum 1 question required"
-                            : "Remove question"
+                            ? t("quizBuilder.tooltips.minOneQuestion")
+                            : t("quizBuilder.tooltips.removeQuestion")
                         }
                       >
                         <Trash2 className="w-4 h-4" />
@@ -579,7 +607,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       {/* text */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Question Text *
+                          {t("quizBuilder.labels.questionText")}
                         </label>
                         <textarea
                           value={q.text}
@@ -587,7 +615,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                             updateQuestion(q.id, { text: e.target.value })
                           }
                           onBlur={triggerAutoSave}
-                          placeholder="Enter your question here…"
+                          placeholder={t(
+                            "quizBuilder.placeholders.questionText"
+                          )}
                           rows={3}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
                             errors[`q_${q.id}`]
@@ -606,7 +636,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       <div>
                         <div className="flex sm:items-center items-start sm:flex-row flex-col-reverse gap-2 sm:gap-0 justify-between mb-4">
                           <label className="block text-sm font-medium text-gray-700">
-                            Answer Options *
+                            {t("quizBuilder.labels.answerOptions")}
                           </label>
                           <button
                             type="button"
@@ -614,8 +644,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                             onMouseDown={(e) => e.preventDefault()}
                             className="self-center bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center"
                           >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Option
+                            <Plus className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                            {t("quizBuilder.buttons.addOption")}
                           </button>
                         </div>
 
@@ -626,8 +656,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                               className="flex items-start gap-3 sm:flex-row flex-col p-3 border border-gray-200 rounded-lg"
                             >
                               <div className="flex items-center mt-1">
-                                <span className="text-sm font-medium text-gray-500 mr-3">
-                                  {String.fromCharCode(65 + oi)}.
+                                <span className="text-sm font-medium text-gray-500 ltr:mr-3 rtl:ml-3">
+                                  {letter(oi)}.
                                 </span>
                                 <button
                                   type="button"
@@ -640,8 +670,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                   }`}
                                   title={
                                     o.is_correct
-                                      ? "Correct answer"
-                                      : "Mark as correct"
+                                      ? t("quizBuilder.tooltips.correctAnswer")
+                                      : t("quizBuilder.tooltips.markAsCorrect")
                                   }
                                 >
                                   {o.is_correct && (
@@ -658,9 +688,10 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                     updateOption(q.id, o.id, e.target.value)
                                   }
                                   onBlur={triggerAutoSave}
-                                  placeholder={`Option ${String.fromCharCode(
-                                    65 + oi
-                                  )}`}
+                                  placeholder={t(
+                                    "quizBuilder.placeholders.option",
+                                    { letter: letter(oi) }
+                                  )}
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                               </div>
@@ -677,8 +708,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                 }`}
                                 title={
                                   q.options.length <= 2
-                                    ? "Minimum 2 options required"
-                                    : "Remove option"
+                                    ? t("quizBuilder.tooltips.minTwoOptions")
+                                    : t("quizBuilder.tooltips.removeOption")
                                 }
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -703,7 +734,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Points *
+                            {t("quizBuilder.labels.points")}
                           </label>
                           <input
                             type="number"
@@ -733,7 +764,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Per-question Time (seconds, optional)
+                            {t("quizBuilder.labels.perQuestionTime")}
                           </label>
                           <input
                             type="number"
@@ -748,7 +779,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                               })
                             }
                             onBlur={triggerAutoSave}
-                            placeholder="Optional"
+                            placeholder={t(
+                              "quizBuilder.placeholders.perQuestionTime"
+                            )}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
                         </div>
@@ -757,7 +790,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       {/* explanation */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Explanation (optional)
+                          {t("quizBuilder.labels.explanation")}
                         </label>
                         <textarea
                           value={q.explanation || ""}
@@ -767,7 +800,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                             })
                           }
                           onBlur={triggerAutoSave}
-                          placeholder="Provide an explanation for the correct answer…"
+                          placeholder={t(
+                            "quizBuilder.placeholders.explanation"
+                          )}
                           rows={2}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
@@ -783,31 +818,42 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         {/* Summary */}
         <div className="bg-blue-50 rounded-lg p-6">
           <h4 className="font-semibold text-blue-900 mb-3">
-            {quiz.type === "exam" ? "Exam Summary" : "Quiz Summary"}
+            {quiz.type === "exam"
+              ? t("quizBuilder.summary.title.exam")
+              : t("quizBuilder.summary.title.quiz")}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-blue-700">Questions:</span>
-              <span className="font-semibold text-blue-900 ml-2">
+              <span className="text-blue-700">
+                {t("quizBuilder.summary.questions")}
+              </span>
+              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
                 {quiz.questions.length}
               </span>
             </div>
             <div>
-              <span className="text-blue-700">Total Points:</span>
-              <span className="font-semibold text-blue-900 ml-2">
+              <span className="text-blue-700">
+                {t("quizBuilder.summary.totalPoints")}
+              </span>
+              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
                 {totalPoints}
               </span>
             </div>
             <div>
-              <span className="text-blue-700">Total Options:</span>
-              <span className="font-semibold text-blue-900 ml-2">
+              <span className="text-blue-700">
+                {t("quizBuilder.summary.totalOptions")}
+              </span>
+              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
                 {quiz.questions.reduce((sum, q) => sum + q.options.length, 0)}
               </span>
             </div>
             <div>
-              <span className="text-blue-700">Time Limit:</span>
-              <span className="font-semibold text-blue-900 ml-2">
-                {quiz.time_limit}m
+              <span className="text-blue-700">
+                {t("quizBuilder.summary.timeLimit")}
+              </span>
+              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
+                {quiz.time_limit}
+                {t("quizBuilder.summary.minutesSuffix")}
               </span>
             </div>
           </div>
@@ -816,9 +862,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         {/* Actions */}
         <div className="flex items-center sm:flex-row flex-col gap-4 justify-between pt-6 border-t border-gray-200">
           <div className="text-sm text-gray-600">
-            {quiz.questions.length} question
-            {quiz.questions.length !== 1 ? "s" : ""} • {totalPoints} total point
-            {totalPoints !== 1 ? "s" : ""}
+            {t("quizBuilder.footer.stats", {
+              count: quiz.questions.length,
+              qPlural: quiz.questions.length !== 1 ? "s" : "",
+              points: totalPoints,
+              pPlural: totalPoints !== 1 ? "s" : "",
+            })}
           </div>
 
           <div className="sm:w-fit w-full flex gap-4 items-center sm:flex-row flex-col">
@@ -828,8 +877,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               onClick={handlePreview}
               className="bg-gray-600 text-white px-6 py-3 w-full rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
+              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {t("quizBuilder.buttons.preview")}
             </button>
             <button
               type="button"
@@ -837,8 +886,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               onClick={handleSave}
               className="bg-purple-600 text-white px-6 py-3 w-full rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
             >
-              <Save className="w-4 h-4 mr-2" />
-              Save
+              <Save className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {t("quizBuilder.buttons.save")}
             </button>
 
             <button
@@ -849,7 +898,7 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
               }}
               className="bg-transparent text-gray-600 px-6 py-3 w-full rounded-lg border border-gray-200 transition-colors flex items-center justify-center"
             >
-              Cancel
+              {t("quizBuilder.buttons.cancel")}
             </button>
           </div>
         </div>

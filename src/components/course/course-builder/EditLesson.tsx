@@ -1,4 +1,5 @@
 // src/components/course/builder/EditLesson.tsx
+import { useEffect, useMemo, useState } from "react";
 import { Youtube } from "lucide-react";
 import {
   isYouTubeUrl,
@@ -8,9 +9,15 @@ import {
   secondsToHours,
   getHtmlVideoDurationSeconds,
 } from "../../../utils/courseBuilder";
+import { useTranslation } from "react-i18next";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { useCustomUpdate } from "../../../hooks/useMutation";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 interface Props {
-  modules: Module[];
+  // modules: Module[]; // kept for compatibility (unused for data source)
   updateLesson: (
     moduleId: string,
     lessonId: string,
@@ -25,35 +32,69 @@ interface Props {
 }
 
 export default function EditLesson({
-  modules,
+  // modules, // not used anymore as source of lesson data
   editingLesson,
   setEditingLesson,
   updateLesson,
   onCancel,
   onSave,
 }: Props) {
-  const mod = modules.find((m) => m.id === editingLesson.moduleId);
-  const les = mod?.lessons.find((l) => l.id === editingLesson.lessonId) as any;
+  const { t } = useTranslation("courseBuilder");
+  const queryClient = useQueryClient();
+  const lessonId = editingLesson.lessonId;
+  const moduleId = editingLesson.moduleId;
 
-  const url: string = les?.url || "";
-  const isYT = isYouTubeUrl(url);
-  const videoId = isYT ? extractYouTubeVideoId(url) : null;
-  const thumb = videoId ? getYouTubeThumbnail(videoId) : "";
+  // Fetch the single lesson by id
+  const { data } = useCustomQuery(
+    `${API_ENDPOINTS.lesson}${lessonId}/`,
+    ["lesson", lessonId],
+    undefined,
+    !!lessonId
+  );
+  const serverLesson: Lesson | undefined = useMemo(
+    () => (data?.data ? (data.data as Lesson) : data),
+    [data]
+  );
 
-  const isValid = (() => {
-    if (!url.trim()) return false;
+  // Local form state (initialized from server)
+  const [title, setTitle] = useState<string>("");
+  const [url, setUrl] = useState<string>("");
+  const [durationHours, setDurationHours] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!serverLesson) return;
+    setTitle(serverLesson.title ?? "");
+    setUrl(serverLesson.url ?? "");
+    setDurationHours(
+      typeof serverLesson.duration_hours === "number"
+        ? serverLesson.duration_hours
+        : null
+    );
+  }, [serverLesson]);
+
+  const isValid = useMemo(() => {
+    if (!url?.trim()) return false;
     try {
       new URL(url);
       return true;
     } catch {
       return false;
     }
-  })();
+  }, [url]);
+
+  const isYT = isYouTubeUrl(url || "");
+  const videoId = isYT ? extractYouTubeVideoId(url || "") : null;
+  const thumb = videoId ? getYouTubeThumbnail(videoId) : "";
+
+  // optimistic reflect in parent, but primary source is local state + PATCH
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    updateLesson(moduleId, lessonId, { title: val } as any);
+  };
 
   const handleUrlChange = async (value: string) => {
-    updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-      url: value,
-    });
+    setUrl(value);
+    updateLesson(moduleId, lessonId, { url: value });
 
     // Auto-extract duration -> duration_hours
     try {
@@ -66,41 +107,42 @@ export default function EditLesson({
       }
       const hours = secondsToHours(seconds);
       if (hours > 0) {
-        updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-          duration_hours: hours,
-        });
+        setDurationHours(hours);
+        updateLesson(moduleId, lessonId, { duration_hours: hours });
       }
     } catch {
-      // silently ignore
+      // ignore
     }
   };
+
+  const { mutateAsync: patchLesson } = useCustomUpdate(
+    `${API_ENDPOINTS.lesson}${lessonId}/`
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 className="text-xl font-bold text-gray-900">Add Video Link</h3>
+          <h3 className="text-xl font-bold text-gray-900">
+            {t("editLesson.title")}
+          </h3>
           <p className="text-gray-600 mt-1">
-            Add a YouTube link (we’ll save it as <code>url</code>)
+            {t("editLesson.subTitle")} <code>url</code>)
           </p>
         </div>
 
         <div className="p-6">
           <div className="space-y-6">
-            {/* Title (NEW) */}
+            {/* Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video Title
+                {t("editLesson.label")}
               </label>
               <input
                 type="text"
-                value={les?.title || ""}
-                onChange={(e) =>
-                  updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-                    title: e.target.value,
-                  } as any)
-                }
-                placeholder="Enter video title"
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder={t("editLesson.placeholder")}
                 className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -108,7 +150,7 @@ export default function EditLesson({
             {/* YouTube URL */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                YouTube Video URL
+                {t("editLesson.youtube")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -116,7 +158,7 @@ export default function EditLesson({
                 </div>
                 <input
                   type="url"
-                  value={url}
+                  value={url || ""}
                   onChange={(e) => handleUrlChange(e.target.value)}
                   name="url"
                   placeholder="https://www.youtube.com/watch?v=..."
@@ -124,13 +166,15 @@ export default function EditLesson({
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                We auto-fill duration when possible.
+                {t("editLesson.youtubePlaceholder")}
               </p>
             </div>
 
             {/* Preview */}
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <h4 className="font-medium text-gray-900 mb-3">Video Preview</h4>
+              <h4 className="font-medium text-gray-900 mb-3">
+                {t("editLesson.videoPreview")}
+              </h4>
               <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
                 {videoId ? (
                   <img
@@ -142,7 +186,9 @@ export default function EditLesson({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
                     <span className="text-sm">
-                      {url ? "No preview for non-YouTube URL" : "No preview"}
+                      {url
+                        ? t("editLesson.noPreviewUrl")
+                        : t("editLesson.noPreview")}
                     </span>
                   </div>
                 )}
@@ -157,19 +203,17 @@ export default function EditLesson({
             {/* Duration (hours) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video Duration (hours)
+                {t("editLesson.time")}
               </label>
               <input
                 type="number"
                 step="0.01"
                 min={0}
-                value={les?.duration_hours ?? ""}
+                value={durationHours ?? ""}
                 onChange={(e) =>
-                  updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-                    duration_hours: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  })
+                  setDurationHours(
+                    e.target.value ? Number(e.target.value) : null
+                  )
                 }
                 placeholder="e.g., 1.25"
                 className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -178,29 +222,40 @@ export default function EditLesson({
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-end space-x-4 sticky bottom-0 bg-white">
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-4 sticky bottom-0 bg-white">
           <button
             onClick={() => (onCancel ? onCancel() : setEditingLesson(null))}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            Cancel
+            {t("editLesson.cancel")}
           </button>
           <button
             onClick={async () => {
               if (!isValid) return;
-              updateLesson(editingLesson.moduleId, editingLesson.lessonId, {
-                content_type: "video",
-                url: (les?.url || "").trim(),
-              } as any);
-              if (onSave) onSave();
-              else setEditingLesson(null);
+              try {
+                await patchLesson({
+                  title: title ?? "",
+                  url: (url || "").trim(),
+                  content_type: "video",
+                  duration_hours: durationHours ?? null,
+                });
+                toast.success(t("createSections.videoSaved"));
+                // only revalidate the section lessons list
+                await queryClient.invalidateQueries({
+                  queryKey: ["lessons", moduleId],
+                });
+                if (onSave) onSave();
+                else setEditingLesson(null);
+              } catch {
+                // toasts/errors handled by wrappers if any
+              }
             }}
             disabled={!isValid}
             className={`bg-purple-600 text-white px-6 py-2 rounded-lg ${
               !isValid ? "opacity-60 cursor-not-allowed" : "hover:bg-purple-700"
             } transition-colors`}
           >
-            Save Video
+            {t("editLesson.save")}
           </button>
         </div>
       </div>

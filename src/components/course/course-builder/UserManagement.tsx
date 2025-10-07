@@ -108,7 +108,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
           className="flex-1"
         />
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={statusFilter}
@@ -129,22 +129,22 @@ export default function UserManagement({ courseId }: { courseId: string }) {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 ltr:text-left rtl:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.user")}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 ltr:text-left rtl:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.progress")}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 ltr:text-left rtl:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.status")}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 ltr:text-left rtl:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.enrolled")}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 ltr:text-left rtl:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.lastActive")}
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 rtl:text-left ltr:text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t("userManagement.actions")}
                 </th>
               </tr>
@@ -158,12 +158,12 @@ export default function UserManagement({ courseId }: { courseId: string }) {
                         name={user?.full_name}
                         avatar={user?.profile_image}
                       />
-                      <div className="ml-4">
+                      <div className="ltr:ml-4 rtl:mr-4">
                         <div className="text-sm font-medium text-gray-900">
                           {user?.full_name}
                         </div>
                         <div className="text-sm text-gray-500 flex items-center">
-                          <Mail className="w-3 h-3 mr-1" />
+                          <Mail className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
                           {user?.email}
                         </div>
                       </div>
@@ -171,7 +171,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 ltr:mr-3 rtl:ml-3">
                         <div
                           className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${user?.progress ?? 0}%` }}
@@ -187,15 +187,15 @@ export default function UserManagement({ courseId }: { courseId: string }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
+                      <Calendar className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
                       {formatDateTimeSimple(user?.enrolled_at ?? new Date())}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user?.last_active ?? ""}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="px-6 py-4 whitespace-nowrap rtl:text-left ltr:text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleRemoveUser(user?.id)}
                         className="text-red-600 hover:text-red-900 p-1"
@@ -249,7 +249,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 gap-2">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               onClick={() => setIsAddUserModalOpen(false)}
               variant="secondary"

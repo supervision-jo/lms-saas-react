@@ -1,12 +1,9 @@
-// src/components/course/builder/createSectionForm.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
-  Edit,
   FileText,
   GripVertical,
   HelpCircle,
-  Link as LinkIcon,
   Plus,
   Trash2,
   Upload,
@@ -22,41 +19,29 @@ import EditLesson from "./EditLesson";
 import EditArticle from "./EditArticle";
 import UploadingMaterial from "./UploadingMaterial";
 
-import {
-  isContent,
-  nextAssessmentTitle,
-  reindexOrders1Based,
-} from "../../../utils/courseBuilder";
-import { makeKeyedDebouncer } from "../../../utils/netCoalesce";
 import QuizBuilder, { AssessmentDraft } from "../../quizzes/QuizBuilder";
 import QuizPreview from "../../quizzes/QuizPreview";
 import { AxiosResponse } from "axios";
 
 import ModuleItem from "./ModuleItem";
-import LessonItem from "./LessonItem";
 import Modal from "../../reusable-components/Modal";
 import { useExamsByLesson } from "../../../hooks/useExamsByLesson";
 import { invalidateLessonExams, qk } from "../../../utils/builderQueries";
 import { useTranslation } from "react-i18next";
 
-// NEW: dedicated lesson API thin helpers
-import {
-  createLessonApi,
-  patchLessonApi,
-  deleteLessonApi,
-} from "../../../utils/lessonApi";
-
-// const debounceLessons = makeKeyedDebouncer(450);
-const debounceCommit = makeKeyedDebouncer(450);
+import { patchLessonApi } from "../../../utils/lessonApi";
+import { patch } from "../../../api";
+import SectionLessons from "./SectionLessons";
 
 export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Track last committed values to avoid no-op PATCH on blur
+  // Track last committed values to avoid no-op PATCH on blur (modules only)
   const lastSavedModuleRef = useRef<
     Record<string, { title: string; description: string }>
   >({});
+  // Track last saved lesson fields for modals (kept to avoid changing modal components)
   const lastSavedLessonRef = useRef<
     Record<
       string,
@@ -76,13 +61,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       menuRefs.current[id] = el;
     };
 
-  // DnD baselines
-  const dragBaselineRef = useRef<Record<string, string[]>>({});
-  const lastCommittedLessonOrderRef = useRef<Record<string, string[]>>({});
-
-  const arraysEqual = (a: string[], b: string[]) =>
-    a.length === b.length && a.every((x, i) => x === b[i]);
-
   const { t } = useTranslation("courseBuilder");
 
   useEffect(() => {
@@ -96,9 +74,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [openMenuFor]);
 
-  // Prefill modules on load
+  // Fetch sections
   const { data: modulesData, isLoading } = useCustomQuery(
-    `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=true`,
+    `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=false`,
     qk.modules(courseId),
     undefined,
     !!courseId
@@ -108,8 +86,13 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     [modulesData]
   );
 
-  // Local editable state
+  // Local editable state (modules only; lesson rows here are for modal lookups)
   const [modules, setModules] = useState<Module[]>(serverModules);
+
+  // Per-module API coming from SectionLessons (so the “+” menu can create lessons)
+  const sectionApisRef = useRef<
+    Record<string, { createContentLesson: any; createAssessment: any }>
+  >({});
 
   // Editing states
   const [editingLesson, setEditingLesson] = useState<{
@@ -135,32 +118,13 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     null
   );
 
-  const isEditingAny = !!(
-    editingLesson ||
-    editingArticle ||
-    uploadingMaterial ||
-    editingAssessment
-  );
-
-  // Seed local state & snapshot from server — but don't override while any editor is open
+  // Seed local modules snapshot when server changes
   useEffect(() => {
-    if (isEditingAny) return;
-    const next = Array.isArray(serverModules) ? serverModules : [];
-    setModules(next);
-
-    // seed last committed order snapshot from server
-    const map: Record<string, string[]> = {};
-    next.forEach((m) => {
-      map[m.id] = (m.lessons || []).map((l: any) => l.id);
-    });
-    lastCommittedLessonOrderRef.current = map;
-
-    // seed module last-saved snapshot
-    const mSnap: Record<string, { title: string; description: string }> = {};
-    for (const m of next || []) {
-      mSnap[m.id] = { title: m.title ?? "", description: m.description ?? "" };
+    setModules(serverModules);
+    const snap: Record<string, any> = {};
+    for (const m of serverModules || []) {
       for (const l of m.lessons || []) {
-        lastSavedLessonRef.current[l.id] = {
+        snap[l.id] = {
           title: l.title,
           description: l.description ?? undefined,
           url: l.url ?? undefined,
@@ -168,21 +132,33 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
         };
       }
     }
-    lastSavedModuleRef.current = mSnap;
-  }, [serverModules, isEditingAny]);
+    lastSavedLessonRef.current = snap;
+  }, [serverModules]);
 
-  // ---- Modules (sections) mutations (title/description/order) ----
+  // // ---- Modules (sections) mutations (title/description/order) ----
+  // const { mutateAsync: patchModule } = useMutation<
+  //   AxiosResponse<any>,
+  //   any,
+  //   { id: string; payload: any }
+  // >({
+  //   mutationFn: async ({ id, payload }) => {
+  //     return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
+  //   },
+  //   onError: (e) => handleErrorAlerts(e.response?.data?.error),
+  // });
+
   const { mutateAsync: patchModule } = useMutation<
     AxiosResponse<any>,
     any,
-    { id: string; payload: any }
+    any
   >({
-    mutationFn: async ({ id, payload }) => {
-      // keep your existing endpoint for module (section) updates
-      const { patch } = await import("../../../api");
+    mutationFn: async ({ id, payload }: any) => {
       return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
     },
-    onError: (e) => handleErrorAlerts(e.response?.data?.error),
+    onError: (e) => {
+      const error = e.response?.data?.error;
+      handleErrorAlerts(error);
+    },
   });
 
   const { mutateAsync: removeSection } = useMutation<
@@ -216,79 +192,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           ? value
           : lastSavedModuleRef.current[id]?.description ?? "",
     };
-    // only invalidate modules list (light)
     queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
   };
 
-  // ---- Lessons (new endpoints) ----
-  const createLesson = async (
-    sectionId: string,
-    base: Partial<Lesson>
-  ): Promise<Lesson> => {
-    const res = await createLessonApi({
-      section_id: sectionId,
-      title: base.title ?? "",
-      description: base.description ?? "",
-      description_html: base.description_html ?? null,
-      content_type: base.content_type!,
-      order: base.order ?? 1,
-      url: base.url ?? null,
-      // string_file: base.string_file ?? null,
-      duration_hours: base.duration_hours ?? null,
-      free_preview: !!base.free_preview,
-    });
-    const lesson: Lesson = res?.data?.data ?? res?.data ?? res;
-    // snapshot last saved
-    lastSavedLessonRef.current[lesson.id] = {
-      title: lesson.title,
-      description: lesson.description ?? undefined,
-      url: lesson.url ?? undefined,
-      duration_hours: lesson.duration_hours ?? null,
-    };
-    return lesson;
-  };
-
-  const patchLesson = async (lessonId: string, payload: Partial<Lesson>) => {
-    // change-detect simple fields to avoid no-op patches
-    const snap = lastSavedLessonRef.current[lessonId] || {};
-    const nextSnap = { ...snap };
-    const toSend: any = {};
-
-    (
-      [
-        "title",
-        "description",
-        "url",
-        "duration_hours",
-        "description_html",
-        "free_preview",
-        "order",
-        "content_type",
-        // "string_file",
-      ] as const
-    ).forEach((k) => {
-      // only include if provided in payload AND changed vs snapshot
-      if (payload[k as keyof Lesson] !== undefined) {
-        const v = payload[k as keyof Lesson] as any;
-        if (snap[k as keyof typeof snap] !== v) {
-          toSend[k] = v;
-          (nextSnap as any)[k] = v;
-        }
-      }
-    });
-
-    if (Object.keys(toSend).length === 0) return; // nothing changed
-
-    await patchLessonApi(lessonId, toSend);
-    lastSavedLessonRef.current[lessonId] = nextSnap;
-  };
-
-  const deleteLesson = async (lessonId: string) => {
-    await deleteLessonApi(lessonId);
-    delete lastSavedLessonRef.current[lessonId];
-  };
-
-  // Local state helpers
+  // Update a single lesson field in our local module snapshot so modals reflect typing immediately
   const updateLessonLocal = (
     moduleId: string,
     lessonId: string,
@@ -308,7 +215,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     );
   };
 
-  // add module (section)
+  // Add a new section
   const { mutateAsync: createSection } = useMutation<
     AxiosResponse<any>,
     any,
@@ -340,164 +247,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     }
   };
 
-  // add content lessons (POST immediately with defaults, then open modal)
-  const addContentLesson = async (
-    moduleId: string,
-    type: "video" | "article" | "material"
-  ) => {
-    const mod = modules.find((m) => m.id === moduleId);
-    if (!mod) return;
-
-    const tempId = `tmp-${Date.now()}`;
-    const optimistic: Lesson = {
-      id: tempId,
-      title:
-        type === "video"
-          ? t("createSections.newVideoTitle")
-          : type === "article"
-          ? t("createSections.newArticleTitle")
-          : t("createSections.newMaterialTitle"),
-      description: "",
-      description_html: type === "article" ? "<p></p>" : null,
-      content_type: type,
-      free_preview: false,
-      order: (mod.lessons?.length ?? 0) + 1,
-      url: "",
-      // string_file: null,
-      duration_hours: null,
-      file: null as any,
-      watched: false,
-      section: moduleId,
-    };
-
-    // optimistic UI
-    setModules((prev) =>
-      prev.map((m) =>
-        m.id !== moduleId
-          ? m
-          : { ...m, lessons: [...(m.lessons || []), optimistic] }
-      )
-    );
-
-    try {
-      const created = await createLesson(moduleId, optimistic);
-      // replace temp with real
-      setModules((prev) =>
-        prev.map((m) =>
-          m.id !== moduleId
-            ? m
-            : {
-                ...m,
-                lessons: (m.lessons || []).map((l) =>
-                  l.id === tempId ? ({ ...created } as Lesson) : l
-                ),
-              }
-        )
-      );
-
-      // Refresh cache
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-
-      // open editor
-      setTimeout(() => {
-        if (type === "video")
-          setEditingLesson({ moduleId, lessonId: created.id });
-        if (type === "article")
-          setEditingArticle({ moduleId, lessonId: created.id });
-        if (type === "material")
-          setUploadingMaterial({ moduleId, lessonId: created.id });
-      }, 0);
-    } catch (e: any) {
-      handleErrorAlerts(e?.response?.data?.error);
-      // rollback optimistic
-      setModules((prev) =>
-        prev.map((m) =>
-          m.id !== moduleId
-            ? m
-            : {
-                ...m,
-                lessons: (m.lessons || []).filter((l) => l.id !== tempId),
-              }
-        )
-      );
-    }
-  };
-
-  const addAssessment = async (moduleId: string, type: "quiz" | "exam") => {
-    const mod = modules.find((m) => m.id === moduleId);
-    if (!mod) return;
-
-    const title = nextAssessmentTitle(mod as any, type);
-    // NOTE: assessments still flow through exams endpoints; store as lesson row first
-    const optimistic: Lesson = {
-      id: `tmp-${Date.now()}`,
-      title,
-      description: "",
-      description_html: null,
-      content_type: type,
-      free_preview: false,
-      order: (mod.lessons?.length ?? 0) + 1,
-      url: "",
-      // string_file: null,
-      duration_hours: null,
-      file: null as any,
-      watched: false,
-      section: moduleId,
-    };
-
-    setModules((prev) =>
-      prev.map((m) =>
-        m.id !== moduleId
-          ? m
-          : {
-              ...m,
-              lessons: reindexOrders1Based([...(m.lessons || []), optimistic]),
-            }
-      )
-    );
-
-    try {
-      const created = await createLesson(moduleId, optimistic);
-      setModules((prev) =>
-        prev.map((m) =>
-          m.id !== moduleId
-            ? m
-            : {
-                ...m,
-                lessons: (m.lessons || []).map((l) =>
-                  l.id === optimistic.id ? ({ ...created } as Lesson) : l
-                ),
-              }
-        )
-      );
-
-      // Refresh cache
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-
-      toast.success(
-        `${
-          type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
-        } ${t("createSections.created")}`
-      );
-      setEditingAssessment({ id: created.id, moduleId, type });
-    } catch {
-      toast.error(t("createSections.failedUpdateSomeAttachments"));
-      // rollback optimistic
-      setModules((prev) =>
-        prev.map((m) =>
-          m.id !== moduleId
-            ? m
-            : {
-                ...m,
-                lessons: (m.lessons || []).filter(
-                  (l) => l.id !== optimistic.id
-                ),
-              }
-        )
-      );
-    }
-  };
-
+  // Modules DnD
   const moveModule = (dragId: string, hoverId: string) => {
     setModules((prev) => {
       const d = prev.findIndex((m) => m.id === dragId);
@@ -510,90 +260,28 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     });
   };
 
+  // Reorder modules = normal PATCH per changed row
   const commitModulesOrder = async () => {
-    // Use the new reorder endpoint to update all sections at once
-    const sections = modules.map((m, idx) => ({
-      section_id: m.id,
-      order: idx + 1,
-    }));
-
-    try {
-      const { edit } = await import("../../../api");
-      await edit(API_ENDPOINTS.reorderSections, { sections });
-      toast.success(t("createSections.commitModulesOrderSuccess"));
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    } catch (error: any) {
-      toast.error(t("createSections.commitModulesOrderError"));
-      handleErrorAlerts(error?.response?.data?.error);
-    }
-  };
-
-  const moveLesson = (moduleId: string, dragId: string, hoverId: string) => {
-    setModules((prev) =>
-      prev.map((m) => {
-        if (m.id !== moduleId) return m;
-
-        // Record baseline once per drag gesture
-        if (!dragBaselineRef.current[moduleId]) {
-          dragBaselineRef.current[moduleId] = (m.lessons || []).map(
-            (l: any) => l.id
-          );
-        }
-
-        const lessons = [...m.lessons];
-        const d = lessons.findIndex((l: any) => l.id === dragId);
-        const h = lessons.findIndex((l: any) => l.id === hoverId);
-        if (d < 0 || h < 0 || d === h) return m;
-
-        const [dragged] = lessons.splice(d, 1);
-        lessons.splice(h, 0, dragged);
-
-        return { ...m, lessons: reindexOrders1Based(lessons) };
+    const ops = modules
+      .map((m, idx) => {
+        if (m.order === idx + 1) return null;
+        return patchModule({
+          id: m.id,
+          payload: {
+            order: idx + 1,
+          },
+        });
       })
-    );
-  };
-
-  const commitLessonOrder = async (moduleId: string) => {
-    return debounceCommit(moduleId, async () => {
-      const mod = modules.find((m) => m.id === moduleId);
-      if (!mod) return;
-
-      const baseline =
-        dragBaselineRef.current[moduleId] ??
-        lastCommittedLessonOrderRef.current[moduleId];
-      const currentIds = (mod.lessons || []).map((l: any) => l.id);
-
-      // Clear the live baseline after drag ends
-      delete dragBaselineRef.current[moduleId];
-
-      // If nothing changed, skip
-      if (baseline && arraysEqual(baseline, currentIds)) return;
-
-      // Only PATCH lessons whose order changed
-      const ops: Promise<any>[] = [];
-      (mod.lessons || []).forEach((l, idx) => {
-        if (l.order !== idx + 1) {
-          ops.push(
-            patchLesson(l.id, { order: idx + 1 }).catch(() => {
-              /* swallow per-lesson order errors */
-            })
-          );
-        }
-      });
-
-      if (!ops.length) return;
-
-      try {
-        await Promise.all(ops);
-        lastCommittedLessonOrderRef.current[moduleId] = currentIds;
-        toast.success(t("createSections.commitModulesOrderSuccess"));
-      } catch {
-        toast.error(t("createSections.commitModulesOrderError"));
-      } finally {
-        // Lightweight: refresh modules to ensure consistency if server transforms anything
-        queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-      }
-    });
+      .filter(Boolean) as Promise<any>[];
+    if (!ops.length) return;
+    try {
+      await Promise.all(ops);
+      toast.success(t("createSections.commitModulesOrderSuccess"));
+    } catch {
+      toast.error(t("createSections.commitModulesOrderError"));
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
+    }
   };
 
   const deleteModule = async (id: string) => {
@@ -605,54 +293,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     }
   };
 
-  const deleteContentLesson = async (moduleId: string, lessonId: string) => {
-    // optimistic remove
-    setModules((prev) =>
-      prev.map((m) =>
-        m.id !== moduleId
-          ? m
-          : {
-              ...m,
-              lessons: reindexOrders1Based(
-                (m.lessons || []).filter((l) => l.id !== lessonId)
-              ),
-            }
-      )
-    );
-    try {
-      await deleteLesson(lessonId);
-      toast.success(t("createSections.lessonRemoved"));
-      await commitLessonOrder(moduleId);
-    } catch {
-      toast.error(t("createSections.failedRemoveLesson"));
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    }
-  };
-
-  const deleteExamOrQuiz = async (id: string, moduleId: string) => {
-    // assessments as lessons are also deletable via lesson API
-    const mod = modules.find((m) => m.id === moduleId);
-    if (!mod) return;
-
-    const nextLessons = reindexOrders1Based(
-      (mod.lessons || []).filter((l) => l.id !== id)
-    );
-
-    setModules((prev) =>
-      prev.map((m) => (m.id !== moduleId ? m : { ...m, lessons: nextLessons }))
-    );
-
-    try {
-      await deleteLesson(id);
-      toast.success(t("createSections.assessmentDeleted"));
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    } catch (e: any) {
-      handleErrorAlerts(e?.response?.data?.error);
-      queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
-    }
-  };
-
-  //  fetch exam/quiz by LESSON id (for builder initialQuiz)
+  // Exams by LESSON id for the quiz/exam builder
   const { data: examResp } = useExamsByLesson(
     editingAssessment?.id ?? undefined
   );
@@ -660,6 +301,25 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     const obj = examResp?.data ?? examResp ?? null;
     return obj && typeof obj === "object" ? obj : null;
   }, [examResp]);
+
+  // Helper to persist a lesson field from modal
+  const persistLessonField = async (
+    lessonId: string,
+    payload: Partial<Lesson>
+  ) => {
+    const snap = lastSavedLessonRef.current[lessonId] || {};
+    let changed = false;
+    for (const k of Object.keys(payload) as (keyof Lesson)[]) {
+      if ((snap as any)[k] !== (payload as any)[k]) {
+        changed = true;
+        (snap as any)[k] = (payload as any)[k];
+      }
+    }
+    if (!changed) return;
+
+    await patchLessonApi(lessonId, payload);
+    lastSavedLessonRef.current[lessonId] = snap;
+  };
 
   return (
     <div className="sm:space-y-6 space-y-3">
@@ -673,7 +333,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
             onClick={addModule}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
             {t("createSections.addModule")}
           </button>
         </div>
@@ -706,7 +366,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 <div className="border border-gray-200 rounded-lg overflow-visible">
                   <div className="sm:p-4 p-2 bg-gray-50 border-b border-gray-200 relative">
                     <div className="flex sm:items-center items-start sm:flex-row flex-col gap-4 justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center gap-3 w-full">
                         <div>
                           <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
                         </div>
@@ -758,7 +418,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                           />
                         </div>
                       </div>
-                      <div className="flex sm:self-center self-end items-center space-x-2">
+                      <div className="flex sm:self-center self-end items-center gap-2">
                         <div className="relative" ref={setMenuRef(module.id)}>
                           <button
                             type="button"
@@ -774,64 +434,73 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                             <Plus className="w-4 h-4" />
                           </button>
                           {openMenuFor === module.id && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                            <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  void addContentLesson(module.id, "video");
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createContentLesson("video");
                                   setOpenMenuFor(null);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 hover:bg-gray-50 flex items-center"
                               >
-                                <Video className="w-4 h-4 mr-2" />
+                                <Video className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.video")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  void addContentLesson(module.id, "article");
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createContentLesson("article");
                                   setOpenMenuFor(null);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 hover:bg-gray-50 flex items-center"
                               >
-                                <FileText className="w-4 h-4 mr-2" />
+                                <FileText className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.article")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  void addContentLesson(module.id, "material");
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createContentLesson("material");
                                   setOpenMenuFor(null);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center"
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 hover:bg-gray-50 flex items-center"
                               >
-                                <Upload className="w-4 h-4 mr-2" />
+                                <Upload className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.material")}
                               </button>
                               <div className="my-1 border-t border-gray-200" />
-                              {/* Quiz & Exam */}
                               <button
                                 type="button"
                                 onClick={() => {
-                                  void addAssessment(module.id, "quiz");
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createAssessment("quiz");
                                   setOpenMenuFor(null);
                                 }}
-                                className="w-full text-left px-4 py-2 flex items-center hover:bg-gray-50"
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 flex items-center hover:bg-gray-50"
                                 title={t("createSections.createQuizLesson")}
                               >
-                                <HelpCircle className="w-4 h-4 mr-2" />
+                                <HelpCircle className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.quiz")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  void addAssessment(module.id, "exam");
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createAssessment("exam");
                                   setOpenMenuFor(null);
                                 }}
-                                className="w-full text-left px-4 py-2 flex items-center rounded-b-lg hover:bg-gray-50"
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 flex items-center rounded-b-lg hover:bg-gray-50"
                                 title={t("createSections.createExamLesson")}
                               >
-                                <Award className="w-4 h-4 mr-2" />
+                                <Award className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.exam")}
                               </button>
                             </div>
@@ -850,195 +519,18 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                     </div>
                   </div>
 
-                  {(module.lessons?.length ?? 0) > 0 && (
-                    <div className="p-4 space-y-2">
-                      {module.lessons!.map((lesson, lIndex) => {
-                        const isContentLesson = isContent(
-                          (lesson as any).content_type
-                        );
-                        const videoUrlPreview = (lesson as any)?.url || "";
-
-                        return (
-                          <LessonItem
-                            key={lesson.id}
-                            moduleId={module.id}
-                            lesson={lesson}
-                            index={lIndex}
-                            moveLesson={moveLesson}
-                            onDragEnd={() => commitLessonOrder(module.id)}
-                            canDrag={true}
-                          >
-                            <div className="flex sm:items-center items-start sm:flex-row flex-col sm:gap-0 gap-4 justify-between sm:p-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-                              <div className="flex items-center gap-3 w-full">
-                                <div>
-                                  <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
-                                </div>
-                                <div>
-                                  {isContentLesson ? (
-                                    (lesson as any).content_type === "video" ? (
-                                      <Video className="w-4 h-4" />
-                                    ) : (lesson as any).content_type ===
-                                      "article" ? (
-                                      <FileText className="w-4 h-4" />
-                                    ) : (
-                                      <Upload className="w-4 h-4" />
-                                    )
-                                  ) : (lesson as any).content_type ===
-                                    "quiz" ? (
-                                    <HelpCircle className="w-4 h-4" />
-                                  ) : (
-                                    <Award className="w-4 h-4" />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <input
-                                    type="text"
-                                    value={(lesson as any).title}
-                                    onChange={(e) =>
-                                      updateLessonLocal(module.id, lesson.id, {
-                                        title: e.target.value,
-                                      } as any)
-                                    }
-                                    onBlur={async (e) => {
-                                      try {
-                                        const newTitle = e.target.value;
-                                        await patchLesson(lesson.id, {
-                                          title: newTitle,
-                                        });
-                                        toast.success(
-                                          t("createSections.saved")
-                                        );
-                                      } catch {
-                                        /* ignore */
-                                      }
-                                    }}
-                                    className="font-medium max-w-full bg-transparent border-none focus:outline-none focus:ring-0 p-0"
-                                  />
-                                  <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
-                                    <span className="inline-flex items-center flex-wrap">
-                                      {isContentLesson &&
-                                      (lesson as any).content_type ===
-                                        "video" ? (
-                                        <>
-                                          <LinkIcon className="w-3 h-3 mr-1" />
-                                          {videoUrlPreview
-                                            ? String(videoUrlPreview).slice(
-                                                0,
-                                                20
-                                              )
-                                            : t("createSections.noURL")}
-                                        </>
-                                      ) : null}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center space-x-2 sm:self-center self-end">
-                                {isContentLesson ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        deleteContentLesson(
-                                          module.id,
-                                          lesson.id
-                                        )
-                                      }
-                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                      title={t("createSections.delete")}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-
-                                    {(lesson as any).content_type ===
-                                      "video" && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setEditingLesson({
-                                            moduleId: module.id,
-                                            lessonId: lesson.id,
-                                          })
-                                        }
-                                        className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                                        title={t("createSections.editVideo")}
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                    )}
-
-                                    {(lesson as any).content_type ===
-                                      "article" && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setEditingArticle({
-                                            moduleId: module.id,
-                                            lessonId: lesson.id,
-                                          })
-                                        }
-                                        className="p-1 text-green-400 hover:text-green-600 transition-colors"
-                                        title={t("createSections.editArticle")}
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                    )}
-
-                                    {(lesson as any).content_type ===
-                                      "material" && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setUploadingMaterial({
-                                            moduleId: module.id,
-                                            lessonId: lesson.id,
-                                          })
-                                        }
-                                        className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                        title={t("createSections.edit")}
-                                      >
-                                        <Upload className="w-4 h-4" />
-                                      </button>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setEditingAssessment({
-                                          id: lesson.id, // lesson id
-                                          moduleId: module.id,
-                                          type: (lesson as any).content_type as
-                                            | "quiz"
-                                            | "exam",
-                                        })
-                                      }
-                                      className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
-                                      title="Edit"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        deleteExamOrQuiz(lesson.id, module.id)
-                                      }
-                                      className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </LessonItem>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* LESSONS */}
+                  <SectionLessons
+                    moduleId={module.id}
+                    setEditingLesson={setEditingLesson}
+                    setEditingArticle={setEditingArticle}
+                    setUploadingMaterial={setUploadingMaterial}
+                    setEditingAssessment={setEditingAssessment}
+                    updateLessonLocal={updateLessonLocal}
+                    onReady={(api) => {
+                      sectionApisRef.current[module.id] = api;
+                    }}
+                  />
                 </div>
               </ModuleItem>
             ))}
@@ -1049,11 +541,10 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Video */}
       {editingLesson && (
         <EditLesson
-          modules={modules}
+          // modules={modules}
           editingLesson={editingLesson}
           setEditingLesson={setEditingLesson}
           updateLesson={(mId, lId, up) => {
-            // Live reflect in list
             updateLessonLocal(mId, lId, up as any);
           }}
           onCancel={() => setEditingLesson(null)}
@@ -1063,17 +554,15 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               const les = mod.lessons.find(
                 (l) => l.id === editingLesson.lessonId
               )!;
-              // Persist changed fields (change-detected inside patchLesson)
-              await patchLesson(les.id, {
+              await persistLessonField(les.id, {
                 title: les.title,
                 url: les.url,
                 content_type: "video",
                 duration_hours: les.duration_hours ?? null,
               });
               toast.success(t("createSections.videoSaved"));
-              // Refresh modules to get latest data from server
               await queryClient.invalidateQueries({
-                queryKey: qk.modules(courseId),
+                queryKey: ["lessons", editingLesson.moduleId],
               });
             } finally {
               setEditingLesson(null);
@@ -1085,7 +574,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Article */}
       {editingArticle && (
         <EditArticle
-          modules={modules}
+          // modules={modules}
           editingArticle={editingArticle}
           setEditingArticle={setEditingArticle}
           updateLesson={(mId, lId, up) =>
@@ -1100,16 +589,15 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               const les = mod.lessons.find(
                 (l) => l.id === editingArticle.lessonId
               )! as any;
-              await patchLesson(les.id, {
+              await persistLessonField(les.id, {
                 title: les.title,
                 description_html: les.description_html ?? null,
                 duration_hours: les.duration_hours ?? null,
                 content_type: "article",
               });
               toast.success(t("createSections.articleSaved"));
-              // Refresh modules to get latest data from server
               await queryClient.invalidateQueries({
-                queryKey: qk.modules(courseId),
+                queryKey: ["lessons", editingArticle.moduleId],
               });
             } finally {
               setEditingArticle(null);
@@ -1121,7 +609,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Material */}
       {uploadingMaterial && (
         <UploadingMaterial
-          modules={modules}
+          // modules={modules}
           setUploadingMaterial={setUploadingMaterial}
           updateLesson={(mId, lId, up) =>
             updateLessonLocal(mId, lId, up as any)
@@ -1140,14 +628,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                 title: les.title,
                 description: les.description ?? "",
                 content_type: "material",
-                // string_file: les.string_file ?? null,
-                url: les.string_file ? null : les.url ?? null,
+                url: les.string_file ? undefined : les.url ?? undefined,
               };
-              await patchLesson(les.id, payload);
+              await persistLessonField(les.id, payload);
               toast.success(t("createSections.materialSaved"));
-              // Refresh modules to get latest data from server
               await queryClient.invalidateQueries({
-                queryKey: qk.modules(courseId),
+                queryKey: ["lessons", uploadingMaterial.moduleId],
               });
             } finally {
               setUploadingMaterial(null);
@@ -1176,20 +662,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
               (l) => l.id === editingAssessment.id
             ) as any;
 
-            // blur-persist a single lesson field
-            const persistLessonField = async (
-              field: "title" | "description",
-              value: string
-            ) => {
-              if (!les) return;
-              await patchLesson(les.id, { [field]: value } as any);
-              // also reflect local snapshot (so future no-op checks skip)
-              lastSavedLessonRef.current[les.id] = {
-                ...(lastSavedLessonRef.current[les.id] || {}),
-                [field]: value,
-              };
-            };
-
             return (
               <QuizBuilder
                 initialQuiz={
@@ -1211,11 +683,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                     { description: dval } as any
                   )
                 }
-                onLessonTitleBlur={(tval) => persistLessonField("title", tval)}
-                onLessonDescriptionBlur={(dval) =>
-                  persistLessonField("description", dval)
-                }
-                // Exam save -> patch EXAM-only fields; also called by blur inside QuizBuilder
+                onLessonTitleBlur={async (tval) => {
+                  await persistLessonField(les.id, { title: tval });
+                }}
+                onLessonDescriptionBlur={async (dval) => {
+                  await persistLessonField(les.id, { description: dval });
+                }}
                 onSave={async (draft) => {
                   try {
                     const payload = {
@@ -1232,6 +705,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
 
                     invalidateLessonExams(queryClient, editingAssessment.id);
                     toast.success(t("createSections.saved"));
+                    await queryClient.invalidateQueries({
+                      queryKey: ["lessons", editingAssessment.moduleId],
+                    });
                   } catch {
                     toast.error(t("createSections.failedToSave"));
                   }

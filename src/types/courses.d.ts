@@ -89,6 +89,7 @@ interface Course {
   is_paid: boolean;
   level: string;
   is_published: boolean;
+  is_sequential: boolean;
   created_at: string;
   updated_at: string;
   total_students: number;
@@ -118,6 +119,7 @@ interface Lesson {
   watched?: boolean;
   string_file?: string | null;
   section: string;
+  is_locked?: boolean;
 }
 
 interface Module {
@@ -129,6 +131,10 @@ interface Module {
   lesson_count: number;
   total_hours: number;
   lessons: Lesson[];
+  is_locked?: boolean;
+  total_lessons?: number;
+  completed_lessons?: number;
+  progress_percentage?: number;
 }
 
 interface CourseReview {

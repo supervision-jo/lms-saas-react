@@ -212,12 +212,14 @@ export default function GroupManagement() {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center">
-                <div className={`w-4 h-4 rounded-full ${group.color} mr-3`} />
+                <div
+                  className={`w-4 h-4 rounded-full ${group.color} ltr:mr-3 rtl:ml-3`}
+                />
                 <h3 className="text-lg font-semibold text-gray-900">
                   {group.name}
                 </h3>
               </div>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
                     setSelectedGroup(group);
@@ -242,7 +244,7 @@ export default function GroupManagement() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm text-gray-500">
-                <Users className="w-4 h-4 mr-1" />
+                <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                 <span>
                   {group.members.length} {t("groupManagement.member")}
                   {group.members.length !== 1 ? "s" : ""}
@@ -347,7 +349,7 @@ export default function GroupManagement() {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 gap-2">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               onClick={() => setIsCreateGroupModalOpen(false)}
               variant="secondary"
@@ -401,7 +403,7 @@ export default function GroupManagement() {
                         avatar={member.avatar}
                         size="sm"
                       />
-                      <div className="ml-3">
+                      <div className="ltr:ml-3 rtl:mr-3">
                         <div className="text-sm font-medium text-gray-900">
                           {member.name}
                         </div>
@@ -448,7 +450,7 @@ export default function GroupManagement() {
                         avatar={user.avatar}
                         size="sm"
                       />
-                      <div className="ml-3">
+                      <div className="ltr:ml-3 rtl:mr-3">
                         <div className="text-sm font-medium text-gray-900">
                           {user.name}
                         </div>
