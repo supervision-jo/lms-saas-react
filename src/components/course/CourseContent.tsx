@@ -33,12 +33,12 @@ export function findNextLessonId(
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;
-  /** highlight the quiz/exam row itself */
   currentAssessmentId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
   onOpenAssessment?: (lessonId: string, assessment: Exam) => void;
+  is_sequential: boolean; // passed in props
 }
 
 function AssessmentList({
@@ -47,22 +47,24 @@ function AssessmentList({
   onOpen,
   currentAssessmentId,
   t,
+  forceLocked = false,
 }: {
   lesson: Lesson;
   isEnrolled: boolean;
   onOpen: (assessment: Exam) => void;
   currentAssessmentId?: string;
   t: (k: string) => string;
+  forceLocked?: boolean;
 }) {
-  const { data } = useCustomQuery(
-    `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
-    ["exams", String(lesson.id)]
-  );
+  const { data } = useCustomQuery(`${API_ENDPOINTS.exams}${lesson.id}/`, [
+    "exams",
+    String(lesson.id),
+  ]);
   const assessments: Exam[] = data?.data ?? [];
-
   if (!assessments?.length) return null;
 
-  const canAccess = isEnrolled || lesson.free_preview;
+  const canAccess =
+    (isEnrolled || lesson.free_preview) && !forceLocked && !lesson.is_locked;
 
   return (
     <div className="mt-2 space-y-1">
@@ -78,6 +80,7 @@ function AssessmentList({
             disabled={!canAccess}
             onClick={(e) => {
               e.stopPropagation();
+              if (!canAccess) return;
               onOpen(a);
             }}
             className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left transition-all duration-200 ${
@@ -130,6 +133,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
   isEnrolled,
   className,
   onOpenAssessment,
+  is_sequential, // ★ use this
 }) => {
   const { t, i18n } = useTranslation("courseDetails");
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
@@ -161,21 +165,29 @@ const CourseContent: React.FC<CourseContentProps> = ({
         nextExpanded.add(String(firstModule.id));
         setExpandedModules(nextExpanded);
 
-        const firstPlayable =
-          (firstModule.lessons ?? []).find(
-            (lesson) => isEnrolled || lesson?.free_preview
-          ) || (firstModule.lessons ?? [])[0];
+        // ★ only block auto-select from a locked module when sequential
+        const moduleAutoBlocked = is_sequential && !!firstModule.is_locked;
 
-        if (firstPlayable?.id) {
-          onLessonSelect(String(firstPlayable.id));
-          autoSelectedOnceRef.current = true;
+        if (!moduleAutoBlocked) {
+          const firstPlayable =
+            (firstModule.lessons ?? []).find(
+              (lesson) =>
+                (isEnrolled || lesson?.free_preview) && !lesson?.is_locked
+            ) || (firstModule.lessons ?? [])[0];
+
+          if (firstPlayable?.id) {
+            onLessonSelect(String(firstPlayable.id));
+            autoSelectedOnceRef.current = true;
+          }
         }
+      } else {
+        setExpandedModules(nextExpanded);
       }
     } else {
       setExpandedModules(nextExpanded);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [safeModules, currentLessonId, isEnrolled]);
+    // ★ include is_sequential in deps
+  }, [safeModules, currentLessonId, isEnrolled, is_sequential, pathname]); // eslint-disable-line
 
   const toggleModule = (moduleId: string | number) => {
     const key = String(moduleId);
@@ -185,8 +197,13 @@ const CourseContent: React.FC<CourseContentProps> = ({
     setExpandedModules(next);
   };
 
-  const handleLessonClick = (lesson: Lesson) => {
-    const canAccess = isEnrolled || lesson?.free_preview;
+  const handleLessonClick = (lesson: Lesson, moduleLocked: boolean) => {
+    // ★ module lock forces lesson lock only when sequential
+    const effectiveLocked =
+      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+    if (effectiveLocked) return;
+
+    const canAccess = (isEnrolled || lesson?.free_preview) && !effectiveLocked;
     if (!canAccess) return;
 
     if (lesson?.content_type === "material" && (lesson as any)?.url) {
@@ -202,8 +219,15 @@ const CourseContent: React.FC<CourseContentProps> = ({
     }
   };
 
-  const getLessonIcon = (lesson: Lesson, isCurrentLesson: boolean) => {
-    if (!isEnrolled && !lesson?.free_preview)
+  const getLessonIcon = (
+    lesson: Lesson,
+    isCurrentLesson: boolean,
+    moduleLocked: boolean
+  ) => {
+    // ★ respect is_sequential for module → lesson lock
+    const effectiveLocked =
+      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+    if (effectiveLocked || (!isEnrolled && !lesson?.free_preview))
       return <Lock className="w-4 h-4 text-gray-500" />;
 
     if ((lesson as any).watched) {
@@ -264,9 +288,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
 
   const sumModuleHours = useCallback((mod?: Module): number => {
     if (!mod) return 0;
-    return (mod.lessons ?? []).reduce((sum, l) => {
+    return (mod?.lessons ?? []).reduce((sum, l) => {
       const v = (l as any)?.duration_hours;
-      const n = typeof v === "number" ? v : parseFloat(v ?? "0");
+      const n = typeof v === "number" ? v : parseFloat((v as any) ?? "0");
       return sum + (Number.isFinite(n) ? n : 0);
     }, 0);
   }, []);
@@ -290,6 +314,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
         {safeModules.map((module) => {
           const key = String(module?.id);
           const isExpanded = expandedModules.has(key);
+          const moduleLocked = !!module?.is_locked;
+
           return (
             <div
               key={key}
@@ -297,7 +323,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
             >
               <button
                 onClick={() => toggleModule(module?.id)}
-                className="w-full sm:px-5 px-2 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
+                className={`w-full sm:px-5 px-2 py-4 flex items-center justify-between transition-all duration-200 ${
+                  isExpanded ? "bg-gray-50" : "bg-white hover:bg-gray-50"
+                }`}
+                title={t("courseContent.toggleModule")}
               >
                 <div className="flex items-center">
                   {isExpanded ? (
@@ -308,8 +337,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
                     <ChevronRight className="w-5 h-5 text-gray-500 mr-3 transition-transform duration-200" />
                   )}
                   <div className="rtl:text-right ltr:text-left">
-                    <h4 className="font-semibold text-gray-900 text-base">
+                    <h4 className="font-semibold text-gray-900 text-base flex items-center gap-2">
                       {module?.title}
+                      {moduleLocked && (
+                        <span className="inline-flex items-center text-[11px] font-semibold text-gray-700 bg-gray-200 rounded-full px-2 py-0.5">
+                          <Lock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                          {t("courseContent.locked")}
+                        </span>
+                      )}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
                       {module?.lessons?.length} {t("courseContent.lessons")} •{" "}
@@ -319,6 +354,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
                 </div>
               </button>
 
+              {/* Always render lessons if expanded.
+                  If sequential AND module is locked → all lessons locked. */}
               {isExpanded && (
                 <div className="sm:px-5 px-2 py-4 bg-gray-50">
                   {(module.lessons ?? []).map((lesson) => {
@@ -326,12 +363,19 @@ const CourseContent: React.FC<CourseContentProps> = ({
                       String(lesson?.id) === String(currentLessonId);
                     const isCurrentLesson =
                       isLessonActive && !currentAssessmentId;
-                    const canAccess = isEnrolled || lesson?.free_preview;
+
+                    // ★ apply module lock only when sequential
+                    const effectiveLocked =
+                      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+                    const canAccess =
+                      (isEnrolled || lesson?.free_preview) && !effectiveLocked;
 
                     return (
                       <div key={lesson?.id} className="mb-2">
                         <button
-                          onClick={() => handleLessonClick(lesson)}
+                          onClick={() =>
+                            handleLessonClick(lesson, moduleLocked)
+                          }
                           disabled={!canAccess}
                           className={`w-full flex items-start flex-col gap-2 py-3 sm:px-4 px-2 rounded-lg transition-all duration-200 text-left ${
                             !isCurrentLesson && (lesson as any)?.watched
@@ -344,7 +388,13 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           }`}
                         >
                           <div className="flex items-center justify-start gap-3 w-full">
-                            <div>{getLessonIcon(lesson, isCurrentLesson)}</div>
+                            <div>
+                              {getLessonIcon(
+                                lesson,
+                                isCurrentLesson,
+                                moduleLocked
+                              )}
+                            </div>
                             <span
                               className={`text-sm font-medium block whitespace-break-spaces ${
                                 isCurrentLesson ? "text-white" : "text-gray-700"
@@ -368,26 +418,36 @@ const CourseContent: React.FC<CourseContentProps> = ({
                                 i18n.language
                               )}
                             </div>
-                            {lesson?.free_preview && !isEnrolled && (
-                              <span className="ltr:ml-2 rtl:mr-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
-                                {t("courseContent.free")}
+                            {lesson?.free_preview &&
+                              !isEnrolled &&
+                              !effectiveLocked && (
+                                <span className="ltr:ml-2 rtl:mr-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
+                                  {t("courseContent.free")}
+                                </span>
+                              )}
+                            {effectiveLocked && (
+                              <span className="ltr:ml-2 rtl:mr-2 text-xs text-gray-700 bg-gray-200 px-2 py-0.5 rounded-full font-semibold">
+                                {t("courseContent.locked")}
                               </span>
                             )}
                           </div>
                         </button>
 
-                        {/* attached assessments: highlight when currentAssessmentId matches */}
-                        {typeof onOpenAssessment === "function" && (
-                          <AssessmentList
-                            lesson={lesson}
-                            isEnrolled={isEnrolled}
-                            currentAssessmentId={currentAssessmentId}
-                            onOpen={(a) =>
-                              onOpenAssessment(String(lesson.id), a)
-                            }
-                            t={(k: string) => t(k)}
-                          />
-                        )}
+                        {typeof onOpenAssessment === "function" &&
+                          ["quiz", "exam"].includes(
+                            (lesson?.content_type || "").toLowerCase()
+                          ) && (
+                            <AssessmentList
+                              lesson={lesson}
+                              isEnrolled={isEnrolled}
+                              currentAssessmentId={currentAssessmentId}
+                              onOpen={(a) =>
+                                onOpenAssessment(String(lesson.id), a)
+                              }
+                              t={(k: string) => t(k)}
+                              forceLocked={is_sequential && moduleLocked}
+                            />
+                          )}
                       </div>
                     );
                   })}

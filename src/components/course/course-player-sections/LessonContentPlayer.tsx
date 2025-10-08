@@ -133,7 +133,7 @@ export default function LessonContentPlayer({
 
   const { data: examResp, isFetching: loadingExam } = useCustomQuery(
     isAssessment ? `${API_ENDPOINTS.exams}${currentLessonId}/` : "",
-    ["exam-by-lesson", currentLessonId],
+    ["exams", String(currentLessonId)],
     undefined,
     isAssessment && !!currentLessonId
   );

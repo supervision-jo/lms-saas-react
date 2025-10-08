@@ -566,6 +566,7 @@ const CourseDetailPage: React.FC = () => {
                   <CourseContent
                     modules={modulesData}
                     onLessonSelect={handleLessonSelect}
+                    is_sequential={course?.is_sequential}
                     isEnrolled={isEnrolled}
                     onOpenAssessment={handleOpenAssessment}
                   />
@@ -670,6 +671,7 @@ const CourseDetailPage: React.FC = () => {
               modules={modulesData}
               onLessonSelect={handleLessonSelect}
               isEnrolled={isEnrolled}
+              is_sequential={course?.is_sequential}
               onOpenAssessment={handleOpenAssessment}
             />
           </div>

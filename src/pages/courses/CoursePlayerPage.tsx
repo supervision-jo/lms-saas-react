@@ -453,6 +453,7 @@ export default function CoursePlayerPage() {
                 modules={modules}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
+                is_sequential={courseData?.is_sequential}
                 isEnrolled={true}
               />
             </div>
@@ -495,6 +496,7 @@ export default function CoursePlayerPage() {
                 modules={modules}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
+                is_sequential={courseData?.is_sequential}
                 isEnrolled={true}
               />
             </div>
