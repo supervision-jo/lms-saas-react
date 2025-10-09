@@ -52,7 +52,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
   const attemptsCount = attempts.length;
   const nextAttempt = Math.min(attemptsCount + 1, MAX_ATTEMPTS);
-  const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
+  // const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
 
   const questions = useMemo(
     () => (Array.isArray(exam?.questions) ? exam.questions : []),
@@ -182,7 +182,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
           </div>
           <div className="text-gray-500 text-sm">
             {t("examSection.attempt")} {Math.min(nextAttempt, MAX_ATTEMPTS)}{" "}
-            {t("examSection.of")} {MAX_ATTEMPTS}
+            {/* {t("examSection.of")} {MAX_ATTEMPTS} */}
           </div>
         </div>
       </div>
@@ -246,9 +246,10 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         {isRetaking ? (
           <>
             <div className="text-gray-500 text-sm">
-              {attemptsCount < MAX_ATTEMPTS
+              {/* {attemptsCount < MAX_ATTEMPTS
                 ? `${t("examSection.ansAll")}: ${attemptsLeft}`
-                : t("examSection.noAttempts")}
+                : t("examSection.noAttempts")} */}
+              {t("examSection.ansAll")}
             </div>
             <button
               onClick={submitExam}

@@ -1,3 +1,4 @@
+// src/components/course/builder/CreateSectionsForm.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
@@ -33,6 +34,15 @@ import { patchLessonApi } from "../../../utils/lessonApi";
 import { patch } from "../../../api";
 import SectionLessons from "./SectionLessons";
 
+// ---- Local shapes for caches (allow nulls where server may return null) ----
+type LessonSnapshot = {
+  title?: string;
+  description?: string | null;
+  description_html?: string | null;
+  url?: string | null;
+  duration_hours?: number | null;
+};
+
 export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -41,18 +51,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const lastSavedModuleRef = useRef<
     Record<string, { title: string; description: string }>
   >({});
-  // Track last saved lesson fields for modals (kept to avoid changing modal components)
-  const lastSavedLessonRef = useRef<
-    Record<
-      string,
-      {
-        title?: string;
-        description?: string;
-        url?: string;
-        duration_hours?: number | null;
-      }
-    >
-  >({});
+
+  // Server-saved snapshot for lessons (used ONLY for no-op comparison)
+  const lastSavedLessonRef = useRef<Record<string, LessonSnapshot>>({});
+
+  // Local drafts (optimistic UI; never used for no-op compare)
+  const lessonDraftRef = useRef<Record<string, Partial<Lesson>>>({});
 
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const setMenuRef =
@@ -74,7 +78,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [openMenuFor]);
 
-  // Fetch sections
+  // Fetch sections (WITHOUT lessons)
   const { data: modulesData, isLoading } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=false`,
     qk.modules(courseId),
@@ -86,7 +90,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     [modulesData]
   );
 
-  // Local editable state (modules only; lesson rows here are for modal lookups)
+  // Local editable state for modules ONLY
   const [modules, setModules] = useState<Module[]>(serverModules);
 
   // Per-module API coming from SectionLessons (so the “+” menu can create lessons)
@@ -121,31 +125,18 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   // Seed local modules snapshot when server changes
   useEffect(() => {
     setModules(serverModules);
-    const snap: Record<string, any> = {};
-    for (const m of serverModules || []) {
-      for (const l of m.lessons || []) {
-        snap[l.id] = {
-          title: l.title,
-          description: l.description ?? undefined,
-          url: l.url ?? undefined,
-          duration_hours: l.duration_hours ?? null,
-        };
-      }
-    }
-    lastSavedLessonRef.current = snap;
-  }, [serverModules]);
 
-  // // ---- Modules (sections) mutations (title/description/order) ----
-  // const { mutateAsync: patchModule } = useMutation<
-  //   AxiosResponse<any>,
-  //   any,
-  //   { id: string; payload: any }
-  // >({
-  //   mutationFn: async ({ id, payload }) => {
-  //     return patch(`${API_ENDPOINTS.updateSection}${id}/`, payload);
-  //   },
-  //   onError: (e) => handleErrorAlerts(e.response?.data?.error),
-  // });
+    // Seed no-op baseline for module fields
+    const snapModules: Record<string, { title: string; description: string }> =
+      {};
+    for (const m of serverModules || []) {
+      snapModules[m.id] = {
+        title: m.title ?? "",
+        description: m.description ?? "",
+      };
+    }
+    lastSavedModuleRef.current = snapModules;
+  }, [serverModules]);
 
   const { mutateAsync: patchModule } = useMutation<
     AxiosResponse<any>,
@@ -175,15 +166,18 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     onError: (e) => handleErrorAlerts(e.response?.data?.error),
   });
 
+  // No-op safe PATCH for module fields
   const patchModuleField = async (
     id: string,
     field: "title" | "description",
     value: string
   ) => {
     const last = lastSavedModuleRef.current[id]?.[field] ?? "";
-    if (String(last) === String(value)) return; // no-op
+    if (String(last) === String(value)) return; // no-op protection
+
     await patchModule({ id, payload: { [field]: value } });
     toast.success(t("createSections.saved"));
+
     lastSavedModuleRef.current[id] = {
       title:
         field === "title" ? value : lastSavedModuleRef.current[id]?.title ?? "",
@@ -192,27 +186,18 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           ? value
           : lastSavedModuleRef.current[id]?.description ?? "",
     };
+
     queryClient.invalidateQueries({ queryKey: qk.modules(courseId) });
   };
 
-  // Update a single lesson field in our local module snapshot so modals reflect typing immediately
+  // Local draft writer (for optimistic UI only; never affects no-op checks)
   const updateLessonLocal = (
-    moduleId: string,
+    _moduleId: string,
     lessonId: string,
     updates: Partial<Lesson>
   ) => {
-    setModules((prev) =>
-      prev.map((m) =>
-        m.id !== moduleId
-          ? m
-          : {
-              ...m,
-              lessons: (m.lessons || []).map((l) =>
-                l.id === lessonId ? ({ ...l, ...updates } as Lesson) : l
-              ),
-            }
-      )
-    );
+    const prev = lessonDraftRef.current[lessonId] || {};
+    lessonDraftRef.current[lessonId] = { ...prev, ...updates };
   };
 
   // Add a new section
@@ -293,7 +278,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     }
   };
 
-  // Exams by LESSON id for the quiz/exam builder
+  // Exams by LESSON id for the quiz/exam builder (structure of result unchanged)
   const { data: examResp } = useExamsByLesson(
     editingAssessment?.id ?? undefined
   );
@@ -302,24 +287,140 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     return obj && typeof obj === "object" ? obj : null;
   }, [examResp]);
 
-  // Helper to persist a lesson field from modal
+  // No-op protected lesson patch helper (returns whether something changed)
   const persistLessonField = async (
     lessonId: string,
     payload: Partial<Lesson>
-  ) => {
+  ): Promise<boolean> => {
     const snap = lastSavedLessonRef.current[lessonId] || {};
     let changed = false;
+
     for (const k of Object.keys(payload) as (keyof Lesson)[]) {
       if ((snap as any)[k] !== (payload as any)[k]) {
         changed = true;
-        (snap as any)[k] = (payload as any)[k];
       }
     }
-    if (!changed) return;
+    if (!changed) return false; // no-op, skip network
 
     await patchLessonApi(lessonId, payload);
-    lastSavedLessonRef.current[lessonId] = snap;
+
+    // Commit new "saved" baseline
+    lastSavedLessonRef.current[lessonId] = {
+      ...snap,
+      ...(payload as any),
+    };
+
+    // Align local drafts too
+    lessonDraftRef.current[lessonId] = {
+      ...(lessonDraftRef.current[lessonId] || {}),
+      ...(payload as any),
+    };
+
+    return true;
   };
+
+  // ----- Assessment modal content: fetch the lesson directly (no modules coupling)
+  function AssessmentModalContent({
+    lessonId,
+    moduleId,
+    type,
+    initialQuizFromServer,
+  }: {
+    lessonId: string;
+    moduleId: string;
+    type: "quiz" | "exam";
+    initialQuizFromServer: any;
+  }) {
+    const { data } = useCustomQuery(
+      `${API_ENDPOINTS.lesson}${lessonId}/`,
+      ["lesson", lessonId],
+      undefined,
+      !!lessonId
+    );
+    const lesson: Lesson | undefined = useMemo(
+      () => (data?.data ? (data.data as Lesson) : (data as any)),
+      [data]
+    );
+
+    // seed both caches when the modal opens (server is source of truth)
+    useEffect(() => {
+      if (!lesson) return;
+
+      const seeded: LessonSnapshot = {
+        title: lesson.title ?? "",
+        description: lesson.description ?? "",
+        description_html: lesson.description_html ?? null,
+        url: lesson.url ?? null,
+        duration_hours:
+          typeof lesson.duration_hours === "number"
+            ? lesson.duration_hours
+            : null,
+      };
+
+      // Saved snapshot for no-op checks
+      lastSavedLessonRef.current[lessonId] = seeded;
+
+      // Drafts start equal to server data
+      lessonDraftRef.current[lessonId] = seeded;
+    }, [lessonId, lesson]);
+
+    return (
+      <QuizBuilder
+        initialQuiz={initialQuizFromServer ?? { type }}
+        lessonTitle={lesson?.title ?? ""}
+        lessonDescription={lesson?.description ?? ""}
+        onLessonTitleChange={(v) =>
+          updateLessonLocal(moduleId, lessonId, { title: v } as any)
+        }
+        onLessonDescriptionChange={(v) =>
+          updateLessonLocal(moduleId, lessonId, { description: v } as any)
+        }
+        onLessonTitleBlur={async (v) => {
+          const didChange = await persistLessonField(lessonId, { title: v });
+          if (didChange) {
+            queryClient.invalidateQueries({ queryKey: ["lesson", lessonId] });
+            queryClient.invalidateQueries({
+              queryKey: qk.lessonsBySection(moduleId),
+            });
+          }
+        }}
+        onLessonDescriptionBlur={async (v) => {
+          const didChange = await persistLessonField(lessonId, {
+            description: v,
+          });
+          if (didChange) {
+            queryClient.invalidateQueries({ queryKey: ["lesson", lessonId] });
+            queryClient.invalidateQueries({
+              queryKey: qk.lessonsBySection(moduleId),
+            });
+          }
+        }}
+        onSave={async (draft) => {
+          try {
+            const payload = {
+              type,
+              time_limit: draft.time_limit,
+              passing_score: draft.passing_score,
+              questions: draft.questions,
+            };
+            const { patch } = await import("../../../api");
+            await patch(`${API_ENDPOINTS.updateExam}${lessonId}/`, payload);
+
+            invalidateLessonExams(queryClient, lessonId);
+            toast.success(t("createSections.saved"));
+
+            await queryClient.invalidateQueries({
+              queryKey: ["lessons", moduleId],
+            });
+          } catch {
+            toast.error(t("createSections.failedToSave"));
+          }
+        }}
+        onPreview={(draft) => setPreviewDraft(draft)}
+        onClose={() => setEditingAssessment(null)}
+      />
+    );
+  }
 
   return (
     <div className="sm:space-y-6 space-y-3">
@@ -541,26 +642,16 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Video */}
       {editingLesson && (
         <EditLesson
-          // modules={modules}
           editingLesson={editingLesson}
           setEditingLesson={setEditingLesson}
+          // keep signature; local cache only
           updateLesson={(mId, lId, up) => {
             updateLessonLocal(mId, lId, up as any);
           }}
           onCancel={() => setEditingLesson(null)}
           onSave={async () => {
             try {
-              const mod = modules.find((m) => m.id === editingLesson.moduleId)!;
-              const les = mod.lessons.find(
-                (l) => l.id === editingLesson.lessonId
-              )!;
-              await persistLessonField(les.id, {
-                title: les.title,
-                url: les.url,
-                content_type: "video",
-                duration_hours: les.duration_hours ?? null,
-              });
-              toast.success(t("createSections.videoSaved"));
+              // child already PATCHed; we only revalidate this section’s lessons
               await queryClient.invalidateQueries({
                 queryKey: ["lessons", editingLesson.moduleId],
               });
@@ -574,7 +665,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Article */}
       {editingArticle && (
         <EditArticle
-          // modules={modules}
           editingArticle={editingArticle}
           setEditingArticle={setEditingArticle}
           updateLesson={(mId, lId, up) =>
@@ -583,19 +673,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           onCancel={() => setEditingArticle(null)}
           onSave={async () => {
             try {
-              const mod = modules.find(
-                (m) => m.id === editingArticle.moduleId
-              )!;
-              const les = mod.lessons.find(
-                (l) => l.id === editingArticle.lessonId
-              )! as any;
-              await persistLessonField(les.id, {
-                title: les.title,
-                description_html: les.description_html ?? null,
-                duration_hours: les.duration_hours ?? null,
-                content_type: "article",
-              });
-              toast.success(t("createSections.articleSaved"));
               await queryClient.invalidateQueries({
                 queryKey: ["lessons", editingArticle.moduleId],
               });
@@ -609,7 +686,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
       {/* Material */}
       {uploadingMaterial && (
         <UploadingMaterial
-          // modules={modules}
           setUploadingMaterial={setUploadingMaterial}
           updateLesson={(mId, lId, up) =>
             updateLessonLocal(mId, lId, up as any)
@@ -618,20 +694,6 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           onCancel={() => setUploadingMaterial(null)}
           onSave={async () => {
             try {
-              const mod = modules.find(
-                (m) => m.id === uploadingMaterial.moduleId
-              )!;
-              const les = mod.lessons.find(
-                (l) => l.id === uploadingMaterial.lessonId
-              )! as any;
-              const payload: any = {
-                title: les.title,
-                description: les.description ?? "",
-                content_type: "material",
-                url: les.string_file ? undefined : les.url ?? undefined,
-              };
-              await persistLessonField(les.id, payload);
-              toast.success(t("createSections.materialSaved"));
               await queryClient.invalidateQueries({
                 queryKey: ["lessons", uploadingMaterial.moduleId],
               });
@@ -654,69 +716,12 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           }
           size="xl"
         >
-          {(() => {
-            const mod = modules.find(
-              (m) => m.id === editingAssessment.moduleId
-            );
-            const les = mod?.lessons.find(
-              (l) => l.id === editingAssessment.id
-            ) as any;
-
-            return (
-              <QuizBuilder
-                initialQuiz={
-                  assessmentDetail ?? { type: editingAssessment?.type }
-                }
-                lessonTitle={les?.title ?? ""}
-                lessonDescription={les?.description ?? ""}
-                onLessonTitleChange={(tval) =>
-                  updateLessonLocal(
-                    editingAssessment.moduleId,
-                    editingAssessment.id,
-                    { title: tval } as any
-                  )
-                }
-                onLessonDescriptionChange={(dval) =>
-                  updateLessonLocal(
-                    editingAssessment.moduleId,
-                    editingAssessment.id,
-                    { description: dval } as any
-                  )
-                }
-                onLessonTitleBlur={async (tval) => {
-                  await persistLessonField(les.id, { title: tval });
-                }}
-                onLessonDescriptionBlur={async (dval) => {
-                  await persistLessonField(les.id, { description: dval });
-                }}
-                onSave={async (draft) => {
-                  try {
-                    const payload = {
-                      type: editingAssessment.type,
-                      time_limit: draft.time_limit,
-                      passing_score: draft.passing_score,
-                      questions: draft.questions,
-                    };
-                    const { patch } = await import("../../../api");
-                    await patch(
-                      `${API_ENDPOINTS.updateExam}${editingAssessment.id}/`,
-                      payload
-                    );
-
-                    invalidateLessonExams(queryClient, editingAssessment.id);
-                    toast.success(t("createSections.saved"));
-                    await queryClient.invalidateQueries({
-                      queryKey: ["lessons", editingAssessment.moduleId],
-                    });
-                  } catch {
-                    toast.error(t("createSections.failedToSave"));
-                  }
-                }}
-                onPreview={(draft) => setPreviewDraft(draft)}
-                onClose={() => setEditingAssessment(null)}
-              />
-            );
-          })()}
+          <AssessmentModalContent
+            lessonId={editingAssessment.id}
+            moduleId={editingAssessment.moduleId}
+            type={editingAssessment.type}
+            initialQuizFromServer={assessmentDetail}
+          />
         </Modal>
       )}
 

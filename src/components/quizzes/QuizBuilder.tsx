@@ -1,5 +1,3 @@
-// src/components/course/quizes/QuizBuilder.tsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
@@ -186,11 +184,38 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     quizRef.current = quiz;
   }, [quiz]);
 
-  // When server data changes, reset local quiz + baseline snapshot
+  // Preserve expanded state by index across prop reloads
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
+    () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
+  );
+
+  // When server data changes, reset local quiz BUT keep expanded by index
   useEffect(() => {
+    const prev = quizRef.current;
+    const prevIds = prev.questions.map((q) => q.id);
+    const prevExpandedIdx = prevIds
+      .map((id, idx) => (expandedQuestions.has(id) ? idx : -1))
+      .filter((i) => i >= 0);
+
     const normalized = normalizeInitial(initialQuiz);
     setQuiz(normalized);
     lastEmittedRef.current = JSON.stringify(toAssessmentDraft(normalized));
+
+    // map expanded indices to new question ids (same positions)
+    const newIds = normalized.questions.map((q) => q.id);
+    const nextExpanded = new Set<string>();
+    if (newIds.length > 0) {
+      if (prevExpandedIdx.length === 0) {
+        // first load → expand first only
+        nextExpanded.add(newIds[0]);
+      } else {
+        prevExpandedIdx.forEach((i) => {
+          if (i >= 0 && i < newIds.length) nextExpanded.add(newIds[i]);
+        });
+      }
+    }
+    setExpandedQuestions(nextExpanded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuiz]);
 
   const triggerAutoSave = () => {
@@ -198,16 +223,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     saveTimerRef.current = setTimeout(() => {
       const draft = toAssessmentDraft(quizRef.current);
       const snapshot = JSON.stringify(draft);
-      // Skip if nothing changed (prevents blur with no edits)
-      if (snapshot === lastEmittedRef.current) return;
+      if (snapshot === lastEmittedRef.current) return; // no-op
       onSave(draft);
       lastEmittedRef.current = snapshot;
     }, 450);
   };
 
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
-    () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
-  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const totalPoints = useMemo(
@@ -356,11 +377,26 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   };
 
   /** ---- actions ---- */
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
+
+    // Ensure lesson meta gets persisted even if user didn't blur
+    try {
+      if (onLessonTitleBlur && metaTitle !== (lessonTitle ?? "")) {
+        await onLessonTitleBlur(metaTitle);
+      }
+      if (
+        onLessonDescriptionBlur &&
+        metaDescription !== (lessonDescription ?? "")
+      ) {
+        await onLessonDescriptionBlur(metaDescription);
+      }
+    } catch {
+      // ignore — lesson meta save is best-effort before quiz save
+    }
+
     const draft = toAssessmentDraft(quizRef.current);
     const snapshot = JSON.stringify(draft);
-    // Optional: also skip manual save if unchanged
     if (snapshot !== lastEmittedRef.current) {
       onSave(draft);
       lastEmittedRef.current = snapshot;
@@ -373,12 +409,14 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     onPreview(toAssessmentDraft(quizRef.current));
   };
 
+  // Keep at least one expanded, but don't collapse user's choice
   useEffect(() => {
     if (!quiz.questions.length) return;
     setExpandedQuestions((prev) => {
       const ids = new Set(quiz.questions.map((q) => q.id));
-      const hasValid = [...prev].some((id) => ids.has(id));
-      if (hasValid) return prev;
+      const stillValid = [...prev].filter((id) => ids.has(id));
+      if (stillValid.length > 0) return new Set(stillValid);
+      // First-time case only: expand first
       return new Set([quiz.questions[0].id]);
     });
   }, [quiz.questions]);
@@ -421,7 +459,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   setMetaTitle(v);
                   onLessonTitleChange?.(v);
                 }}
-                onBlur={(e) => onLessonTitleBlur?.(e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  if (v !== (lessonTitle ?? "")) {
+                    onLessonTitleBlur?.(v);
+                  }
+                }}
                 placeholder={t(
                   `quizBuilder.placeholders.lessonTitle.${
                     quiz.type === "exam" ? "exam" : "quiz"
@@ -503,7 +546,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   setMetaDescription(v);
                   onLessonDescriptionChange?.(v);
                 }}
-                onBlur={(e) => onLessonDescriptionBlur?.(e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  if (v !== (lessonDescription ?? "")) {
+                    onLessonDescriptionBlur?.(v);
+                  }
+                }}
                 placeholder={t(
                   `quizBuilder.placeholders.lessonDescription.${
                     quiz.type === "exam" ? "exam" : "quiz"

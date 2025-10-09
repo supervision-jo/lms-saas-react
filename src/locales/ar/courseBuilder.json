@@ -130,6 +130,7 @@
     "failedToSave": "فشل في الحفظ",
     "preview": "معاينة",
     "moduleDescPlaceholder": "وصف الوحدة",
+    "lessonDescPlaceholder": "وصف الدرس",
     "createQuizLesson": "إنشاء درس اختبار",
     "createExamLesson": "إنشاء درس امتحان",
     "uploadMaterial": "رفع المادة",
@@ -161,7 +162,8 @@
     "enterUserEmailAddress": "أدخل البريد الإلكتروني للطالب",
     "invitationEmailMessage": "سيتم إرسال دعوة عبر البريد الإلكتروني للطالب للانضمام للكورس.",
     "adding": "جار الإضافة...",
-    "removeUser": "إزالة الطالب"
+    "removeUser": "إزالة الطالب",
+    "of": "من"
   },
   "groupManagement": {
     "studyGroups": "مجموعات الدراسة",

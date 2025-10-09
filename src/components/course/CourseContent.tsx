@@ -342,7 +342,6 @@ const CourseContent: React.FC<CourseContentProps> = ({
                       {moduleLocked && (
                         <span className="inline-flex items-center text-[11px] font-semibold text-gray-700 bg-gray-200 rounded-full px-2 py-0.5">
                           <Lock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
-                          {t("courseContent.locked")}
                         </span>
                       )}
                     </h4>
@@ -425,11 +424,6 @@ const CourseContent: React.FC<CourseContentProps> = ({
                                   {t("courseContent.free")}
                                 </span>
                               )}
-                            {effectiveLocked && (
-                              <span className="ltr:ml-2 rtl:mr-2 text-xs text-gray-700 bg-gray-200 px-2 py-0.5 rounded-full font-semibold">
-                                {t("courseContent.locked")}
-                              </span>
-                            )}
                           </div>
                         </button>
 

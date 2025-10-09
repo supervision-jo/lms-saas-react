@@ -130,6 +130,7 @@
     "failedToSave": "Failed to save",
     "preview": "Preview",
     "moduleDescPlaceholder": "Module description",
+    "lessonDescPlaceholder": "Lesson description",
     "createQuizLesson": "Create a quiz ",
     "createExamLesson": "Create an exam ",
     "uploadMaterial": "Upload material",
@@ -161,7 +162,8 @@
     "enterUserEmailAddress": "Enter user email address",
     "invitationEmailMessage": "The user will receive an invitation email to join the course.",
     "adding": "Adding...",
-    "removeUser": "Remove user"
+    "removeUser": "Remove user",
+    "of": "of"
   },
   "groupManagement": {
     "studyGroups": "Study Groups",

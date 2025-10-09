@@ -1,3 +1,4 @@
+// src/components/course/builder/SectionLessons.tsx
 import {
   Award,
   Edit,
@@ -19,7 +20,7 @@ import { isContent, reindexOrders1Based } from "../../../utils/courseBuilder";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomUpdate } from "../../../hooks/useMutation"; // <-- use your hook
+import { useCustomUpdate } from "../../../hooks/useMutation";
 import {
   deleteLessonApi,
   patchLessonApi,
@@ -44,9 +45,7 @@ export default function SectionLessons({
   setEditingArticle,
   setUploadingMaterial,
   setEditingAssessment,
-  /** Reflect inline edits in parent's module snapshot so modals show current values */
   updateLessonLocal,
-  /** Let parent register per-module creation handlers for the “+” menu */
   onReady,
 }: {
   moduleId: string;
@@ -57,7 +56,10 @@ export default function SectionLessons({
     React.SetStateAction<{ moduleId: string; lessonId: string } | null>
   >;
   setUploadingMaterial: React.Dispatch<
-    React.SetStateAction<{ moduleId: string; lessonId: string } | null>
+    React.SetStateAction<{
+      moduleId: string;
+      lessonId: string;
+    } | null>
   >;
   setEditingAssessment: React.Dispatch<
     React.SetStateAction<{
@@ -83,20 +85,44 @@ export default function SectionLessons({
     undefined,
     !!moduleId
   );
-  const lessonsFromServer: Lesson[] = useMemo(() => data?.data ?? [], [data]);
 
-  /** Local working copy to support DnD before committing */
+  // Trust DB order; do not client-sort
+  const lessonsFromServer: Lesson[] = useMemo(() => {
+    return data?.data ?? [];
+  }, [data]);
+
+  /** Local working copy to support DnD & inline edits before committing */
   const [localLessons, setLocalLessons] = useState<Lesson[]>(lessonsFromServer);
 
   /** DnD snapshot baseline per section, and last committed orders */
   const dragBaselineRef = useRef<Record<string, string[]>>({});
   const lastCommittedLessonOrderRef = useRef<Record<string, string[]>>({});
 
+  /** last committed fields per lesson (for no-op guards on blur) */
+  const lastCommittedLessonFieldsRef = useRef<
+    Record<string, { title?: string; description?: string | null }>
+  >({});
+
   useEffect(() => {
     setLocalLessons(lessonsFromServer);
+
+    // remember current order
     lastCommittedLessonOrderRef.current[moduleId] = (
       lessonsFromServer || []
     ).map((l) => l.id);
+
+    // seed last-committed fields snapshot (title/description for no-op checks)
+    const fields: Record<
+      string,
+      { title?: string; description?: string | null }
+    > = {};
+    for (const l of lessonsFromServer || []) {
+      fields[l.id] = {
+        title: l.title,
+        description: l.description ?? null,
+      };
+    }
+    lastCommittedLessonFieldsRef.current = fields;
   }, [moduleId, lessonsFromServer]);
 
   const arraysEqual = (a: string[], b: string[]) =>
@@ -157,7 +183,6 @@ export default function SectionLessons({
         currentLessons
           .map((l, idx) => {
             const newOrder = idx + 1;
-            // if no baseline, treat all as changed (first reorder ever)
             const oldOrder = baselinePos.size
               ? baselinePos.get(l.id)
               : undefined;
@@ -170,49 +195,109 @@ export default function SectionLessons({
           .filter((x) => !baselinePos.size || x._changed)
           .map(({ lesson_id, order }) => ({ lesson_id, order }));
 
-      // If nothing changed, bail
       if (!changes.length) return;
 
       try {
-        await reorderLessons({ lessons: changes }); // your hook
-        // Remember last committed order for this module
+        await reorderLessons({ lessons: changes });
         lastCommittedLessonOrderRef.current[sectionId] = currentIds;
         toast.success(t("createSections.commitModulesOrderSuccess"));
       } catch (e: any) {
         toast.error(t("createSections.commitModulesOrderError"));
         handleErrorAlerts(e?.response?.data?.error);
       } finally {
-        // Revalidate only this section's lessons
         queryClient.invalidateQueries({ queryKey: ["lessons", sectionId] });
       }
     });
   };
 
-  /** Inline title edit -> local reflect for parent (modals) + patch lesson, then revalidate this section */
+  /** Inline title edit */
+  const onTitleChange = (lessonId: string, newTitle: string) => {
+    setLocalLessons((prev) =>
+      prev.map((l) => (l.id === lessonId ? { ...l, title: newTitle } : l))
+    );
+    updateLessonLocal(moduleId, lessonId, { title: newTitle } as any);
+  };
+
   const onTitleBlur = async (lessonId: string, newTitle: string) => {
+    const prevTitle =
+      lastCommittedLessonFieldsRef.current[lessonId]?.title ??
+      lessonsFromServer.find((l) => l.id === lessonId)?.title ??
+      "";
+
+    if (String(prevTitle) === String(newTitle)) {
+      // unchanged -> no-op
+      return;
+    }
+
     try {
-      updateLessonLocal(moduleId, lessonId, { title: newTitle } as any);
       await patchLessonApi(lessonId, { title: newTitle });
+
+      // update our last-committed snapshot so subsequent blurs are no-ops
+      lastCommittedLessonFieldsRef.current[lessonId] = {
+        ...(lastCommittedLessonFieldsRef.current[lessonId] || {}),
+        title: newTitle,
+        description:
+          lastCommittedLessonFieldsRef.current[lessonId]?.description ?? null,
+      };
+
       toast.success(t("createSections.saved"));
       queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
     } catch {
-      /* ignore; errors already handled by wrapper */
+      /* errors handled by wrapper; keep local text as-is */
     }
   };
 
-  /** Delete a lesson: optimistic local removal, API delete, then revalidate this section's lessons */
-  const deleteLesson = async (lessonId: string) => {
+  /** 🔥 NEW: Inline description edit */
+  const onDescriptionChange = (lessonId: string, newDesc: string) => {
     setLocalLessons((prev) =>
-      reindexOrders1Based(prev.filter((l) => l.id !== lessonId))
+      prev.map((l) => (l.id === lessonId ? { ...l, description: newDesc } : l))
     );
+    updateLessonLocal(moduleId, lessonId, { description: newDesc } as any);
+  };
+
+  const onDescriptionBlur = async (lessonId: string, newDesc: string) => {
+    const prevDesc =
+      lastCommittedLessonFieldsRef.current[lessonId]?.description ??
+      lessonsFromServer.find((l) => l.id === lessonId)?.description ??
+      null;
+
+    if (String(prevDesc ?? "") === String(newDesc ?? "")) {
+      // unchanged -> no-op
+      return;
+    }
+
+    try {
+      await patchLessonApi(lessonId, { description: newDesc });
+
+      // update our last-committed snapshot so subsequent blurs are no-ops
+      lastCommittedLessonFieldsRef.current[lessonId] = {
+        ...(lastCommittedLessonFieldsRef.current[lessonId] || {}),
+        title:
+          lastCommittedLessonFieldsRef.current[lessonId]?.title ??
+          lessonsFromServer.find((l) => l.id === lessonId)?.title ??
+          "",
+        description: newDesc,
+      };
+
+      toast.success(t("createSections.saved"));
+      queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
+    } catch {
+      /* errors handled by wrapper; keep local desc as-is */
+    }
+  };
+
+  /** Delete a lesson (trust DB for order compaction) */
+  const deleteLesson = async (lessonId: string) => {
+    // pure optimistic removal; do not reindex locally
+    setLocalLessons((prev) => prev.filter((l) => l.id !== lessonId));
     try {
       await deleteLessonApi(lessonId);
       toast.success(t("createSections.lessonRemoved"));
-      await queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
     } catch (e) {
       toast.error(t("createSections.failedRemoveLesson"));
       handleErrorAlerts((e as any)?.response?.data?.error);
-      queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
     }
   };
 
@@ -270,6 +355,12 @@ export default function SectionLessons({
         prev.map((l) => (l.id === optimistic.id ? (created as Lesson) : l))
       );
 
+      // seed committed fields for the new lesson
+      lastCommittedLessonFieldsRef.current[created.id] = {
+        title: created.title,
+        description: created.description ?? null,
+      };
+
       await queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
 
       if (type === "video")
@@ -323,6 +414,12 @@ export default function SectionLessons({
         prev.map((l) => (l.id === optimistic.id ? (created as Lesson) : l))
       );
 
+      // seed committed fields for the new assessment
+      lastCommittedLessonFieldsRef.current[created.id] = {
+        title: created.title,
+        description: created.description ?? null,
+      };
+
       await queryClient.invalidateQueries({ queryKey: ["lessons", moduleId] });
 
       toast.success(
@@ -348,8 +445,7 @@ export default function SectionLessons({
   }, [onReady, moduleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) return <LessonsSkeleton />;
-
-  if (lessonsFromServer.length === 0) return;
+  if (lessonsFromServer.length === 0) return null;
 
   return (
     <div className="p-4 space-y-2">
@@ -387,19 +483,19 @@ export default function SectionLessons({
                     <Award className="w-4 h-4" />
                   )}
                 </div>
+
                 <div className="flex-1">
+                  {/* Title */}
                   <input
                     type="text"
                     value={(lesson as any).title}
-                    onChange={(e) =>
-                      updateLessonLocal(moduleId, lesson.id, {
-                        title: e.target.value,
-                      } as any)
-                    }
+                    onChange={(e) => onTitleChange(lesson.id, e.target.value)}
                     onBlur={(e) => onTitleBlur(lesson.id, e.target.value)}
                     className="font-medium w-11/12 bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                   />
-                  <div className="text-sm text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2">
+
+                  {/* Meta row: URL (for video) */}
+                  <div className="text-xs text-gray-500 flex sm:items-center items-start sm:flex-row flex-col gap-2 mt-1">
                     <span className="inline-flex items-center flex-wrap">
                       {isContentLesson &&
                       (lesson as any).content_type === "video" ? (
@@ -412,6 +508,18 @@ export default function SectionLessons({
                       ) : null}
                     </span>
                   </div>
+
+                  {/* 🔥 NEW: Description (inline, like module) */}
+                  <input
+                    type="text"
+                    value={(lesson as any).description ?? ""}
+                    onChange={(e) =>
+                      onDescriptionChange(lesson.id, e.target.value)
+                    }
+                    onBlur={(e) => onDescriptionBlur(lesson.id, e.target.value)}
+                    placeholder={t("createSections.lessonDescPlaceholder")}
+                    className="text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0 p-0 w-11/12 mt-1"
+                  />
                 </div>
               </div>
 

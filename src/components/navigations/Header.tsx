@@ -193,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* User Dropdown Menu */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     {userNavigationItems.map((i, idx) => {
                       if (currentUser.is_instructor && i.id === "dashboard") {
                         return;

@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SimpleEditor from "./Editor";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomUpdate } from "../../../hooks/useMutation";
+import { useCustomPatch } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { qk } from "../../../utils/builderQueries";
 
 type LessonLocal = Lesson & { parentId?: string };
 
@@ -92,9 +93,16 @@ export default function EditArticle({
     updateLesson(moduleId, lessonId, { duration_hours: val } as any);
   };
 
-  const { mutateAsync: patchLesson } = useCustomUpdate(
-    `${API_ENDPOINTS.lesson}${lessonId}/`
+  const { mutateAsync: patchLesson } = useCustomPatch(
+    `${API_ENDPOINTS.lesson}${lessonId}/`,
+    [...qk.lessonsBySection(moduleId)]
   );
+
+  useEffect(() => {
+    if (lessonId) {
+      queryClient.invalidateQueries({ queryKey: ["lesson", lessonId] });
+    }
+  }, [lessonId, queryClient]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

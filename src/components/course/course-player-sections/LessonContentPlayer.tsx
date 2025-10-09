@@ -93,6 +93,14 @@ export default function LessonContentPlayer({
     beginAutoNext();
   };
 
+  const onArticleComplete = async (goNext: boolean) => {
+    try {
+      handleComplete?.();
+    } finally {
+      if (goNext) proceedNext();
+    }
+  };
+
   // at top of the component
   const [downloading, setDownloading] = useState(false);
 
@@ -211,8 +219,8 @@ export default function LessonContentPlayer({
                     )}
                   </div>
                   <button
-                    onClick={handleComplete}
-                    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+                    onClick={() => onArticleComplete(true)}
+                    className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
                   >
                     {t("content.markComplete")}
                   </button>
@@ -251,6 +259,12 @@ export default function LessonContentPlayer({
                       </div>
                     )}
                   </div>
+                  <button
+                    onClick={() => onArticleComplete(true)}
+                    className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+                  >
+                    {t("content.markComplete")}
+                  </button>
                 </div>
               );
             }

@@ -78,12 +78,12 @@ export default function MobileNav({
             })}
           </>
         )}
-        <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
+        {/* <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
           {t("header.notifications")}
         </button>
         <button className="block w-full text-left px-3 py-2 text-gray-700 hover:text-purple-600">
           {t("header.cart")}
-        </button>
+        </button> */}
         {currentUser && onLogout && (
           <button
             onClick={() => {

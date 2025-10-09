@@ -130,6 +130,7 @@
     "failedToSave": "Error al guardar",
     "preview": "Vista Previa",
     "moduleDescPlaceholder": "Descripción del módulo",
+    "lessonDescPlaceholder": "Descripción del Lección",
     "createQuizLesson": "Crear lección de cuestionario",
     "createExamLesson": "Crear lección de examen",
     "uploadMaterial": "Subir material",
@@ -161,7 +162,8 @@
     "enterUserEmailAddress": "Ingresa el correo electrónico del usuario",
     "invitationEmailMessage": "El usuario recibirá un correo de invitación para unirse al curso.",
     "adding": "Agregando...",
-    "removeUser": "Eliminar usuario"
+    "removeUser": "Eliminar usuario",
+    "of": "de"
   },
   "groupManagement": {
     "studyGroups": "Grupos de Estudio",

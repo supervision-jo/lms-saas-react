@@ -52,7 +52,7 @@ const LoginPage: React.FC = () => {
   const loginType = data?.login_type ?? "email";
   const isPhoneLogin = loginType === "phone";
 
-  const loginFieldValidation = isPhoneLogin
+  const loginFieldValidation = !isPhoneLogin
     ? {
         required: t("Login.phone.error.required"),
         pattern: {

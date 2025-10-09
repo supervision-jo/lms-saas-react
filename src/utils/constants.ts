@@ -63,6 +63,8 @@ export const API_ENDPOINTS = {
   createExam: "course/create-exam/",
   updateExam: "course/update-exam/",
   courseUsers: "course/get-student-courses/",
+  addCourseUser: "course/add-student-to-course/",
+  removeCourseUser: "course/remove-student-from-course/",
   submitExam: "exam/exam-quiz/",
   getStudentAnswers: "exam/get-student-answers/",
   exams: "course/quiz/",

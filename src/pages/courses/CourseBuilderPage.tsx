@@ -211,12 +211,16 @@ const CourseBuilderPage: React.FC = () => {
     try {
       const fd = new FormData();
       fd.append("is_published", shouldPublish ? "true" : "false");
-      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
-      await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      setPublished(shouldPublish);
-      toast.success(
-        shouldPublish ? t("tryPublish.success") : t("tryUnpublish.success")
-      );
+      const res = await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
+
+      if (res.status === true) {
+        queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        setPublished(shouldPublish);
+        toast.success(
+          shouldPublish ? t("tryPublish.success") : t("tryUnpublish.success")
+        );
+      }
     } catch (e: any) {
       toast.error(e?.response?.data?.error || t("tryPublish.error"));
     }

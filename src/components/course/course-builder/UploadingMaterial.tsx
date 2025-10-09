@@ -1,15 +1,14 @@
 // src/components/course/course-builder/UploadingMaterial.tsx
-// — aligns to { content_type:"material", title, description, url, string_file (base64) }
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { fileToBase64 } from "../../../utils/courseBuilder";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomUpdate } from "../../../hooks/useMutation";
+import { useCustomPatch } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useQueryClient } from "@tanstack/react-query";
+import { qk } from "../../../utils/builderQueries";
 
 type LessonLocal = Lesson & {
   parentId?: string;
@@ -19,7 +18,6 @@ type LessonLocal = Lesson & {
 };
 
 interface Props {
-  // modules: Module[]; // kept for compatibility (unused for source)
   setUploadingMaterial: React.Dispatch<
     React.SetStateAction<{
       moduleId: string;
@@ -40,7 +38,6 @@ interface Props {
 }
 
 export default function UploadingMaterial({
-  // modules, // not used as source of truth
   setUploadingMaterial,
   updateLesson,
   uploadingMaterial,
@@ -53,14 +50,23 @@ export default function UploadingMaterial({
   const lessonId = uploadingMaterial.lessonId;
   const moduleId = uploadingMaterial.moduleId;
 
-  // Fetch the lesson
+  // Ensure lesson detail is fresh when modal opens
+  useEffect(() => {
+    if (!lessonId) return;
+    queryClient.invalidateQueries({ queryKey: ["lesson", lessonId] });
+  }, [lessonId, queryClient]);
+
+  // Fetch the lesson (single)
   const { data } = useCustomQuery(
     `${API_ENDPOINTS.lesson}${lessonId}/`,
     ["lesson", lessonId],
     undefined,
     !!lessonId
   );
-  const serverLesson: Lesson | undefined = data?.data ?? data;
+  const serverLesson: Lesson | undefined = useMemo(
+    () => (data?.data ? (data.data as Lesson) : (data as any)),
+    [data]
+  );
 
   // Local working state
   const [title, setTitle] = useState<string>("");
@@ -74,22 +80,34 @@ export default function UploadingMaterial({
     if (!serverLesson) return;
     setTitle(serverLesson.title ?? "");
     setDescription(serverLesson.description ?? "");
+    // Only prefill URL if lesson.url exists; do not map server "file" into URL
     setUrl(serverLesson.url ?? null);
     setStringFile(null);
     setFile(null);
   }, [serverLesson]);
 
+  // Consider an existing server file as a valid source (server returns it at lesson.file)
+  const hasExistingServerFile = !!(
+    (serverLesson as any)?.file &&
+    (typeof (serverLesson as any).file === "string" ||
+      typeof (serverLesson as any).file?.url === "string")
+  );
+
   const canSave =
     Boolean((title || "").trim()) &&
-    (Boolean(stringFile) || Boolean(file) || Boolean(url));
+    (Boolean(stringFile) ||
+      Boolean(file) ||
+      Boolean(url) ||
+      hasExistingServerFile);
 
   const localPreviewUrl = useMemo(() => {
     if (file instanceof File) return URL.createObjectURL(file);
     return null;
   }, [file]);
 
-  const { mutateAsync: patchLesson } = useCustomUpdate(
-    `${API_ENDPOINTS.lesson}${lessonId}/`
+  const { mutateAsync: patchLesson } = useCustomPatch(
+    `${API_ENDPOINTS.lesson}${lessonId}/`,
+    [...qk.lessonsBySection(moduleId)]
   );
 
   return (
@@ -248,12 +266,12 @@ export default function UploadingMaterial({
             onClick={async () => {
               if (!canSave) return;
 
-              // Prefer base64 string_file; otherwise use URL
               const payload: any = {
                 title: title ?? "",
                 description: description ?? "",
                 content_type: "material",
               };
+              // Only send a replacement source if user provided one
               if (stringFile) {
                 payload.string_file = stringFile;
                 payload.url = null;
@@ -265,9 +283,14 @@ export default function UploadingMaterial({
               try {
                 await patchLesson(payload);
                 toast.success(t("createSections.materialSaved"));
-                await queryClient.invalidateQueries({
-                  queryKey: ["lessons", moduleId],
-                });
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: ["lessons", moduleId],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["lesson", lessonId],
+                  }),
+                ]);
                 if (onSave) onSave();
                 else setUploadingMaterial(null);
               } catch {

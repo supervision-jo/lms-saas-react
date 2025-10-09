@@ -11,10 +11,10 @@ import {
 } from "../../../utils/courseBuilder";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomUpdate } from "../../../hooks/useMutation";
+import { useCustomPatch } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
-import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { qk } from "../../../utils/builderQueries";
 
 interface Props {
   // modules: Module[]; // kept for compatibility (unused for data source)
@@ -40,7 +40,6 @@ export default function EditLesson({
   onSave,
 }: Props) {
   const { t } = useTranslation("courseBuilder");
-  const queryClient = useQueryClient();
   const lessonId = editingLesson.lessonId;
   const moduleId = editingLesson.moduleId;
 
@@ -115,8 +114,9 @@ export default function EditLesson({
     }
   };
 
-  const { mutateAsync: patchLesson } = useCustomUpdate(
-    `${API_ENDPOINTS.lesson}${lessonId}/`
+  const { mutateAsync: patchLesson } = useCustomPatch(
+    `${API_ENDPOINTS.lesson}${lessonId}/`,
+    [...qk.lessonsBySection(moduleId)]
   );
 
   return (
@@ -240,10 +240,6 @@ export default function EditLesson({
                   duration_hours: durationHours ?? null,
                 });
                 toast.success(t("createSections.videoSaved"));
-                // only revalidate the section lessons list
-                await queryClient.invalidateQueries({
-                  queryKey: ["lessons", moduleId],
-                });
                 if (onSave) onSave();
                 else setEditingLesson(null);
               } catch {
