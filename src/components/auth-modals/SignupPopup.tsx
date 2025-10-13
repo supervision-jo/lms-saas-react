@@ -7,7 +7,7 @@ import {
   User,
   ArrowRight,
   X,
-  ArrowLeft,
+  Phone,
 } from "lucide-react";
 import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 // import { useNavigate } from "react-router";
@@ -16,6 +16,7 @@ import handleErrorAlerts from "../../utils/showErrorMessages";
 import toast from "react-hot-toast";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useTranslation } from "react-i18next";
+import { useSettings } from "../../hooks/useSettings";
 
 type Role = "instructor" | "student";
 
@@ -59,7 +60,7 @@ export default function SignupPopup({
   });
 
   // const navigate = useNavigate();
-  const { t, i18n } = useTranslation("auth");
+  const { t } = useTranslation("auth");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +73,26 @@ export default function SignupPopup({
   const password = useWatch({ control, name: "password" });
 
   const signUp = useCustomPost(API_ENDPOINTS.signup, ["sign-up"]);
+
+  const { data, isLoading } = useSettings();
+  const loginType = data?.login_type ?? "email";
+  const isPhoneLogin = loginType === "phone";
+
+  const loginFieldValidation = isPhoneLogin
+    ? {
+        required: t("Login.phone.error.required"),
+        pattern: {
+          value: /^\+?[0-9\s-]{7,15}$/,
+          message: t("Login.phone.error.valid"),
+        },
+      }
+    : {
+        required: t("Login.email.error.required"),
+        pattern: {
+          value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+          message: t("Login.email.error.valid"),
+        },
+      };
 
   const onSubmit = async (data: FormValues) => {
     if (data.password !== data.c_password) {
@@ -147,6 +168,10 @@ export default function SignupPopup({
     if (getValues("c_password")) trigger("c_password");
   }, [password, trigger, getValues]);
 
+  if (isLoading) {
+    return "loading...";
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -154,7 +179,15 @@ export default function SignupPopup({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-purple-600 mb-2">
-                LearnHub
+                {data?.logo_type === "text" ? (
+                  data?.logo_text
+                ) : (
+                  <img
+                    src={data?.logo_file}
+                    alt="logo"
+                    className="w-40 block m-auto rounded-full"
+                  />
+                )}
               </div>
               <p className="text-gray-600">{t("Signup.welcome")}</p>
             </div>
@@ -221,25 +254,26 @@ export default function SignupPopup({
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t("Signup.email.label")}
+                {t(`Login.${isPhoneLogin ? "phone" : "email"}.label`)}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  {isPhoneLogin ? (
+                    <Phone className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  )}{" "}
                 </div>
                 <input
-                  type="email"
-                  {...register("email", {
-                    required: t("Signup.email.error.required"),
-                    pattern: {
-                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: t("Signup.email.error.valid"),
-                    },
-                  })}
+                  type={isPhoneLogin ? "tel" : "email"}
+                  inputMode={isPhoneLogin ? "tel" : undefined}
+                  {...register("email", loginFieldValidation)}
+                  placeholder={t(
+                    `Login.${isPhoneLogin ? "phone" : "email"}.placeholder`
+                  )}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder={t("Signup.email.placeholder")}
                 />
               </div>
               {errors.email && (
@@ -409,11 +443,7 @@ export default function SignupPopup({
               ) : (
                 <>
                   {t("Signup.create")}
-                  {i18n.language === "ar" ? (
-                    <ArrowLeft className="w-5 h-5 mr-2" />
-                  ) : (
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  )}
+                  <ArrowRight className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                 </>
               )}
             </button>

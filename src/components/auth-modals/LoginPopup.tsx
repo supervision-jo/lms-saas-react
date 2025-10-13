@@ -5,10 +5,11 @@ import { useCustomPost } from "../../hooks/useMutation";
 import { useForm } from "react-hook-form";
 import useAuth from "../../store/useAuth";
 import { useState } from "react";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, X } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone, X } from "lucide-react";
 import { storeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../settings/FeatureGate";
+import { useSettings } from "../../hooks/useSettings";
 
 interface FormValues {
   email: string;
@@ -43,6 +44,26 @@ export default function LoginPopup({
 
   const login = useCustomPost(API_ENDPOINTS.login, ["login"]);
 
+  const { data, isLoading } = useSettings();
+  const loginType = data?.login_type ?? "email";
+  const isPhoneLogin = loginType === "phone";
+
+  const loginFieldValidation = isPhoneLogin
+    ? {
+        required: t("Login.phone.error.required"),
+        pattern: {
+          value: /^\+?[0-9\s-]{7,15}$/,
+          message: t("Login.phone.error.valid"),
+        },
+      }
+    : {
+        required: t("Login.email.error.required"),
+        pattern: {
+          value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+          message: t("Login.email.error.valid"),
+        },
+      };
+
   const onSubmit = async (data: FormValues) => {
     try {
       const formData = new FormData();
@@ -67,16 +88,17 @@ export default function LoginPopup({
         onClose();
       }
     } catch (error: any) {
-      const payload = error?.response?.data;
-      handleErrorAlerts(
-        payload?.message || "There is an unexpected error occured."
-      );
+      const payload = error?.response?.data?.non_field_errors[0];
+      handleErrorAlerts(payload || "There is an unexpected error occured.");
     }
   };
 
   // const handleGoogleLogin = () => {
   //   return;
   // };
+  if (isLoading) {
+    return "loading...";
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -85,7 +107,15 @@ export default function LoginPopup({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-purple-600 mb-2">
-                LearnHub
+                {data?.logo_type === "text" ? (
+                  data?.logo_text
+                ) : (
+                  <img
+                    src={data?.logo_file}
+                    alt="logo"
+                    className="w-24 block m-auto rounded-full"
+                  />
+                )}
               </div>
               <p className="text-gray-600">{t("Login.welcome")}</p>
             </div>
@@ -104,25 +134,26 @@ export default function LoginPopup({
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t("Login.email.label")}
+                {t(`Login.${isPhoneLogin ? "phone" : "email"}.label`)}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  {isPhoneLogin ? (
+                    <Phone className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  )}
                 </div>
                 <input
-                  type="email"
-                  {...register("email", {
-                    required: t("Login.email.error.required"),
-                    pattern: {
-                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: t("Login.email.error.valid"),
-                    },
-                  })}
+                  type={isPhoneLogin ? "tel" : "email"}
+                  inputMode={isPhoneLogin ? "tel" : undefined}
+                  {...register("email", loginFieldValidation)}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
                     errors.email ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder={t("Login.email.placeholder")}
+                  placeholder={t(
+                    `Login.${isPhoneLogin ? "phone" : "email"}.placeholder`
+                  )}
                 />
               </div>
               {errors.email && (
@@ -180,7 +211,7 @@ export default function LoginPopup({
                 />
                 <label
                   htmlFor="remember-me"
-                  className="ltr:ml-2 rtl::mr-2 block text-sm text-gray-700"
+                  className="ltr:ml-2 rtl:mr-2 block text-sm text-gray-700"
                 >
                   {t("Login.rememberMe")}
                 </label>
@@ -204,14 +235,14 @@ export default function LoginPopup({
               ) : (
                 <>
                   {t("Login.signin")}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                 </>
               )}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -222,7 +253,7 @@ export default function LoginPopup({
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Google Login */}
           {/* <button

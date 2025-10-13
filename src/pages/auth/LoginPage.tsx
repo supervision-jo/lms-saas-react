@@ -1,13 +1,5 @@
 import React, { useState } from "react";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  ArrowLeft,
-  Phone,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone } from "lucide-react";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
@@ -26,7 +18,7 @@ interface FormValues {
 }
 
 const LoginPage: React.FC = () => {
-  const { t, i18n } = useTranslation("auth");
+  const { t } = useTranslation("auth");
   const { setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -52,7 +44,7 @@ const LoginPage: React.FC = () => {
   const loginType = data?.login_type ?? "email";
   const isPhoneLogin = loginType === "phone";
 
-  const loginFieldValidation = !isPhoneLogin
+  const loginFieldValidation = isPhoneLogin
     ? {
         required: t("Login.phone.error.required"),
         pattern: {
@@ -92,12 +84,8 @@ const LoginPage: React.FC = () => {
         reset();
       }
     } catch (error: any) {
-      const payload = error?.response?.data;
-      handleErrorAlerts(
-        payload?.error ||
-          payload.non_field_errors ||
-          "There is an unexpected error occured."
-      );
+      const payload = error?.response?.data?.non_field_errors[0];
+      handleErrorAlerts(payload || "There is an unexpected error occured.");
     }
   };
 
@@ -120,7 +108,7 @@ const LoginPage: React.FC = () => {
               <img
                 src={data?.logo_file}
                 alt="logo"
-                className="w-24 block m-auto rounded-full"
+                className="w-40 block m-auto rounded-full"
               />
             )}
           </div>
@@ -234,11 +222,7 @@ const LoginPage: React.FC = () => {
               ) : (
                 <>
                   {t("Login.signin")}
-                  {i18n.language === "ar" ? (
-                    <ArrowLeft className="w-5 h-5 mr-2" />
-                  ) : (
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  )}
+                  <ArrowRight className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                 </>
               )}
             </button>
