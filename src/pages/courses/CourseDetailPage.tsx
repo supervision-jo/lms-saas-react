@@ -73,7 +73,6 @@ const CourseDetailPage: React.FC = () => {
     !!courseId
   );
   const course: Course = courseData?.data?.data;
-
   const { data: modulesResp } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=true`,
     ["modules", courseId],
@@ -454,10 +453,12 @@ const CourseDetailPage: React.FC = () => {
                       <Smartphone className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
                       <span>{t("details.access")}</span>
                     </div>
-                    <div className="flex items-center text-gray-700">
-                      <Trophy className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
-                      <span>{t("details.certificate")}</span>
-                    </div>
+                    {course?.has_certificate && (
+                      <div className="flex items-center text-gray-700">
+                        <Trophy className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
+                        <span>{t("details.certificate")}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

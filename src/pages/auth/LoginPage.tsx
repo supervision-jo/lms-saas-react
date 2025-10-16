@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
   const onSubmit = async (data: FormValues) => {
     try {
       const formData = new FormData();
-      formData.append("email", data.email);
+      formData.append("identifier", data.email);
       formData.append("password", data.password);
 
       const res = await login.mutateAsync(formData);
@@ -84,8 +84,10 @@ const LoginPage: React.FC = () => {
         reset();
       }
     } catch (error: any) {
-      const payload = error?.response?.data?.non_field_errors[0];
-      handleErrorAlerts(payload || "There is an unexpected error occured.");
+      // const payload = error?.response?.data?.non_field_errors[0];
+      handleErrorAlerts(
+        error?.response?.data.error || "There is an unexpected error occured."
+      );
     }
   };
 

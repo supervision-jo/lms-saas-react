@@ -2,7 +2,7 @@ import { Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-export default function HeroSection() {
+export default function HeroSection(dashboardStatsData: dashboardStats) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation("home");
 
@@ -50,17 +50,17 @@ export default function HeroSection() {
 
             <div className="flex items-center gap-8 pt-8">
               <div className="text-center">
-                <div className="text-3xl font-bold">50M+</div>
+                <div className="text-4xl font-bold">{dashboardStatsData?.total_students ?? "-"}</div>
                 <div className="text-gray-300">{t("students")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold">190K+</div>
+                <div className="text-4xl font-bold">{dashboardStatsData?.total_courses ?? "-"}</div>
                 <div className="text-gray-300">{t("courses")}</div>
               </div>
-              <div className="text-center">
+              {/* <div className="text-center">
                 <div className="text-3xl font-bold">70+</div>
                 <div className="text-gray-300">{t("languages")}</div>
-              </div>
+              </div> */}
             </div>
           </div>
 

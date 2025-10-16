@@ -193,7 +193,7 @@ const CourseCatalogPage: React.FC = () => {
   useEffect(() => {
     if (
       selectedCategory !== "all" &&
-      !categories.some((c) => c.id === selectedCategory)
+      !categories?.some((c) => c.id === selectedCategory)
     ) {
       const next = new URLSearchParams(searchParams);
       next.delete("category");

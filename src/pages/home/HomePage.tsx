@@ -5,15 +5,21 @@ import FeaturedCoursesSection from "../../components/home/FeaturedCoursesSection
 import StatisticsSection from "../../components/home/StatisticsSection";
 import TestimonialsSection from "../../components/home/TestimonialsSection";
 import { useTranslation } from "react-i18next";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("home");
-
+  const { data: dashboardStats } = useCustomQuery(
+    API_ENDPOINTS.dashboardStats,
+    ["dashboardStats"]
+  );
+  const dashboardStatsData: dashboardStats = dashboardStats?.data;
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <HeroSection />
+      <HeroSection {...dashboardStatsData} />
 
       {/* Categories Section */}
       <CategoriesSection />
@@ -22,9 +28,9 @@ const HomePage: React.FC = () => {
       <FeaturedCoursesSection />
 
       {/* Stats Section */}
-      <StatisticsSection />
+      <StatisticsSection {...dashboardStatsData} />
 
-      {/* Testimonials */}
+      {/* Top Reviews */}
       <TestimonialsSection />
 
       {/* CTA Section */}

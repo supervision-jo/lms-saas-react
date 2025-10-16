@@ -67,7 +67,7 @@ export default function LoginPopup({
   const onSubmit = async (data: FormValues) => {
     try {
       const formData = new FormData();
-      formData.append("email", data.email);
+      formData.append("identifier", data.email);
       formData.append("password", data.password);
 
       const res = await login.mutateAsync(formData);

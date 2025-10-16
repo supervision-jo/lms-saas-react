@@ -18,6 +18,7 @@ import HomePage from "../pages/home/HomePage";
 import { RequireAuth } from "./requireAuth";
 import { RequireRole } from "./guards";
 import { useFeatureFlag } from "../hooks/useSettings";
+import WebView from "../pages/userProfile/WebView";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -103,6 +104,8 @@ export default function AppRoutes() {
             <Route path="/sign-up" element={<SignupPage />} />
           )}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/webview/:id" element={<WebView />} />
+
           {/* Auth */}
 
           {/* Main */}
@@ -123,7 +126,6 @@ export default function AppRoutes() {
           {/* Main */}
 
           {/* Courses */}
-
           <Route element={<RequireRole exclude={["instructor"]} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
           </Route>
@@ -133,6 +135,8 @@ export default function AppRoutes() {
           </Route>
           {/* Courses */}
 
+          {/* WebView */}
+          {/* WebView */}
           {/* User */}
           <Route path="/profile" element={<ProfilePage />} />
           {/* User */}

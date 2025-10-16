@@ -90,6 +90,7 @@ interface Course {
   level: string;
   is_published: boolean;
   is_sequential: boolean;
+  has_certificate: boolean;
   created_at: string;
   updated_at: string;
   total_students: number;

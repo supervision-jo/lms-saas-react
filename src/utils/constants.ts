@@ -10,7 +10,7 @@ export const USER_KEY = "lms-user";
 const api_url =
   window.location.href.includes("vercel") ||
   window.location.href.includes("localhost")
-    ? "https://test-lms-api.vision-jo.com/"
+    ? "https://ollms-api.vision-jo.com/"
     : toApiURL(window.location.origin);
 export const BASE_URL = `${api_url}api/`;
 
@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
   getStudentAnswers: "exam/get-student-answers/",
   exams: "course/quiz/",
   categories: "course/categories/",
+  categoriesFilters: "course/categories_filters/",
   subCategories: "course/get-sub-categories/",
   featuredCourses: "course/best-sellers/",
   modules: "course/get-sections/",
@@ -96,6 +97,9 @@ export const API_ENDPOINTS = {
   signup: "users/register/",
   login: "users/login/",
   refreshToken: "users/refresh-token/",
+  webView: "core/webview/",
+  dashboardStats: "core/dashboard_stats/",
+  topReviews: "core/top_reviews/",
   updateProfile: "users/update-profile/",
   settings: "tenant/settings",
   studentPresence: "",

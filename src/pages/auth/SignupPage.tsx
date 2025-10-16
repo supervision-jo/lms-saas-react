@@ -387,6 +387,7 @@ const SignupPage: React.FC = () => {
                     {t("Signup.agreeTerms.label")}{" "}
                     <button
                       type="button"
+                      onClick={() => navigate("/webview/terms-of-service")}
                       className="text-purple-600 hover:text-purple-700 font-medium"
                     >
                       {t("Signup.agreeTerms.terms")}
@@ -394,6 +395,7 @@ const SignupPage: React.FC = () => {
                     {t("Signup.agreeTerms.and")}{" "}
                     <button
                       type="button"
+                      onClick={() => navigate("/webview/privacy-policy")}
                       className="text-purple-600 hover:text-purple-700 font-medium"
                     >
                       {t("Signup.agreeTerms.privacy")}
