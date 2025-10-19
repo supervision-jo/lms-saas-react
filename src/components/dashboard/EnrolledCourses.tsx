@@ -39,7 +39,7 @@ export default function EnrolledCourses({
   const enrollStats: EnrolledCourseStats[] = enrollStatsData?.data ?? [];
 
   const currentEnrollStat = enrollStats?.find((s) => s.id === item?.course?.id);
-
+  console.log(currentEnrollStat);
   const cates: Category[] = catesData?.data?.data ?? [];
 
   const currentCategory = cates?.find(

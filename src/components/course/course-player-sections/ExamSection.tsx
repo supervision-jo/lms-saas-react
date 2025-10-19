@@ -7,7 +7,7 @@ import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 import { Award, RotateCcw, X } from "lucide-react";
-import blankCertificateImage from "../../../assets/blank_certificat.png";
+// import blankCertificateImage from "../../../assets/blank_certificat.png";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -29,7 +29,7 @@ interface StudentAnswers {
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const { t, i18n } = useTranslation("coursePlayer");
-
+  console.log(exam);
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
@@ -150,11 +150,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
   const handleCloseResultModal = () => setShowResultModal(false);
 
-  const handleViewCertificate = () => {
-    if (!passed) return;
-    setShowResultModal(false);
-    window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
-  };
+  // const handleViewCertificate = () => {
+  //   if (!passed) return;
+  //   setShowResultModal(false);
+  //   window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
+  // };
 
   const submitDisabled = !allAnswered || isPending || !isRetaking;
 
@@ -375,7 +375,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <button
+                {/* <button
                   onClick={handleViewCertificate}
                   disabled={!passed}
                   className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors ${
@@ -386,7 +386,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 >
                   <Award className="w-4 h-4" />
                   {t("examSection.resultModal.viewCertificate")}
-                </button>
+                </button> */}
                 <button
                   onClick={() => {
                     handleCloseResultModal();
@@ -402,17 +402,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                   <RotateCcw className="w-4 h-4" />
                   {t("examSection.resultModal.retake")}
                 </button>
+                <button
+                  onClick={() => {
+                    handleCloseResultModal();
+                    onClose();
+                  }}
+                  className="w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t("examSection.continue")}
+                </button>
               </div>
-
-              <button
-                onClick={() => {
-                  handleCloseResultModal();
-                  onClose();
-                }}
-                className="w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                {t("examSection.continue")}
-              </button>
             </div>
           </div>
         </div>

@@ -62,7 +62,6 @@ function AssessmentList({
   ]);
   const assessments: Exam[] = data?.data ?? [];
   if (!assessments?.length) return null;
-
   const canAccess =
     (isEnrolled || lesson.free_preview) && !forceLocked && !lesson.is_locked;
 

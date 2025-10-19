@@ -100,7 +100,7 @@ export default function CoursePlayerPage() {
   const courseData: Course = courseRes?.data;
 
   const modules: Module[] = useMemo(
-    () => modulesData?.data?.data ?? [],
+    () => modulesData?.data ?? [],
     [modulesData]
   );
 

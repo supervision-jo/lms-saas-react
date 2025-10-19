@@ -99,6 +99,7 @@ export const API_ENDPOINTS = {
   refreshToken: "users/refresh-token/",
   webView: "core/webview/",
   dashboardStats: "core/dashboard_stats/",
+  lastCourseProgress: "course/last-course-progress/",
   topReviews: "core/top_reviews/",
   updateProfile: "users/update-profile/",
   settings: "tenant/settings",

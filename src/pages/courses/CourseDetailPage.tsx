@@ -80,10 +80,10 @@ const CourseDetailPage: React.FC = () => {
     !!courseId
   );
   const modulesData: Module[] = useMemo(
-    () => modulesResp?.data?.data ?? [],
+    () => modulesResp?.data ?? [],
     [modulesResp]
   );
-
+  console.log(modulesResp?.data);
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);

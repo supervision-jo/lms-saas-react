@@ -10,7 +10,7 @@ export default function CategoriesSection() {
   const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
     "categories",
   ]);
-  const categories: Category[] = categoriesData?.data?.data;
+  const categories: Category[] = categoriesData?.data;
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,7 +27,7 @@ export default function CategoriesSection() {
           {categories?.map((category: Category) => (
             <div
               key={category?.id}
-              onClick={() => navigate(`/catalog?category=${category?.id}`)}
+              onClick={() => navigate(`/catalog?category_id=${category?.id}`)}
               className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden"
             >
               <div

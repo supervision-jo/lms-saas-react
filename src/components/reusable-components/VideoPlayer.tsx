@@ -52,23 +52,23 @@ function toNoCookie(url: string): string {
   }
 }
 
-const isYouTube = (u: string) =>
-  /(?:youtu\.be|youtube\.com\/(?:watch|embed|shorts))/i.test(u);
+// const isYouTube = (u: string) =>
+//   /(?:youtu\.be|youtube\.com\/(?:watch|embed|shorts))/i.test(u);
 
-const getYouTubeId = (u: string) => {
-  try {
-    const url = new URL(u);
-    if (url.hostname.includes("youtu.be"))
-      return url.pathname.replace(/^\//, "").split("/")[0] || "";
-    if (url.pathname.startsWith("/embed/"))
-      return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
-    if (url.pathname.startsWith("/shorts/"))
-      return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
-    return url.searchParams.get("v") || "";
-  } catch {
-    return "";
-  }
-};
+// const getYouTubeId = (u: string) => {
+//   try {
+//     const url = new URL(u);
+//     if (url.hostname.includes("youtu.be"))
+//       return url.pathname.replace(/^\//, "").split("/")[0] || "";
+//     if (url.pathname.startsWith("/embed/"))
+//       return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
+//     if (url.pathname.startsWith("/shorts/"))
+//       return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
+//     return url.searchParams.get("v") || "";
+//   } catch {
+//     return "";
+//   }
+// };
 
 const VideoPlayer: React.FC<Props> = ({
   src,
@@ -77,7 +77,7 @@ const VideoPlayer: React.FC<Props> = ({
   onPrev,
   onNext,
   startMuted = false,
-  poster,
+  // poster,
   privacyEnhanced = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -91,12 +91,11 @@ const VideoPlayer: React.FC<Props> = ({
     () => (privacyEnhanced ? toNoCookie(src) : src),
     [src, privacyEnhanced]
   );
-
-  const resolvedPoster =
-    poster ||
-    (isYouTube(safeSrc)
-      ? `https://i.ytimg.com/vi/${getYouTubeId(safeSrc)}/hqdefault.jpg`
-      : "/poster-fallback.jpg");
+  // const resolvedPoster =
+  //   poster ||
+  //   (isYouTube(safeSrc)
+  //     ? `https://i.ytimg.com/vi/${getYouTubeId(safeSrc)}/hqdefault.jpg`
+  //     : "/poster-fallback.jpg");
 
   // UI state
   const [playing, setPlaying] = useState(false);
@@ -172,13 +171,13 @@ const VideoPlayer: React.FC<Props> = ({
 
       {/* Renderer (chromeless) */}
       <div className="w-full h-full aspect-video">
-        {!playing && (
+        {/* {!playing && (
           <img
             src={resolvedPoster}
             alt=""
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
-        )}
+        )} */}
         {canPlay ? (
           <ReactPlayer
             ref={playerRef}
