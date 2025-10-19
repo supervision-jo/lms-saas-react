@@ -30,6 +30,7 @@ const PUBLIC_ENDPOINT_PREFIXES: string[] = [
   API_ENDPOINTS.login,
   API_ENDPOINTS.signup,
   API_ENDPOINTS.refreshToken,
+  API_ENDPOINTS.lastCourseProgress,
   API_ENDPOINTS.webView,
   API_ENDPOINTS.dashboardStats,
   API_ENDPOINTS.topReviews,
