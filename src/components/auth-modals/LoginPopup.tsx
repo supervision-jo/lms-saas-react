@@ -88,8 +88,7 @@ export default function LoginPopup({
         onClose();
       }
     } catch (error: any) {
-      const payload = error?.response?.data?.non_field_errors[0];
-      handleErrorAlerts(payload || "There is an unexpected error occured.");
+      handleErrorAlerts(error?.response?.data.error || "There is an unexpected error occured.");
     }
   };
 
@@ -104,8 +103,8 @@ export default function LoginPopup({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-end">
+            {/* <div>
               <div className="text-3xl font-bold text-purple-600 mb-2">
                 {data?.logo_type === "text" ? (
                   data?.logo_text
@@ -118,7 +117,7 @@ export default function LoginPopup({
                 )}
               </div>
               <p className="text-gray-600">{t("Login.welcome")}</p>
-            </div>
+            </div> */}
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"

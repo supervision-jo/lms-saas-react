@@ -44,7 +44,7 @@ export default function CoursesFilter({
   const { t } = useTranslation("courseCatalog");
 
   const { data } = useCustomQuery(API_ENDPOINTS.categories, ["categories"]);
-  const categories: Category[] = data?.data?.data;
+  const categories: Category[] = data?.data;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -67,7 +67,6 @@ export default function CoursesFilter({
       el.setAttribute("inert", "");
     }
   }, [mobileOpen, returnFocusRef]);
-
   const Body = ({ group }: { group: string }) => (
     <>
       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
