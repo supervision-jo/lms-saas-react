@@ -61,7 +61,7 @@ export default function CoursePlayerPage() {
 
   // course + modules
   const { data: courseRes } = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}/`,
+    `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId

@@ -67,7 +67,7 @@ const CourseDetailPage: React.FC = () => {
   }, [isAuthenticated, queryClient]);
 
   const courseData = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}/`,
+    `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId
@@ -133,7 +133,6 @@ const CourseDetailPage: React.FC = () => {
 
   const isInstructorCourse =
     currentUser?.is_instructor && course?.instructor?.id === currentUser?.id;
-
   const isEnrolled = isInstructorCourse
     ? true
     : enrolledOptimistic || computedEnrolled;
@@ -417,7 +416,7 @@ const CourseDetailPage: React.FC = () => {
                           ? y("card.viewCourse")
                           : y("card.startLearning")}
                       </button>
-                      {!isInstructorCourse && (
+                      {!course?.has_reviewed && (
                         <FeatureGate
                           flag="is_review_enabled"
                           fallback={null}

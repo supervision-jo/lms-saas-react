@@ -56,7 +56,7 @@ export default function TestimonialsSection() {
                 <div className="flex items-center mb-6">
                   <img
                     src={
-                      review.profile_image ??
+                      review?.student.profile_image ??
                       "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                     }
                     alt={
@@ -74,7 +74,7 @@ export default function TestimonialsSection() {
                   </div>
                 </div>
                 <p className="text-gray-700 italic">
-                  "{review.tell_about_your_experience}"
+                  "{review.comment}"
                 </p>
               </div>
               <div className="space-y-2">

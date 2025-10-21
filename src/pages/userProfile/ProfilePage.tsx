@@ -8,48 +8,12 @@ import { useCustomPatch } from "../../hooks/useMutation";
 import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 import { useCustomQuery } from "../../hooks/useQuery";
-import LearningStats from "../../components/userProfile/LearningStats";
 import { useTranslation } from "react-i18next";
-
-const achievements = [
-  { id: "1", icon: "🎓", date: "2024-01-15" },
-  { id: "2", icon: "🔥", date: "2024-01-20" },
-  { id: "3", icon: "⚡", date: "2024-01-25" },
-  { id: "4", icon: "🧠", date: "2024-02-01" },
-  { id: "5", icon: "🤝", date: "2024-02-05" },
-  { id: "6", icon: "📚", date: "2024-02-10" },
-];
-
-const certificatesData = [
-  {
-    id: "1",
-    title: "Complete React Developer Course",
-    issueDate: "2024-01-30",
-    instructor: "John Doe",
-    thumbnail:
-      "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=300",
-  },
-  {
-    id: "2",
-    title: "Python for Data Science",
-    issueDate: "2024-02-15",
-    instructor: "Jane Smith",
-    thumbnail:
-      "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=300",
-  },
-  {
-    id: "3",
-    title: "UI/UX Design Fundamentals",
-    issueDate: "2024-02-28",
-    instructor: "Alex Brown",
-    thumbnail:
-      "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=300",
-  },
-];
+import { formatDate } from "../../services/date";
 
 const ProfilePage: React.FC = () => {
   const { t, i18n } = useTranslation("profile");
-  const { t: y } = useTranslation("studentDashboard");
+  // const { t: y } = useTranslation("studentDashboard");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -61,28 +25,22 @@ const ProfilePage: React.FC = () => {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const certificates: Certificate[] = certificatesData ?? [];
-
-  const handleDownloadCertificate = (certificate: any) => {
-    console.log("Downloading certificate for:", certificate.title);
-    // Create a mock download
-    const link = document.createElement("a");
-    link.href = "#";
-    link.download = `${certificate.title}-certificate.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(t("downloadDone"));
-  };
-
-  const { data: studentStatsData } = useCustomQuery(
-    API_ENDPOINTS.studentStats,
-    ["student-stats", profileData?.id],
-    undefined,
-    !!isStudent
+  const { data: certificatesData } = useCustomQuery(
+    API_ENDPOINTS.studentCertificates,
+    ["certificates"]
   );
-
-  const studentStats: StudentStats = studentStatsData?.data;
+  const certificates: Certificate[] = certificatesData?.data ?? [];
+  // const handleDownloadCertificate = (certificate: any) => {
+  //   console.log("Downloading certificate for:", certificate.title);
+  //   // Create a mock download
+  //   const link = document.createElement("a");
+  //   link.href = "#";
+  //   link.download = `${certificate.title}-certificate.pdf`;
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  //   toast.success(t("downloadDone"));
+  // };
 
   const { mutateAsync, isPending } = useCustomPatch(
     API_ENDPOINTS.updateProfile,
@@ -126,7 +84,6 @@ const ProfilePage: React.FC = () => {
 
   const TABS = [
     { id: "profile", label: t("tabs.profileSettings") },
-    { id: "achievements", label: t("tabs.achievements") },
     { id: "certificates", label: t("tabs.certificates"), studentOnly: true },
   ];
 
@@ -225,9 +182,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Learning Stats */}
-        <LearningStats stats={studentStats} />
-
         {/* Tabs */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
@@ -314,67 +268,44 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === "achievements" && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              {t("tabs.achievements")}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {achievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className="border border-gray-200 rounded-lg p-6 text-center hover:border-purple-300 transition-colors"
-                >
-                  <div className="text-5xl mb-4">{achievement.icon}</div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">
-                    {y(`achievementsSection.items.${achievement.id}.title`)}
-                  </h4>
-                  <p className="text-gray-600 text-sm mb-3">
-                    {y(`achievementsSection.items.${achievement.id}.desc`)}
-                  </p>
-                  <p className="text-xs text-purple-600 font-medium bg-purple-100 px-3 py-1 rounded-full inline-block">
-                    {achievement.date}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {isStudent && activeTab === "certificates" && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
               {t("tabs.certificates")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {certificates.map((certificate) => (
+              {certificates?.map((certificate) => (
                 <div
                   key={certificate.id}
-                  className="border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors"
+                  className="border min-h-[250px] border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 transition-colors"
                 >
                   <img
                     src={
-                      certificate.thumbnail ??
+                      certificate.image_course ??
                       "https://ralfvanveen.com/wp-content/uploads/2021/06/Placeholder-_-Glossary.svg"
                     }
-                    alt={certificate.title}
+                    alt={certificate.title_course}
                     className="w-full h-32 object-cover"
                   />
-                  <div className="p-4">
+                  <div className="p-4 h-fit">
                     <h4 className="font-semibold text-gray-900 mb-2">
-                      {certificate.title}
+                      {certificate.title_course}
                     </h4>
                     <p className="text-sm text-gray-600 mb-1">
-                      Instructor: {certificate.instructor}
+                      Instractor: {certificate.instractor}
                     </p>
                     <p className="text-sm text-gray-500 mb-3">
-                      Issued: {certificate.issueDate}
+                      Issued: {formatDate(certificate.date_issued)}
                     </p>
-                    <button
-                      onClick={() => handleDownloadCertificate(certificate)}
-                      className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      {t("download")}
+                    <button>
+                      <a
+                        href={certificate.file}
+                        target="_blank"
+                        download
+                        className="w-full px-4 h-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        {t("download")}
+                      </a>
                     </button>
                   </div>
                 </div>

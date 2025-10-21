@@ -19,11 +19,11 @@ interface CourseRatingProps {
 interface DataToSend {
   course: string;
   rating: number;
-  tell_about_your_experience: string;
+  comment: string;
   like_course: number[];
   recommend: boolean;
   anonymous: boolean;
-  comment: string;
+  // comment: string;
 }
 
 interface Reason {
@@ -85,9 +85,7 @@ export default function CourseRatingModal({
   // local state (seed from lastReview if present)
   const [rating, setRating] = useState<number>(lastReview?.rating ?? 0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [review, setReview] = useState<string>(
-    lastReview?.tell_about_your_experience ?? ""
-  );
+  const [review, setReview] = useState<string>(lastReview?.comment ?? "");
   const [selectedReasons, setSelectedReasons] = useState<number[]>(
     lastReview?.like_course_details.map((r) => r.id) ?? []
   );
@@ -155,17 +153,19 @@ export default function CourseRatingModal({
     const basePayload: DataToSendWithId = {
       course: String(courseId),
       rating,
-      tell_about_your_experience: review.trim(),
+      comment: review.trim(),
       like_course: selectedReasons,
       recommend: wouldRecommend,
       anonymous,
-      comment: review.trim(),
     };
 
     try {
       if (isEdit && lastReview?.id != null) {
         // include id for PATCH body as you requested
         const res = await editReview({ ...basePayload, id: lastReview.id });
+        queryClient.invalidateQueries({
+          queryKey: ["course", courseId],
+        });
         if (res?.status) {
           toast.success(t("rateModal.handleSubmit.success"));
         } else {
@@ -198,7 +198,7 @@ export default function CourseRatingModal({
   useEffect(() => {
     if (!lastReview) return;
     setRating(lastReview.rating ?? 0);
-    setReview(lastReview.tell_about_your_experience ?? "");
+    setReview(lastReview.comment ?? "");
     setSelectedReasons(lastReview.like_course_details?.map((r) => r.id) ?? []);
     setAnonymous(lastReview.anonymous ?? false);
     setWouldRecommend(lastReview.recommend ?? true);

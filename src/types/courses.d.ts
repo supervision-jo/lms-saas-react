@@ -89,6 +89,7 @@ interface Course {
   is_paid: boolean;
   level: string;
   is_published: boolean;
+  has_reviewed: boolean;
   is_sequential: boolean;
   has_certificate: boolean;
   created_at: string;
@@ -144,7 +145,7 @@ interface CourseReview {
   course: string;
   course_title: string;
   rating: number;
-  tell_about_your_experience: string;
+  // tell_about_your_experience: string;
   like_course_details: {
     id: number;
     name: string;

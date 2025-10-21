@@ -18,13 +18,6 @@
     "viewCerts": "Ver certificados",
     "updateProfile": "Actualizar perfil"
   },
-  "thisMonth": {
-    "title": "Este mes",
-    "newCourses": "Cursos nuevos",
-    "hoursLearned": "Horas de aprendizaje",
-    "certificates": "Certificados",
-    "streakDays": "Días de racha"
-  },
   "achievementsSection": {
     "title": "Logros",
     "items": {
@@ -55,10 +48,11 @@
     }
   },
   "headerStats": {
-    "coursesEnrolled": "Cursos inscritos",
-    "hoursLearned": "Horas de aprendizaje",
+    "coursesEnrolled": "Cursos Inscritos",
+    "completedCourses": "Cursos Completados",
     "certificates": "Certificados",
-    "streakDays": "Días de racha"
+    "newCourses": "Cursos Nuevos",
+    "thisMonth": "Este Mes"
   },
   "enrolledCourses": {
     "continue": "Continuar",
