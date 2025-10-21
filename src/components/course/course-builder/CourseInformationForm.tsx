@@ -33,7 +33,7 @@ export default function CourseInformationForm({ course }: Props) {
   const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
     "categories",
   ]);
-  const categories: Category[] = categoriesData?.data?.data || [];
+  const categories: Category[] = categoriesData?.data || [];
 
   const {
     reset,

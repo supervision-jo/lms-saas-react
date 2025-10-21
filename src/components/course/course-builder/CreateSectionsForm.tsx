@@ -86,7 +86,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
     !!courseId
   );
   const serverModules: Module[] = useMemo(
-    () => modulesData?.data?.data ?? [],
+    () => modulesData?.data ?? [],
     [modulesData]
   );
 
