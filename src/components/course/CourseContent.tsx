@@ -375,15 +375,19 @@ const CourseContent: React.FC<CourseContentProps> = ({
                             handleLessonClick(lesson, moduleLocked)
                           }
                           disabled={!canAccess}
-                          className={`w-full flex items-start flex-col gap-2 py-3 sm:px-4 px-2 rounded-lg transition-all duration-200 text-left ${
-                            !isCurrentLesson && (lesson as any)?.watched
-                              ? "bg-green-50"
-                              : isCurrentLesson
-                              ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
-                              : canAccess
-                              ? "hover:bg-white hover:shadow-md bg-white"
-                              : "opacity-50 cursor-not-allowed bg-gray-100"
-                          }`}
+                          className={`
+    w-full flex items-center justify-between sm:px-4 px-3 py-3 rounded-xl transition-all duration-200 text-left
+    border
+    ${
+      isCurrentLesson
+        ? "bg-purple-600 border-purple-700 text-white shadow-lg scale-[1.02]"
+        : lesson.completed
+        ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+        : canAccess
+        ? "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
+        : "bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed"
+    }
+  `}
                         >
                           <div className="flex items-center justify-start gap-3 w-full">
                             <div>

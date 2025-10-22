@@ -116,6 +116,7 @@ interface Lesson {
   free_preview?: boolean;
   order: number;
   file?: any;
+  completed?: boolean;
   description_html?: any;
   content_type: ContentType;
   watched?: boolean;

@@ -207,6 +207,7 @@ export default function CoursePlayerPage() {
         queryClient.invalidateQueries({
           queryKey: ["modules", courseId],
         });
+        queryClient.invalidateQueries({ queryKey: ["course", courseId] });
 
         if (res?.status) toast.success(t("handleComplete.success"));
       }
