@@ -1,4 +1,3 @@
-// src/components/course/course-builder/UploadingMaterial.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { fileToBase64 } from "../../../utils/courseBuilder";
@@ -14,7 +13,9 @@ type LessonLocal = Lesson & {
   parentId?: string;
   file?: File | null;
   url?: string | null; // external or preview link
-  string_file?: string | null; // base64
+  string_file?: string | null; // backend may return file link here (per new backend behavior)
+  file_base64?: string | null; // outbound only
+  file_name?: string | null; // outbound only
 };
 
 interface Props {
@@ -72,7 +73,7 @@ export default function UploadingMaterial({
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [url, setUrl] = useState<string | null>(null);
-  const [stringFile, setStringFile] = useState<string | null>(null);
+  const [stringFile, setStringFile] = useState<string | null>(null); // local base64 buffer (outbound as file_base64)
   const [file, setFile] = useState<File | null>(null);
 
   // Initialize from server
@@ -80,17 +81,21 @@ export default function UploadingMaterial({
     if (!serverLesson) return;
     setTitle(serverLesson.title ?? "");
     setDescription(serverLesson.description ?? "");
-    // Only prefill URL if lesson.url exists; do not map server "file" into URL
-    setUrl(serverLesson.url ?? null);
+    // Backend now returns the final file link in `string_file` → use it as URL if present.
+    const serverFileLink =
+      (serverLesson as any)?.string_file &&
+      typeof (serverLesson as any).string_file === "string"
+        ? (serverLesson as any).string_file
+        : null;
+    setUrl(serverLesson.url ?? serverFileLink ?? null);
+
     setStringFile(null);
     setFile(null);
   }, [serverLesson]);
 
-  // Consider an existing server file as a valid source (server returns it at lesson.file)
+  // Consider an existing server file as a valid source
   const hasExistingServerFile = !!(
-    (serverLesson as any)?.file &&
-    (typeof (serverLesson as any).file === "string" ||
-      typeof (serverLesson as any).file?.url === "string")
+    (serverLesson as any)?.string_file || serverLesson?.url
   );
 
   const canSave =
@@ -171,14 +176,20 @@ export default function UploadingMaterial({
                     updateLesson(moduleId, lessonId, {
                       file: picked,
                       url: null,
+                      file_base64: undefined,
+                      file_name: picked?.name ?? undefined,
+                      // Keep string_file undefined—it's server-returned link now
                       string_file: undefined,
                     });
 
-                    // 2) encode to base64
+                    // 2) encode to base64 → store locally then reflect as file_base64 for outbound
                     try {
                       const b64 = await fileToBase64(picked);
                       setStringFile(b64);
-                      updateLesson(moduleId, lessonId, { string_file: b64 });
+                      updateLesson(moduleId, lessonId, {
+                        file_base64: b64,
+                        file_name: picked.name,
+                      });
                     } catch {
                       toast.error(t("uploadingMaterial.fail"));
                     }
@@ -188,9 +199,9 @@ export default function UploadingMaterial({
                   }}
                 />
 
-                {(file as any)?.name && (
+                {file?.name && (
                   <p className="text-sm text-gray-500 mt-2 truncate">
-                    {t("uploadingMaterial.selected")} {(file as any)?.name}
+                    {t("uploadingMaterial.selected")} {file.name}
                   </p>
                 )}
                 {!!localPreviewUrl && (
@@ -227,6 +238,10 @@ export default function UploadingMaterial({
                   updateLesson(moduleId, lessonId, {
                     url: v,
                     file: null,
+                    // Clear outbound-only fields if using URL
+                    file_base64: undefined,
+                    file_name: undefined,
+                    // keep string_file undefined; it's server link on response
                     string_file: undefined,
                   });
                 }}
@@ -271,13 +286,18 @@ export default function UploadingMaterial({
                 description: description ?? "",
                 content_type: "material",
               };
+
               // Only send a replacement source if user provided one
-              if (stringFile) {
-                payload.string_file = stringFile;
+              if (stringFile && file) {
+                // BASE64 outbound with filename
+                payload.file_base64 = stringFile;
+                payload.file_name = file.name;
                 payload.url = null;
+                // do NOT send string_file outbound anymore (server uses it for returning a link)
               } else if (url) {
                 payload.url = url;
-                payload.string_file = null;
+                payload.file_base64 = null;
+                payload.file_name = null;
               }
 
               try {

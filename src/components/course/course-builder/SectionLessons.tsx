@@ -502,7 +502,7 @@ export default function SectionLessons({
                         <>
                           <LinkIcon className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
                           {videoUrlPreview
-                            ? String(videoUrlPreview).slice(0, 20)
+                            ? String(videoUrlPreview)
                             : t("createSections.noURL")}
                         </>
                       ) : null}

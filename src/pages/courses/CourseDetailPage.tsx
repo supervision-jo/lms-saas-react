@@ -83,7 +83,6 @@ const CourseDetailPage: React.FC = () => {
     () => modulesResp?.data ?? [],
     [modulesResp]
   );
-  console.log(modulesResp?.data);
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
@@ -416,7 +415,7 @@ const CourseDetailPage: React.FC = () => {
                           ? y("card.viewCourse")
                           : y("card.startLearning")}
                       </button>
-                      {!course?.has_reviewed  && (
+                      {!course?.has_reviewed && (
                         <FeatureGate
                           flag="is_review_enabled"
                           fallback={null}
@@ -459,7 +458,6 @@ const CourseDetailPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
                 </div>
               </div>
             </div>

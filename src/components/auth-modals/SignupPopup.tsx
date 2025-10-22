@@ -132,15 +132,8 @@ export default function SignupPopup({
         handleErrorAlerts(res?.data?.detail);
       }
     } catch (error: any) {
-      const payload = error?.response?.data;
-      handleErrorAlerts(
-        payload?.email[0] ||
-          payload?.password[0] ||
-          payload?.first_name[0] ||
-          payload?.last_name[0] ||
-          payload?.role[0] ||
-          "There is an unexpected error occured"
-      );
+      const payload = error?.response?.data.error;
+      handleErrorAlerts(payload || "There is an unexpected error occured");
     }
   };
 

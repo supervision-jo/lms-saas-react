@@ -121,6 +121,10 @@ interface Lesson {
   content_type: ContentType;
   watched?: boolean;
   string_file?: string | null;
+
+  file_base64?: string | null;
+  file_name?: string;
+
   section: string;
   is_locked?: boolean;
 }

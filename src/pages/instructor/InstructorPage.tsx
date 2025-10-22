@@ -5,7 +5,7 @@ import StatisticsCards from "../../components/instructor-dashboard/StatisticsCar
 import CoursesSection from "../../components/instructor-dashboard/CoursesSection";
 import AnalyticsSection from "../../components/instructor-dashboard/AnalyticsSection";
 import ReviewsSection from "../../components/instructor-dashboard/ReviewsSection";
-import InstructorDashboardSidebar from "../../components/instructor-dashboard/Sidebar";
+// import InstructorDashboardSidebar from "../../components/instructor-dashboard/Sidebar";
 import Modal from "../../components/reusable-components/Modal";
 import { useCustomPost } from "../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../utils/constants";
@@ -124,8 +124,8 @@ const InstructorPage: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="">
             {activeTab === "courses" && <CoursesSection />}
 
             {activeTab === "analytics" && <AnalyticsSection />}
@@ -134,7 +134,7 @@ const InstructorPage: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <InstructorDashboardSidebar />
+          {/* <InstructorDashboardSidebar /> */}
         </div>
       </div>
       <Modal
