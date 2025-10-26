@@ -75,8 +75,10 @@ export default function AppRoutes() {
         {/* Auth */}
         <Route path="" element={<Layout />}>
           <Route path="/reset-password" element={<ForgetPassword />} />
+          <Route path="/reset-password/:token" element={<ForgetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify-account" element={<VerifyAccount />} />
+          <Route path="/verify-account/:token" element={<VerifyAccount />} />
           {shouldShowHomePage ? (
             <Route path="/" element={<HomePage />} />
           ) : (

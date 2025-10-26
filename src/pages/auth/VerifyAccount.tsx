@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useNavigate, useParams } from "react-router";
 import useAuth from "../../store/useAuth";
@@ -10,7 +10,7 @@ import { useSettings } from "../../hooks/useSettings";
 import toast from "react-hot-toast";
 import handleErrorAlerts from "../../utils/showErrorMessages";
 
-type VerifyState = "idle" | "verifying" | "success" | "error";
+type VerifyState = "idle" | "verifying" | "error";
 
 const VerifyAccount: React.FC = () => {
   const { t } = useTranslation("auth");
@@ -18,10 +18,7 @@ const VerifyAccount: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const { setIsAuthenticated } = useAuth();
 
-  const { data: settings, isLoading: isSettingsLoading } = useSettings();
-
-  const useSuccessScreen =
-    (settings as any)?.features?.verifyAccountSuccessScreen ?? false;
+  const { data: settings } = useSettings();
 
   const verifyAccountReq = useCustomPost(API_ENDPOINTS.verifyAccount, [
     "verify-account",
@@ -29,9 +26,13 @@ const VerifyAccount: React.FC = () => {
 
   const [state, setState] = useState<VerifyState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const didRunRef = useRef(false);
 
   useEffect(() => {
-    const run = async () => {
+    if (didRunRef.current) return;
+    didRunRef.current = true;
+
+    (async () => {
       if (!token) {
         setState("error");
         setErrorMsg(
@@ -62,12 +63,8 @@ const VerifyAccount: React.FC = () => {
             setIsAuthenticated,
           });
 
-          if (useSuccessScreen) {
-            setState("success");
-            setTimeout(() => navigate("/"), 900);
-          } else {
-            navigate("/");
-          }
+          // Immediate redirect to home (no success screen)
+          navigate("/", { replace: true });
         } else {
           throw new Error(
             t(
@@ -88,18 +85,14 @@ const VerifyAccount: React.FC = () => {
         handleErrorAlerts(msg);
         setState("error");
       }
-    };
-
-    run();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  if (isSettingsLoading) return "loading...";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Logo */}
+        {/* Logo (settings used ONLY here) */}
         <div className="text-center mb-8">
           <div className="text-3xl font-bold text-purple-600 mb-2 text-center">
             {settings?.logo_type === "text" ? (
@@ -113,13 +106,10 @@ const VerifyAccount: React.FC = () => {
             )}
           </div>
           <p className="text-gray-600 mt-2">
-            {state === "success"
-              ? t("VerifyAccount.titleSuccess", "Your account is verified")
-              : t("VerifyAccount.title", "Verifying your account")}
+            {t("VerifyAccount.title", "Verifying your account")}
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {state === "verifying" || state === "idle" ? (
             <div className="flex flex-col items-center text-center space-y-3">
@@ -133,27 +123,6 @@ const VerifyAccount: React.FC = () => {
                   "We’re confirming your email and signing you in."
                 )}
               </p>
-            </div>
-          ) : null}
-
-          {state === "success" ? (
-            <div className="flex flex-col items-center text-center space-y-3">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
-              <h2 className="text-lg font-semibold">
-                {t("VerifyAccount.successTitle", "Account Verified")}
-              </h2>
-              <p className="text-gray-600 text-sm">
-                {t(
-                  "VerifyAccount.redirecting",
-                  "Redirecting you to the home page..."
-                )}
-              </p>
-              <button
-                onClick={() => navigate("/")}
-                className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:from-purple-700 hover:to-indigo-700 transition"
-              >
-                {t("VerifyAccount.goHome", "Go to Home")}
-              </button>
             </div>
           ) : null}
 
