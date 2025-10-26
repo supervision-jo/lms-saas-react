@@ -76,6 +76,9 @@ const Layout = () => {
   return (
     <div id="app-scroll" className="min-h-screen bg-gray-50">
       {!pathname.includes("player") &&
+        !pathname.includes("verify-email") &&
+        !pathname.includes("verify-account") &&
+        !pathname.includes("reset-password") &&
         !pathname.includes("login") &&
         !pathname.includes("sign-up") && (
           <Header

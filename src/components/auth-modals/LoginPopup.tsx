@@ -10,6 +10,7 @@ import { storeTokens } from "../../services/auth";
 import { useTranslation } from "react-i18next";
 import FeatureGate from "../settings/FeatureGate";
 import { useSettings } from "../../hooks/useSettings";
+import { useNavigate } from "react-router";
 
 interface FormValues {
   email: string;
@@ -23,6 +24,7 @@ export default function LoginPopup({
   onClose: () => void;
   setShowSignupModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+  const navigate = useNavigate();
   const { t } = useTranslation("auth");
   const { setIsAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -88,7 +90,9 @@ export default function LoginPopup({
         onClose();
       }
     } catch (error: any) {
-      handleErrorAlerts(error?.response?.data.error || "There is an unexpected error occured.");
+      handleErrorAlerts(
+        error?.response?.data.error || "There is an unexpected error occured."
+      );
     }
   };
 
@@ -215,12 +219,17 @@ export default function LoginPopup({
                   {t("Login.rememberMe")}
                 </label>
               </div>
-              <button
-                type="button"
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                {t("Login.forgotPass")}
-              </button>
+              {!isPhoneLogin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/verify-email?type=password_reset");
+                  }}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  {t("Login.forgotPass")}
+                </button>
+              )}
             </div>
 
             {/* Login Button */}

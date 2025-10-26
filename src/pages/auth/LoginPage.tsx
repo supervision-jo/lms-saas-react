@@ -205,12 +205,17 @@ const LoginPage: React.FC = () => {
                   {t("Login.rememberMe")}
                 </label>
               </div>
-              <button
-                type="button"
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                {t("Login.forgotPass")}
-              </button>
+              {!isPhoneLogin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/verify-email?type=password_reset");
+                  }}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  {t("Login.forgotPass")}
+                </button>
+              )}
             </div>
 
             {/* Login Button */}

@@ -19,6 +19,9 @@ import { RequireAuth } from "./requireAuth";
 import { RequireRole } from "./guards";
 import { useFeatureFlag } from "../hooks/useSettings";
 import WebView from "../pages/userProfile/WebView";
+import ForgetPassword from "../pages/auth/ForgetPassword";
+import VerifyEmail from "../pages/auth/VerifyEmail";
+import VerifyAccount from "../pages/auth/VerifyAccount";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -71,6 +74,9 @@ export default function AppRoutes() {
       <Routes>
         {/* Auth */}
         <Route path="" element={<Layout />}>
+          <Route path="/reset-password" element={<ForgetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/verify-account" element={<VerifyAccount />} />
           {shouldShowHomePage ? (
             <Route path="/" element={<HomePage />} />
           ) : (
@@ -78,7 +84,7 @@ export default function AppRoutes() {
               {isAuthenticated ? (
                 <>
                   <Route
-                    path="login"
+                    path="/login"
                     element={<Navigate to="/catalog" replace />}
                   />
 
@@ -135,8 +141,6 @@ export default function AppRoutes() {
           </Route>
           {/* Courses */}
 
-          {/* WebView */}
-          {/* WebView */}
           {/* User */}
           <Route path="/profile" element={<ProfilePage />} />
           {/* User */}
