@@ -99,6 +99,7 @@
     "noIdReturned": "No se devolvió ningún id",
     "quiz": "Cuestionario",
     "exam": "Examen",
+    "assessment": "Evaluación",
     "created": "creado",
     "commitModulesOrderSuccess": "Orden de módulos actualizado",
     "commitModulesOrderError": "Error al actualizar el orden de módulos",
@@ -133,10 +134,12 @@
     "lessonDescPlaceholder": "Descripción del Lección",
     "createQuizLesson": "Crear lección de cuestionario",
     "createExamLesson": "Crear lección de examen",
+    "createAssessmentLesson": "Crear una evaluación",
     "uploadMaterial": "Subir material",
     "edit": "Editar",
     "examBuilder": "Constructor de exámenes",
-    "quizBuilder": "Constructor de cuestionarios"
+    "quizBuilder": "Constructor de cuestionarios",
+    "assessmentBuilder": "Creador de evaluaciones"
   },
   "userManagement": {
     "active": "Activo",
@@ -256,11 +259,13 @@
   "quizBuilder": {
     "title": {
       "quiz": "Cuestionario",
-      "exam": "Examen"
+      "exam": "Examen",
+      "assessment": "Evaluación"
     },
     "infoTitle": {
       "quiz": "Información del cuestionario",
-      "exam": "Información del examen"
+      "exam": "Información del examen",
+      "assessmentInfo": "Información de la evaluación"
     },
     "labels": {
       "lessonTitle": "Título *",

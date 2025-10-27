@@ -4,10 +4,9 @@ import { fileToBase64 } from "../../../utils/courseBuilder";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomPatch } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useQueryClient } from "@tanstack/react-query";
-import { qk } from "../../../utils/builderQueries";
+import { patch } from "../../../api";
 
 type LessonLocal = Lesson & {
   parentId?: string;
@@ -73,6 +72,7 @@ export default function UploadingMaterial({
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [url, setUrl] = useState<string | null>(null);
+  const [serverFileLink, setServerFileLink] = useState<string | null>(null);
   const [stringFile, setStringFile] = useState<string | null>(null); // local base64 buffer (outbound as file_base64)
   const [file, setFile] = useState<File | null>(null);
 
@@ -83,11 +83,14 @@ export default function UploadingMaterial({
     setDescription(serverLesson.description ?? "");
     // Backend now returns the final file link in `string_file` → use it as URL if present.
     const serverFileLink =
-      (serverLesson as any)?.string_file &&
-      typeof (serverLesson as any).string_file === "string"
-        ? (serverLesson as any).string_file
+      (serverLesson as any)?.file &&
+      typeof (serverLesson as any).file === "string"
+        ? (serverLesson as any).file
         : null;
-    setUrl(serverLesson.url ?? serverFileLink ?? null);
+    setServerFileLink(
+      serverFileLink ? `${serverFileLink?.slice(0, 60)}...` : ""
+    );
+    setUrl(serverLesson?.file_url ?? serverLesson?.url ?? null);
 
     setStringFile(null);
     setFile(null);
@@ -104,16 +107,6 @@ export default function UploadingMaterial({
       Boolean(file) ||
       Boolean(url) ||
       hasExistingServerFile);
-
-  const localPreviewUrl = useMemo(() => {
-    if (file instanceof File) return URL.createObjectURL(file);
-    return null;
-  }, [file]);
-
-  const { mutateAsync: patchLesson } = useCustomPatch(
-    `${API_ENDPOINTS.lesson}${lessonId}/`,
-    [...qk.lessonsBySection(moduleId)]
-  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -145,12 +138,12 @@ export default function UploadingMaterial({
               />
             </div>
 
-            <div>
+            <div className="flex flex-col w-full">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t("uploadingMaterial.uploadFile")}
               </label>
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-start flex-col border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer"
                 onClick={() => inputRef.current?.click()}
               >
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -160,6 +153,13 @@ export default function UploadingMaterial({
                 <p className="text-sm text-gray-500">
                   PDF, DOC, ZIP, PPT, XLS… (Max 50MB)
                 </p>
+                <div className="w-full h-5">
+                  {" "}
+                  {/* reserve height */}
+                  <p className="text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap">
+                    {serverFileLink}
+                  </p>
+                </div>
                 <input
                   ref={inputRef}
                   type="file"
@@ -202,11 +202,6 @@ export default function UploadingMaterial({
                 {file?.name && (
                   <p className="text-sm text-gray-500 mt-2 truncate">
                     {t("uploadingMaterial.selected")} {file.name}
-                  </p>
-                )}
-                {!!localPreviewUrl && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {t("uploadingMaterial.ready")}
                   </p>
                 )}
               </div>
@@ -281,27 +276,23 @@ export default function UploadingMaterial({
             onClick={async () => {
               if (!canSave) return;
 
-              const payload: any = {
-                title: title ?? "",
-                description: description ?? "",
-                content_type: "material",
-              };
-
-              // Only send a replacement source if user provided one
-              if (stringFile && file) {
-                // BASE64 outbound with filename
-                payload.file_base64 = stringFile;
-                payload.file_name = file.name;
-                payload.url = null;
-                // do NOT send string_file outbound anymore (server uses it for returning a link)
-              } else if (url) {
-                payload.url = url;
-                payload.file_base64 = null;
-                payload.file_name = null;
-              }
-
               try {
-                await patchLesson(payload);
+                const formData = new FormData();
+                formData.append("title", title ?? "");
+                formData.append("description", description ?? "");
+                formData.append("content_type", "material");
+
+                if (file) {
+                  formData.append("file", file); // directly attach the File object
+                } else if (url) {
+                  formData.append("url", url);
+                }
+
+                // Send FormData directly using patch()
+                await patch(`${API_ENDPOINTS.lesson}${lessonId}/`, formData, {
+                  headers: { "Content-Type": "multipart/form-data" },
+                });
+
                 toast.success(t("createSections.materialSaved"));
                 await Promise.all([
                   queryClient.invalidateQueries({
@@ -313,8 +304,9 @@ export default function UploadingMaterial({
                 ]);
                 if (onSave) onSave();
                 else setUploadingMaterial(null);
-              } catch {
-                // handled by wrappers
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to upload material");
               }
             }}
             disabled={!canSave}

@@ -24,7 +24,7 @@ export type AssessmentDraft = {
   description?: string;
   time_limit: number;
   passing_score: number;
-  type?: "quiz" | "exam";
+  type?: "quiz" | "exam" | "assessment";
   questions: QuestionDraft[];
 };
 
@@ -55,23 +55,65 @@ type UiQuestion = {
 type UiQuiz = {
   time_limit: number;
   passing_score: number;
-  type?: "quiz" | "exam";
+  type?: "quiz" | "exam" | "assessment";
   questions: UiQuestion[];
 };
 
 const uid = () => Math.random().toString(36).slice(2);
 
 function normalizeInitial(initial?: any): UiQuiz {
+  // 1) Coerce type robustly
+  const coerceType = (t: any): "quiz" | "exam" | "assessment" => {
+    const s = String(t ?? "")
+      .trim()
+      .toLowerCase();
+    if (s === "exam") return "exam";
+    if (s === "quiz") return "quiz";
+    return "assessment";
+  };
+
+  const type = coerceType(initial?.type);
+
+  // 2) Safe helpers
+  const safeInt = (v: any, def: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.floor(n) : def;
+  };
+
+  const getOptions = (q: any) => {
+    const raw = Array.isArray(q?.choices)
+      ? q.choices
+      : Array.isArray(q?.options)
+      ? q.options
+      : [];
+    if (!raw.length) {
+      return [
+        { id: uid(), text: "", is_correct: false },
+        { id: uid(), text: "", is_correct: false },
+      ];
+    }
+    return raw.map((c: any) => ({
+      id: uid(),
+      text: String(c?.text ?? c?.label ?? ""),
+      is_correct: !!(c?.is_correct ?? c?.isCorrect),
+    }));
+  };
+
+  // 3) Defaults depend on type (assessments are non-graded)
+  const defaultPoints = type === "assessment" ? 0 : 1;
+  const baseTimeLimit = type === "assessment" ? 0 : 10; // you can keep 0 for assessments
+  const basePassing = type === "assessment" ? 0 : 70;
+
   const base: UiQuiz = {
-    time_limit: 10,
-    passing_score: 70,
-    type: initial?.type === "exam" ? "exam" : "quiz",
+    time_limit: baseTimeLimit,
+    passing_score: basePassing,
+    type,
     questions: [
       {
         id: uid(),
         text: "",
         explanation: "",
-        points: 1,
+        points: defaultPoints,
         timeLimitSeconds: undefined,
         options: [
           { id: uid(), text: "", is_correct: false },
@@ -81,59 +123,63 @@ function normalizeInitial(initial?: any): UiQuiz {
     ],
   };
 
+  // 4) If no initial, return base
   if (!initial) return base;
 
-  if (
-    Array.isArray(initial?.questions) &&
-    (typeof initial?.time_limit === "number" || initial?.time_limit == null)
-  ) {
+  // 5) Build from initial if it looks like quiz/exam/assessment data
+  const hasQuestionsArray = Array.isArray(initial?.questions);
+  const hasTimeLimit =
+    typeof initial?.time_limit === "number" || initial?.time_limit == null;
+
+  if (hasQuestionsArray && hasTimeLimit) {
+    const normalizedQuestions =
+      initial.questions.length > 0
+        ? initial.questions.map((q: any) => {
+            const txt = String(q?.text ?? q?.question ?? q?.title ?? "");
+            const pts =
+              type === "assessment"
+                ? 0
+                : Number.isFinite(q?.points)
+                ? Math.max(1, Number(q.points))
+                : 1;
+            return {
+              id: uid(),
+              text: txt,
+              explanation: q?.explanation ?? "",
+              points: pts,
+              timeLimitSeconds: undefined, // keep undefined here; per-question timers are optional
+              options: getOptions(q),
+            };
+          })
+        : base.questions;
+
     return {
       time_limit:
-        typeof initial.time_limit === "number"
-          ? Math.max(1, Math.floor(initial.time_limit))
-          : base.time_limit,
+        type === "assessment"
+          ? 0
+          : safeInt(initial.time_limit, baseTimeLimit) < 1
+          ? baseTimeLimit
+          : safeInt(initial.time_limit, baseTimeLimit),
       passing_score:
-        typeof initial.passing_score === "number"
-          ? Math.max(0, Math.min(100, Math.floor(initial.passing_score)))
-          : base.passing_score,
-      type: initial.type === "exam" ? "exam" : "quiz",
-      questions:
-        initial.questions.length > 0
-          ? initial.questions.map((q: any) => {
-              const optionsRaw = Array.isArray(q.choices)
-                ? q.choices
-                : Array.isArray(q.options)
-                ? q.options
-                : [];
-              return {
-                id: uid(),
-                text: String(q.text ?? q.question ?? q.title ?? ""),
-                explanation: q.explanation ?? "",
-                points: Number.isFinite(q.points) ? Math.max(1, q.points) : 1,
-                timeLimitSeconds: undefined,
-                options:
-                  optionsRaw.length > 0
-                    ? optionsRaw.map((c: any) => ({
-                        id: uid(),
-                        text: String(c.text ?? c.label ?? ""),
-                        is_correct: !!(c.is_correct ?? c.isCorrect),
-                      }))
-                    : [
-                        { id: uid(), text: "", is_correct: false },
-                        { id: uid(), text: "", is_correct: false },
-                      ],
-              };
-            })
-          : base.questions,
+        type === "assessment"
+          ? 0
+          : Math.max(
+              0,
+              Math.min(100, safeInt(initial.passing_score, basePassing))
+            ),
+      type,
+      questions: normalizedQuestions,
     };
   }
+
+  // 6) Fallback to base if shape is not as expected
   return base;
 }
 
 function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
-  const mins = Math.max(1, Math.floor(Number(ui.time_limit || 1)));
-  return {
-    time_limit: mins,
+  const base: AssessmentDraft = {
+    // for assessment we’ll drop these later
+    time_limit: Math.max(1, Math.floor(Number(ui.time_limit || 1))),
     passing_score: Math.max(
       0,
       Math.min(100, Math.floor(Number(ui.passing_score || 0)))
@@ -143,13 +189,26 @@ function toAssessmentDraft(ui: UiQuiz): AssessmentDraft {
       text: q.text.trim(),
       question_type: "mcq",
       explanation: q.explanation?.trim() || "",
+      // Points & correctness only matter for non-assessments; keep minimal safe defaults here
       points: Math.max(1, Number(q.points || 1)),
       choices: q.options.map((o) => ({
         text: o.text.trim(),
-        is_correct: !!o.is_correct,
+        // assessments don’t use correctness; keep false so backend won’t reject missing field
+        is_correct: ui.type === "assessment" ? false : !!o.is_correct,
       })),
     })),
   };
+
+  // For assessment: remove scoring/timing fields from the outgoing payload
+  if (ui.type === "assessment") {
+    delete (base as any).time_limit;
+    delete (base as any).passing_score;
+
+    // Also normalize questions’ points to 0 if your backend tolerates it (optional):
+    base.questions = base.questions.map((q) => ({ ...q, points: 0 }));
+  }
+
+  return base;
 }
 
 const QuizBuilder: React.FC<QuizBuilderProps> = ({
@@ -167,6 +226,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 }) => {
   const { t } = useTranslation("courseBuilder");
   const [quiz, setQuiz] = useState<UiQuiz>(() => normalizeInitial(initialQuiz));
+
+  const isAssessment =
+    String(quiz?.type ?? "")
+      .trim()
+      .toLowerCase() === "assessment";
 
   const [metaTitle, setMetaTitle] = useState<string>(lessonTitle);
   const [metaDescription, setMetaDescription] =
@@ -188,6 +252,8 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
     () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
   );
+
+  console.log("isAssessment", isAssessment);
 
   // When server data changes, reset local quiz BUT keep expanded by index
   useEffect(() => {
@@ -349,28 +415,37 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         next[`q_${q.id}`] = t("quizBuilder.errors.questionRequired", {
           index: idx + 1,
         });
+
+      // Require non-empty options
       if (q.options.some((o) => !o.text.trim()))
         next[`opts_${q.id}`] = t("quizBuilder.errors.optionsTextRequired", {
           index: idx + 1,
         });
-      if (!q.options.some((o) => o.is_correct))
-        next[`corr_${q.id}`] = t("quizBuilder.errors.correctRequired", {
-          index: idx + 1,
-        });
-      if (!Number.isFinite(q.points) || q.points < 1)
-        next[`pts_${q.id}`] = t("quizBuilder.errors.pointsMin", {
-          index: idx + 1,
-        });
+
+      // Only for non-assessment: need at least one correct answer and points >= 1
+      if (!isAssessment) {
+        if (!q.options.some((o) => o.is_correct))
+          next[`corr_${q.id}`] = t("quizBuilder.errors.correctRequired", {
+            index: idx + 1,
+          });
+
+        if (!Number.isFinite(q.points) || q.points < 1)
+          next[`pts_${q.id}`] = t("quizBuilder.errors.pointsMin", {
+            index: idx + 1,
+          });
+      }
     });
 
-    if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1)
-      next["time"] = t("quizBuilder.errors.timeMin");
-    if (
-      !Number.isFinite(quiz.passing_score) ||
-      quiz.passing_score < 0 ||
-      quiz.passing_score > 100
-    )
-      next["pass"] = t("quizBuilder.errors.passRange");
+    if (!isAssessment) {
+      if (!Number.isFinite(quiz.time_limit) || quiz.time_limit < 1)
+        next["time"] = t("quizBuilder.errors.timeMin");
+      if (
+        !Number.isFinite(quiz.passing_score) ||
+        quiz.passing_score < 0 ||
+        quiz.passing_score > 100
+      )
+        next["pass"] = t("quizBuilder.errors.passRange");
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -429,7 +504,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           {metaTitle ||
             (quiz.type === "exam"
               ? t("quizBuilder.title.exam")
-              : t("quizBuilder.title.quiz"))}
+              : quiz.type === "quiz"
+              ? t("quizBuilder.title.quiz")
+              : t("quizBuilder.title.assessment"))}
         </h2>
         {!!metaDescription && (
           <p className="text-gray-600">{metaDescription}</p>
@@ -442,7 +519,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {quiz.type === "exam"
               ? t("quizBuilder.infoTitle.exam")
-              : t("quizBuilder.infoTitle.quiz")}
+              : quiz.type === "quiz"
+              ? t("quizBuilder.infoTitle.quiz")
+              : t("quizBuilder.infoTitle.assessment")}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -467,71 +546,79 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 }}
                 placeholder={t(
                   `quizBuilder.placeholders.lessonTitle.${
-                    quiz.type === "exam" ? "exam" : "quiz"
+                    quiz.type === "exam"
+                      ? "exam"
+                      : quiz.type === "quiz"
+                      ? "quiz"
+                      : "assessment"
                   }`
                 )}
                 className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent border-gray-300"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t("quizBuilder.labels.passingScore")}
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={quiz.passing_score}
-                onChange={(e) =>
-                  setQuiz((p) => {
-                    return {
-                      ...p,
-                      passing_score: Math.max(
-                        0,
-                        Math.min(100, Number(e.target.value || 0))
-                      ),
-                    };
-                  })
-                }
-                onBlur={triggerAutoSave}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.pass ? "border-red-300" : "border-gray-300"
-                }`}
-              />
-              {errors.pass && (
-                <p className="mt-1 text-sm text-red-600">{errors.pass}</p>
-              )}
-            </div>
+            {!isAssessment && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("quizBuilder.labels.passingScore")}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={quiz.passing_score}
+                  onChange={(e) =>
+                    setQuiz((p) => {
+                      return {
+                        ...p,
+                        passing_score: Math.max(
+                          0,
+                          Math.min(100, Number(e.target.value || 0))
+                        ),
+                      };
+                    })
+                  }
+                  onBlur={triggerAutoSave}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                    errors.pass ? "border-red-300" : "border-gray-300"
+                  }`}
+                />
+                {errors.pass && (
+                  <p className="mt-1 text-sm text-red-600">{errors.pass}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t("quizBuilder.labels.totalTimeLimit")}
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={quiz.time_limit}
-                onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    time_limit: Math.max(
-                      1,
-                      Math.floor(Number(e.target.value || 1))
-                    ),
-                  }))
-                }
-                onBlur={triggerAutoSave}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.time ? "border-red-300" : "border-gray-300"
-                }`}
-              />
-              {errors.time && (
-                <p className="mt-1 text-sm text-red-600">{errors.time}</p>
-              )}
-            </div>
+            {!isAssessment && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("quizBuilder.labels.totalTimeLimit")}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={quiz.time_limit}
+                  onChange={(e) =>
+                    setQuiz((p) => ({
+                      ...p,
+                      time_limit: Math.max(
+                        1,
+                        Math.floor(Number(e.target.value || 1))
+                      ),
+                    }))
+                  }
+                  onBlur={triggerAutoSave}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                    errors.time ? "border-red-300" : "border-gray-300"
+                  }`}
+                />
+                {errors.time && (
+                  <p className="mt-1 text-sm text-red-600">{errors.time}</p>
+                )}
+              </div>
+            )}
 
             {/* LESSON description */}
             <div className="md:col-span-2">
@@ -554,7 +641,11 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 }}
                 placeholder={t(
                   `quizBuilder.placeholders.lessonDescription.${
-                    quiz.type === "exam" ? "exam" : "quiz"
+                    quiz.type === "exam"
+                      ? "exam"
+                      : quiz.type === "quiz"
+                      ? "quiz"
+                      : "assessment"
                   }`
                 )}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -707,25 +798,31 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                 <span className="text-sm font-medium text-gray-500 ltr:mr-3 rtl:ml-3">
                                   {letter(oi)}.
                                 </span>
-                                <button
-                                  type="button"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => toggleCorrect(q.id, o.id)}
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                    o.is_correct
-                                      ? "bg-green-500 border-green-500 text-white"
-                                      : "border-gray-300 hover:border-green-400"
-                                  }`}
-                                  title={
-                                    o.is_correct
-                                      ? t("quizBuilder.tooltips.correctAnswer")
-                                      : t("quizBuilder.tooltips.markAsCorrect")
-                                  }
-                                >
-                                  {o.is_correct && (
-                                    <Check className="w-3 h-3" />
-                                  )}
-                                </button>
+                                {!isAssessment && (
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => toggleCorrect(q.id, o.id)}
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                      o.is_correct
+                                        ? "bg-green-500 border-green-500 text-white"
+                                        : "border-gray-300 hover:border-green-400"
+                                    }`}
+                                    title={
+                                      o.is_correct
+                                        ? t(
+                                            "quizBuilder.tooltips.correctAnswer"
+                                          )
+                                        : t(
+                                            "quizBuilder.tooltips.markAsCorrect"
+                                          )
+                                    }
+                                  >
+                                    {o.is_correct && (
+                                      <Check className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                )}
                               </div>
 
                               <div className="flex-1">
@@ -780,59 +877,63 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
                       {/* settings */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t("quizBuilder.labels.points")}
-                          </label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={q?.points}
-                            onChange={(e) =>
-                              updateQuestion(q.id, {
-                                points: Math.max(
-                                  1,
-                                  Number(e.target.value || 1)
-                                ),
-                              })
-                            }
-                            onBlur={triggerAutoSave}
-                            className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                              errors[`pts_${q.id}`]
-                                ? "border-red-300"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          {errors[`pts_${q.id}`] && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors[`pts_${q.id}`]}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {t("quizBuilder.labels.perQuestionTime")}
-                          </label>
-                          <input
-                            type="number"
-                            min={10}
-                            max={1800}
-                            value={q.timeLimitSeconds ?? ""}
-                            onChange={(e) =>
-                              updateQuestion(q.id, {
-                                timeLimitSeconds: e.target.value
-                                  ? Math.max(10, Number(e.target.value))
-                                  : undefined,
-                              })
-                            }
-                            onBlur={triggerAutoSave}
-                            placeholder={t(
-                              "quizBuilder.placeholders.perQuestionTime"
+                        {!isAssessment && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t("quizBuilder.labels.points")}
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={q?.points}
+                              onChange={(e) =>
+                                updateQuestion(q.id, {
+                                  points: Math.max(
+                                    1,
+                                    Number(e.target.value || 1)
+                                  ),
+                                })
+                              }
+                              onBlur={triggerAutoSave}
+                              className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                errors[`pts_${q.id}`]
+                                  ? "border-red-300"
+                                  : "border-gray-300"
+                              }`}
+                            />
+                            {errors[`pts_${q.id}`] && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {errors[`pts_${q.id}`]}
+                              </p>
                             )}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
+                          </div>
+                        )}
+
+                        {!isAssessment && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t("quizBuilder.labels.perQuestionTime")}
+                            </label>
+                            <input
+                              type="number"
+                              min={10}
+                              max={1800}
+                              value={q.timeLimitSeconds ?? ""}
+                              onChange={(e) =>
+                                updateQuestion(q.id, {
+                                  timeLimitSeconds: e.target.value
+                                    ? Math.max(10, Number(e.target.value))
+                                    : undefined,
+                                })
+                              }
+                              onBlur={triggerAutoSave}
+                              placeholder={t(
+                                "quizBuilder.placeholders.perQuestionTime"
+                              )}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* explanation */}
@@ -864,48 +965,50 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
         </div>
 
         {/* Summary */}
-        <div className="bg-blue-50 rounded-lg p-6">
-          <h4 className="font-semibold text-blue-900 mb-3">
-            {quiz.type === "exam"
-              ? t("quizBuilder.summary.title.exam")
-              : t("quizBuilder.summary.title.quiz")}
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-blue-700">
-                {t("quizBuilder.summary.questions")}
-              </span>
-              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
-                {quiz.questions.length}
-              </span>
-            </div>
-            <div>
-              <span className="text-blue-700">
-                {t("quizBuilder.summary.totalPoints")}
-              </span>
-              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
-                {totalPoints}
-              </span>
-            </div>
-            <div>
-              <span className="text-blue-700">
-                {t("quizBuilder.summary.totalOptions")}
-              </span>
-              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
-                {quiz.questions.reduce((sum, q) => sum + q.options.length, 0)}
-              </span>
-            </div>
-            <div>
-              <span className="text-blue-700">
-                {t("quizBuilder.summary.timeLimit")}
-              </span>
-              <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
-                {quiz.time_limit}
-                {t("quizBuilder.summary.minutesSuffix")}
-              </span>
+        {!isAssessment && (
+          <div className="bg-blue-50 rounded-lg p-6">
+            <h4 className="font-semibold text-blue-900 mb-3">
+              {quiz.type === "exam"
+                ? t("quizBuilder.summary.title.exam")
+                : t("quizBuilder.summary.title.quiz")}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-blue-700">
+                  {t("quizBuilder.summary.questions")}
+                </span>
+                <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
+                  {quiz.questions.length}
+                </span>
+              </div>
+              <div>
+                <span className="text-blue-700">
+                  {t("quizBuilder.summary.totalPoints")}
+                </span>
+                <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
+                  {totalPoints}
+                </span>
+              </div>
+              <div>
+                <span className="text-blue-700">
+                  {t("quizBuilder.summary.totalOptions")}
+                </span>
+                <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
+                  {quiz.questions.reduce((sum, q) => sum + q.options.length, 0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-blue-700">
+                  {t("quizBuilder.summary.timeLimit")}
+                </span>
+                <span className="font-semibold text-blue-900 ltr:ml-2 rtl:mr-2">
+                  {quiz.time_limit}
+                  {t("quizBuilder.summary.minutesSuffix")}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center sm:flex-row flex-col gap-4 justify-between pt-6 border-t border-gray-200">

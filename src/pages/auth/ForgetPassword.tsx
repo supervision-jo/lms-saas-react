@@ -45,10 +45,10 @@ export default function ForgetPassword() {
   // Basic password rules (tweak as you like)
   const passwordRules = {
     required: t("ResetPassword.password.required", "Password is required"),
-    minLength: {
-      value: 8,
-      message: t("ResetPassword.password.min", "Minimum 8 characters"),
-    },
+    // minLength: {
+    //   value: 8,
+    //   message: t("ResetPassword.password.min", "Minimum 8 characters"),
+    // },
   };
 
   const confirmRules = {

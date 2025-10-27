@@ -99,6 +99,7 @@
     "noIdReturned": "No id returned",
     "quiz": "Quiz",
     "exam": "Exam",
+    "assessment": "Assessment",
     "created": "created",
     "commitModulesOrderSuccess": "Module order updated",
     "commitModulesOrderError": "Failed to update module order",
@@ -133,10 +134,12 @@
     "lessonDescPlaceholder": "Lesson description",
     "createQuizLesson": "Create a quiz ",
     "createExamLesson": "Create an exam ",
+    "createAssessmentLesson": "Create an assessment ",
     "uploadMaterial": "Upload material",
     "edit": "Edit",
     "examBuilder": "Exam builder",
-    "quizBuilder": "Quiz builder"
+    "quizBuilder": "Quiz builder",
+    "assessmentBuilder": "Assessment builder"
   },
   "userManagement": {
     "active": "Active",
@@ -256,11 +259,13 @@
   "quizBuilder": {
     "title": {
       "quiz": "Quiz",
-      "exam": "Exam"
+      "exam": "Exam",
+      "assessment": "Assessment"
     },
     "infoTitle": {
       "quiz": "Quiz Information",
-      "exam": "Exam Information"
+      "exam": "Exam Information",
+      "assessment": "Assessment Information"
     },
     "labels": {
       "lessonTitle": "Title *",

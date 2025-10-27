@@ -16,8 +16,12 @@ export const edit = async (endpoint: string, body: any) => {
   return res.data;
 };
 
-export const patch = async (endpoint: string, body: any) => {
-  const res = await axiosInstance.patch(endpoint, body);
+export const patch = async (
+  endpoint: string,
+  body: any,
+  config?: RawAxiosRequestConfig
+) => {
+  const res = await axiosInstance.patch(endpoint, body, config);
   return res.data;
 };
 

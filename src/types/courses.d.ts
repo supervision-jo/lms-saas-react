@@ -105,7 +105,13 @@ interface Course {
   language: string;
 }
 
-type ContentType = "video" | "article" | "material" | "quiz" | "exam";
+type ContentType =
+  | "video"
+  | "article"
+  | "material"
+  | "quiz"
+  | "exam"
+  | "assessment";
 
 interface Lesson {
   id: string;
@@ -121,7 +127,7 @@ interface Lesson {
   content_type: ContentType;
   watched?: boolean;
   string_file?: string | null;
-
+  file_url?: string | null;
   file_base64?: string | null;
   file_name?: string;
 
@@ -167,19 +173,20 @@ interface Exam {
   id: string;
   title: string;
   description: string;
-  type: "quiz" | "exam";
+  type: "quiz" | "exam" | "assessment";
   lesson: string;
-  time_limit: number;
-  passing_score: number;
+  time_limit?: number;
+  passing_score?: number;
   questions: {
     id: string;
     text: string;
     question_type: string;
     explanation: string;
+    points?: number;
     choices: {
       id: string;
       text: string;
-      is_correct: boolean;
+      is_correct?: boolean;
     }[];
   }[];
 }

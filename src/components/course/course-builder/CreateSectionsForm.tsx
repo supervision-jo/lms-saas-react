@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
+  BookCheck,
   FileText,
   GripVertical,
   HelpCircle,
@@ -116,7 +117,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   const [editingAssessment, setEditingAssessment] = useState<{
     id: string; // lessonId
     moduleId: string;
-    type: "quiz" | "exam";
+    type: "quiz" | "exam" | "assessment";
   } | null>(null);
   const [previewDraft, setPreviewDraft] = useState<AssessmentDraft | null>(
     null
@@ -328,7 +329,7 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
   }: {
     lessonId: string;
     moduleId: string;
-    type: "quiz" | "exam";
+    type: "quiz" | "exam" | "assessment";
     initialQuizFromServer: any;
   }) {
     const { data } = useCustomQuery(
@@ -604,6 +605,22 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
                                 <Award className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                                 {t("createSections.exam")}
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  sectionApisRef.current[
+                                    module.id
+                                  ]?.createAssessment("assessment");
+                                  setOpenMenuFor(null);
+                                }}
+                                className="w-full ltr:text-left rtl:text-right px-4 py-2 flex items-center rounded-b-lg hover:bg-gray-50"
+                                title={t(
+                                  "createSections.createAssessmentLesson"
+                                )}
+                              >
+                                <BookCheck className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                                {t("createSections.assessment")}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -712,7 +729,9 @@ export default function CreateSectionsForm({ courseId }: { courseId: string }) {
           title={
             editingAssessment?.type === "exam"
               ? t("createSections.examBuilder")
-              : t("createSections.quizBuilder")
+              : editingAssessment?.type === "quiz"
+              ? t("createSections.quizBuilder")
+              : t("createSections.assessmentBuilder")
           }
           size="xl"
         >

@@ -99,6 +99,7 @@
     "noIdReturned": "لم يتم إرجاع معرف",
     "quiz": "اختبار",
     "exam": "امتحان",
+    "assessment": "التقييم",
     "created": "تم إنشاؤه",
     "commitModulesOrderSuccess": "تم تحديث ترتيب الوحدات",
     "commitModulesOrderError": "فشل في تحديث ترتيب الوحدات",
@@ -133,10 +134,12 @@
     "lessonDescPlaceholder": "وصف الدرس",
     "createQuizLesson": "إنشاء درس اختبار",
     "createExamLesson": "إنشاء درس امتحان",
+    "createAssessmentLesson": "إنشاء تقييم",
     "uploadMaterial": "رفع المادة",
     "edit": "تعديل",
     "examBuilder": "منشئ الامتحان",
-    "quizBuilder": "منشئ الاختبار"
+    "quizBuilder": "منشئ الاختبار",
+    "assessmentBuilder": "منشئ التقييم"
   },
   "userManagement": {
     "active": "نشط",
@@ -256,11 +259,13 @@
   "quizBuilder": {
     "title": {
       "quiz": "اختبار قصير",
-      "exam": "اختبار"
+      "exam": "اختبار",
+      "assessment": "تقييم"
     },
     "infoTitle": {
       "quiz": "معلومات الاختبار القصير",
-      "exam": "معلومات الاختبار"
+      "exam": "معلومات الاختبار",
+      "assessmentInfo": "معلومات التقييم"
     },
     "labels": {
       "lessonTitle": "العنوان *",

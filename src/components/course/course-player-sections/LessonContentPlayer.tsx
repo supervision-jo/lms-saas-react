@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Download } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
+import Material from "./Material";
 
 interface LessonContentProps {
   modules: Module[];
@@ -101,40 +102,7 @@ export default function LessonContentPlayer({
     }
   };
 
-  // at top of the component
-  const [downloading, setDownloading] = useState(false);
-
-  const downloadMaterial = async (rawUrl?: string) => {
-    if (!rawUrl) return;
-    try {
-      setDownloading(true);
-
-      const u = new URL(rawUrl);
-      const pathname = u.pathname;
-      const base = pathname.substring(pathname.lastIndexOf("/") + 1) || "file";
-      const filename = base.includes(".") ? base : `${base}.download`;
-
-      const res = await fetch(rawUrl, { method: "GET" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-    } catch (e: any) {
-      console.log(e);
-      window.open(rawUrl, "_blank");
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  // NEW: fetch quiz/exam by *lesson id* when lesson is assessment
+  // fetch quiz/exam by *lesson id* when lesson is assessment
   const isAssessment =
     (currentLessonData?.content_type || "").toLowerCase() === "quiz" ||
     (currentLessonData?.content_type || "").toLowerCase() === "exam";
@@ -227,45 +195,12 @@ export default function LessonContentPlayer({
                 </div>
               );
             }
-
             if (currentLessonData?.content_type?.toLowerCase() === "material") {
-              const fileUrl = (currentLessonData as any)?.file ?? "";
-
               return (
-                <div className="bg-white rounded-lg p-8 shadow-lg">
-                  <div className="max-w-4xl mx-auto text-center">
-                    <button
-                      onClick={() => downloadMaterial(fileUrl)}
-                      className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6"
-                      title={
-                        downloading
-                          ? t("content.downloading")
-                          : t("content.download")
-                      }
-                    >
-                      <Download className="w-10 h-10 text-orange-600" />
-                    </button>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                      {currentLessonData?.title}
-                    </h1>
-                    <p className="text-gray-600 mb-8">
-                      {currentLessonData?.description}
-                    </p>
-                    {fileUrl && (
-                      <div className="text-sm text-gray-500 break-all">
-                        {decodeURIComponent(
-                          new URL(fileUrl).pathname.split("/").pop() || ""
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => onArticleComplete(true)}
-                    className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
-                  >
-                    {t("content.markComplete")}
-                  </button>
-                </div>
+                <Material
+                  currentLessonData={currentLessonData}
+                  onArticleComplete={onArticleComplete}
+                />
               );
             }
 

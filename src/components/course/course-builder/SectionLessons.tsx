@@ -1,6 +1,7 @@
 // src/components/course/builder/SectionLessons.tsx
 import {
   Award,
+  BookCheck,
   Edit,
   FileText,
   GripVertical,
@@ -36,7 +37,7 @@ type ReadyApi = {
   createContentLesson: (
     type: "video" | "article" | "material"
   ) => Promise<void>;
-  createAssessment: (type: "quiz" | "exam") => Promise<void>;
+  createAssessment: (type: "quiz" | "exam" | "assessment") => Promise<void>;
 };
 
 export default function SectionLessons({
@@ -65,7 +66,7 @@ export default function SectionLessons({
     React.SetStateAction<{
       id: string;
       moduleId: string;
-      type: "quiz" | "exam";
+      type: "quiz" | "exam" | "assessment";
     } | null>
   >;
   updateLessonLocal: (
@@ -375,10 +376,10 @@ export default function SectionLessons({
     }
   };
 
-  const createAssessment = async (type: "quiz" | "exam") => {
+  const createAssessment = async (type: "quiz" | "exam" | "assessment") => {
     const optimistic: Lesson = {
       id: `tmp-${Date.now()}`,
-      title: type === "quiz" ? "Quiz" : "Exam",
+      title: type === "quiz" ? "Quiz" : type === "exam" ? "Exam" : "Assessment",
       description: "",
       description_html: null,
       content_type: type,
@@ -424,7 +425,11 @@ export default function SectionLessons({
 
       toast.success(
         `${
-          type === "quiz" ? t("createSections.quiz") : t("createSections.exam")
+          type === "quiz"
+            ? t("createSections.quiz")
+            : type === "exam"
+            ? t("createSections.exam")
+            : t("createSections.assessment")
         } ${t("createSections.created")}`
       );
       setEditingAssessment({ id: created.id, moduleId, type });
@@ -479,8 +484,10 @@ export default function SectionLessons({
                     )
                   ) : (lesson as any).content_type === "quiz" ? (
                     <HelpCircle className="w-4 h-4" />
-                  ) : (
+                  ) : (lesson as any).content_type === "exam" ? (
                     <Award className="w-4 h-4" />
+                  ) : (
+                    <BookCheck className="w-4 h-4" />
                   )}
                 </div>
 
@@ -585,7 +592,10 @@ export default function SectionLessons({
                         setEditingAssessment({
                           id: lesson.id,
                           moduleId,
-                          type: (lesson as any).content_type as "quiz" | "exam",
+                          type: (lesson as any).content_type as
+                            | "quiz"
+                            | "exam"
+                            | "assessment",
                         })
                       }
                       className="p-1 text-purple-400 hover:text-purple-600 transition-colors"
