@@ -73,8 +73,10 @@
   },
   "courseContent": {
     "openExam": "فتح الاختبار",
+    "openAssessment": "فتح التقييم",
     "openQuiz": "فتح الاختبار القصير",
     "exam": "اختبار",
+    "assessment": "تقييم",
     "quiz": "اختبار قصير",
     "m": "د",
     "pass": "اجتياز",

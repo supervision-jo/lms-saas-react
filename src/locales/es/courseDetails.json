@@ -74,8 +74,10 @@
   "courseContent": {
     "openExam": "Abrir examen",
     "openQuiz": "Abrir cuestionario",
+    "openAssessment": "Abrir evaluación",
     "exam": "Examen",
     "quiz": "Cuestionario",
+    "assessment": "Evaluación",
     "m": "min",
     "pass": "aprobación",
     "title": "Contenido del curso",

@@ -74,8 +74,10 @@
   "courseContent": {
     "openExam": "Open Exam",
     "openQuiz": "Open Quiz",
+    "openAssessment": "Open Assessment",
     "exam" :"Exam",
     "quiz": "Quiz",
+    "assessment": "Assessment",
     "m": "m",
     "pass": "pass",
     "title": "Course Content",
