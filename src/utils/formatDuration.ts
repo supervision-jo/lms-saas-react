@@ -2,10 +2,10 @@ export function formatDuration(val: unknown, locale?: string): string {
   const hours = locale === "ar" ? "س" : "h";
   const minutes = locale === "ar" ? "د" : "m";
 
-  if (val == null) return `0${hours} 0${minutes}`;
+  if (val == null) return "";
 
   if (typeof val === "number") {
-    if (!Number.isFinite(val)) return `0${hours} 0${minutes}`;
+    if (!Number.isFinite(val)) return "";
     if (val >= 20) {
       const h = Math.floor(val / 60);
       const m = Math.round(val % 60);
@@ -75,5 +75,5 @@ export function formatDuration(val: unknown, locale?: string): string {
     }
   }
 
-  return `0${hours} 0${minutes}`;
+  return "";
 }

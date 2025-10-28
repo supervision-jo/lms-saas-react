@@ -309,7 +309,10 @@ export default function CoursePlayerPage() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
                   <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
                   <span className="text-gray-400 flex items-center justify-start">
-                    <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                    {currentLesson?.duration_hours &&
+                      currentLesson?.duration_hours > 0 && (
+                        <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                      )}
                     {formatDuration(
                       (currentLesson as any)?.duration_hours,
                       i18n.language

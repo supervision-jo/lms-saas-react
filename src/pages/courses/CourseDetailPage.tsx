@@ -102,6 +102,15 @@ const CourseDetailPage: React.FC = () => {
   );
   const currentCategory = cates?.find((c) => c.id === currentSubCate?.category);
 
+  // const { data: assessmentsData } = useCustomQuery(
+  //   `${API_ENDPOINTS.assessments}${course?.id}/`,
+  //   ["assessments", course?.id],
+  //   undefined,
+  //   !!course?.id && currentUser?.is_instructor
+  // );
+
+  // const assessments: Exam[] = assessmentsData?.data ?? [];
+
   const { data: instructorData } = useCustomQuery(
     `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
     ["instructor", course?.id],
@@ -473,12 +482,13 @@ const CourseDetailPage: React.FC = () => {
             {/* Tabs */}
             <div className="mb-8">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
+                <nav className="-mb-px grid grid-cols-2 sm:grid-cols-5 items-center gap-4">
                   {[
                     { id: "overview", label: t("tabs.overview") },
                     { id: "curriculum", label: t("tabs.curriculum") },
                     { id: "instructor", label: t("tabs.instructor") },
                     { id: "reviews", label: t("tabs.reviews") },
+                    { id: "assessments", label: t("tabs.assessments") },
                   ].map((tab) => {
                     if (
                       (!reviewsEnabled ||
@@ -487,6 +497,9 @@ const CourseDetailPage: React.FC = () => {
                         reviewsLoading) &&
                       tab.id === "reviews"
                     )
+                      return null;
+
+                    if (tab.id === "assessments" && currentUser?.is_student)
                       return null;
                     return (
                       <button
@@ -660,6 +673,32 @@ const CourseDetailPage: React.FC = () => {
                     <CourseReviews courseId={course?.id} />
                   </div>
                 </FeatureGate>
+              )}
+
+              {activeTab === "assessments" && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    {t("tabs.assessments")}
+                  </h3>
+                  <div className="flex w-full flex-col items-start justify-start gap-4">
+                    {[{ id: 1 }, { id: 2 }, { id: 3 }].map((assessment) => {
+                      return (
+                        <button
+                          key={assessment.id}
+                          type="button"
+                          // onClick={() => {
+                          //   navigate(
+                          //     `/catalog/${course.id}/assessments/${assessment.id}`
+                          //   );
+                          // }}
+                          className="bg-slate-50 shadow-md rounded-lg w-full p-2 ltr:text-left rtl:text-right"
+                        >
+                          {assessment.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           </div>

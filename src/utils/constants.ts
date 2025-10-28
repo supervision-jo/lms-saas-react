@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
   submitExam: "exam/exam-quiz/",
   getStudentAnswers: "exam/get-student-answers/",
   exams: "course/quiz/",
+  assessments: "course/assessments/",
   categories: "course/categories/",
   categoriesFilters: "course/categories_filters/",
   subCategories: "course/get-sub-categories/",

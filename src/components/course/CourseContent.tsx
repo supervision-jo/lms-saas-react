@@ -413,8 +413,17 @@ const CourseContent: React.FC<CourseContentProps> = ({
                       )}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {module?.lessons?.length} {t("courseContent.lessons")} •{" "}
-                      {formatDuration(sumModuleHours(module), i18n.language)}
+                      {module?.lessons?.length} {t("courseContent.lessons")}
+                      {sumModuleHours(module) > 0 && (
+                        <>
+                          {" "}
+                          •{" "}
+                          {formatDuration(
+                            sumModuleHours(module),
+                            i18n.language
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -481,7 +490,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
                                   : "text-gray-600"
                               }`}
                             >
-                              <Clock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                              {lesson?.duration_hours &&
+                                lesson?.duration_hours > 0 && (
+                                  <Clock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                                )}
                               {formatDuration(
                                 (lesson as any)?.duration_hours,
                                 i18n.language
