@@ -281,11 +281,13 @@
     "placeholders": {
       "lessonTitle": {
         "quiz": "Enter quiz title",
-        "exam": "Enter exam title"
+        "exam": "Enter exam title",
+        "assessment": "Enter assessment title"
       },
       "lessonDescription": {
         "quiz": "Brief description of the quiz",
-        "exam": "Brief description of the exam"
+        "exam": "Brief description of the exam",
+        "assessment": "Brief description of the assessment"
       },
       "questionText": "Enter your question here…",
       "option": "Option {{letter}}",
@@ -315,7 +317,8 @@
     "summary": {
       "title": {
         "quiz": "Quiz Summary",
-        "exam": "Exam Summary"
+        "exam": "Exam Summary",
+        "assessment": "Assessment Summary"
       },
       "questions": "Questions:",
       "totalPoints": "Total Points:",
@@ -324,7 +327,8 @@
       "minutesSuffix": "m"
     },
     "footer": {
-      "stats": "{{count}} question{{qPlural}} • {{points}} total point{{pPlural}}"
+      "stats": "{{count}} question{{qPlural}}",
+      "pointStats": " • {{points}} total point{{pPlural}}"
     },
     "errors": {
       "questionRequired": "Question {{index}} is required",
@@ -342,7 +346,8 @@
   "quizPreview": {
     "type": {
       "quiz": "Quiz",
-      "exam": "Exam"
+      "exam": "Exam",
+      "assessment": "Assessment"
     },
     "completed": "Completed",
     "questions": "Questions",
@@ -370,7 +375,8 @@
     "close": "Close",
     "editType": "Edit {{type}}",
     "takeAgain": "Take Again",
-    "meta": "{{count}} question{{qPlural}} • {{points}} total point{{pPlural}} • Passing {{passing}}%",
+    "meta": "{{count}} question{{qPlural}}",
+    "metaPoints": " • {{points}} total point{{pPlural}} • Passing {{passing}}%",
     "misc": {
       "sPlural": "s",
       "untitled": "Untitled question",

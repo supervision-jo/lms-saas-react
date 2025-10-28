@@ -281,11 +281,13 @@
     "placeholders": {
       "lessonTitle": {
         "quiz": "Ingresa el título del cuestionario",
-        "exam": "Ingresa el título del examen"
+        "exam": "Ingresa el título del examen",
+        "assessment": "Ingresa el título del evaluación"
       },
       "lessonDescription": {
         "quiz": "Breve descripción del cuestionario",
-        "exam": "Breve descripción del examen"
+        "exam": "Breve descripción del examen",
+        "assessment": "Breve descripción del evaluación"
       },
       "questionText": "Escribe tu pregunta aquí…",
       "option": "Opción {{letter}}",
@@ -315,7 +317,8 @@
     "summary": {
       "title": {
         "quiz": "Resumen del cuestionario",
-        "exam": "Resumen del examen"
+        "exam": "Resumen del examen",
+        "assessment": "Resumen del evaluación"
       },
       "questions": "Preguntas:",
       "totalPoints": "Puntos totales:",
@@ -324,7 +327,8 @@
       "minutesSuffix": "min"
     },
     "footer": {
-      "stats": "{{count}} pregunta{{qPlural}} • {{points}} punto{{pPlural}} en total"
+      "stats": "{{count}} pregunta{{qPlural}}",
+      "pointStats": " • {{points}} punto{{pPlural}} en total"
     },
     "errors": {
       "questionRequired": "La pregunta {{index}} es obligatoria",
@@ -342,7 +346,8 @@
   "quizPreview": {
     "type": {
       "quiz": "Cuestionario",
-      "exam": "Examen"
+      "exam": "Examen",
+      "assessment": "Evaluación"
     },
     "completed": "Completado",
     "questions": "Preguntas",
@@ -370,7 +375,8 @@
     "close": "Cerrar",
     "editType": "Editar {{type}}",
     "takeAgain": "Volver a intentar",
-    "meta": "{{count}} pregunta{{qPlural}} • {{points}} punto{{pPlural}} en total • Aprobación {{passing}}%",
+    "meta": "{{count}} pregunta{{qPlural}}",
+    "metaPoints": " • {{points}} punto{{pPlural}} en total • Aprobación {{passing}}%",
     "misc": {
       "sPlural": "s",
       "untitled": "Pregunta sin título",

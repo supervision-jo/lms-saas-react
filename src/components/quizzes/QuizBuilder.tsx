@@ -253,8 +253,6 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
     () => new Set(quiz.questions.length ? [quiz.questions[0].id] : [])
   );
 
-  console.log("isAssessment", isAssessment);
-
   // When server data changes, reset local quiz BUT keep expanded by index
   useEffect(() => {
     const prev = quizRef.current;
@@ -526,7 +524,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* LESSON title */}
-            <div className="md:col-span-2">
+            <div
+              className={`${!isAssessment ? "md:col-span-2" : "md:col-span-3"}`}
+            >
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t("quizBuilder.labels.lessonTitle")}
               </label>
@@ -621,7 +621,9 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             )}
 
             {/* LESSON description */}
-            <div className="md:col-span-2">
+            <div
+              className={`${!isAssessment ? "md:col-span-2" : "md:col-span-3"}`}
+            >
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t("quizBuilder.labels.lessonDescription")}
               </label>
@@ -709,13 +711,15 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
                                 q.text.length > 50 ? "…" : ""
                               }`}
                           </h4>
-                          <p className="text-sm text-gray-600">
-                            {t("quizBuilder.questions.optionsAndPoints", {
-                              options: q.options.length,
-                              points: q.points,
-                              plural: q.points !== 1 ? "s" : "",
-                            })}
-                          </p>
+                          {!isAssessment && (
+                            <p className="text-sm text-gray-600">
+                              {t("quizBuilder.questions.optionsAndPoints", {
+                                options: q.options.length,
+                                points: q.points,
+                                plural: q.points !== 1 ? "s" : "",
+                              })}
+                            </p>
+                          )}
                         </div>
                       </button>
 
@@ -1016,9 +1020,12 @@ const QuizBuilder: React.FC<QuizBuilderProps> = ({
             {t("quizBuilder.footer.stats", {
               count: quiz.questions.length,
               qPlural: quiz.questions.length !== 1 ? "s" : "",
-              points: totalPoints,
-              pPlural: totalPoints !== 1 ? "s" : "",
             })}
+            {!isAssessment &&
+              `${t("quizBuilder.footer.pointStats", {
+                points: totalPoints,
+                pPlural: totalPoints !== 1 ? "s" : "",
+              })}`}
           </div>
 
           <div className="sm:w-fit w-full flex gap-4 items-center sm:flex-row flex-col">

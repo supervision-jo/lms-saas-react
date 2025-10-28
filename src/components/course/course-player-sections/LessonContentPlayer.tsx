@@ -105,6 +105,7 @@ export default function LessonContentPlayer({
   // fetch quiz/exam by *lesson id* when lesson is assessment
   const isAssessment =
     (currentLessonData?.content_type || "").toLowerCase() === "quiz" ||
+    (currentLessonData?.content_type || "").toLowerCase() === "assessment" ||
     (currentLessonData?.content_type || "").toLowerCase() === "exam";
 
   const { data: examResp, isFetching: loadingExam } = useCustomQuery(

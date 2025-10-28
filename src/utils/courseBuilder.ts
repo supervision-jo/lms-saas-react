@@ -118,12 +118,16 @@ export const reindexOrders1Based = <T extends { order?: number }>(arr: T[]) =>
 
 export const nextAssessmentTitle = (
   module: { lessons?: any[] },
-  type: "quiz" | "exam"
+  type: "quiz" | "exam" | "assessment"
 ) => {
   const count = (module.lessons || []).filter(
     (l) => l?.content_type === type
   ).length;
-  return type === "quiz" ? `Quiz ${count + 1}` : `Exam ${count + 1}`;
+  return type === "quiz"
+    ? `Quiz ${count + 1}`
+    : type === "exam"
+    ? `Exam ${count + 1}`
+    : `Assessment ${count + 1}`;
 };
 
 export async function fileToBase64(file: File): Promise<string> {

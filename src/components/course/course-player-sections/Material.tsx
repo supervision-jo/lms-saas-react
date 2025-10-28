@@ -12,7 +12,7 @@ const getPath = (u?: string) => {
   try {
     return new URL(u).pathname.toLowerCase();
   } catch {
-    return u.toLowerCase(); // fallback if it's not a full URL
+    return u.toLowerCase();
   }
 };
 
@@ -21,24 +21,66 @@ const isImagePath = (p: string) =>
 
 const isPdfPath = (p: string) => /\.pdf$/i.test(p);
 
+// NEW: treat different sources uniformly
+const pickSourceUrl = (lesson?: Lesson): string => {
+  const file = (lesson as any)?.file;
+  const url = (lesson as any)?.url;
+  return (file ?? url ?? "") as string;
+};
+
+// NEW: external checker (same-origin vs external)
+const isExternalUrl = (u?: string) => {
+  if (!u) return false;
+  try {
+    const target = new URL(u, window.location.origin);
+    return target.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+};
+
 export default function Material({
   currentLessonData,
   onArticleComplete,
 }: Props) {
   const { t } = useTranslation("coursePlayer");
-  const fileUrl = (currentLessonData as any)?.file ?? "";
-  const path = getPath(fileUrl);
+
+  // NEW: use url if file is null
+  const sourceUrl = pickSourceUrl(currentLessonData);
+  const path = getPath(sourceUrl);
   const isImg = isImagePath(path);
   const isPdf = isPdfPath(path);
+  const isExternal = isExternalUrl(sourceUrl);
+  const fileIsMissing = !(currentLessonData as any)?.file; // NEW
 
   const [downloading, setDownloading] = useState(false);
 
-  const downloadMaterial = async (rawUrl?: string) => {
+  const openInNewTab = (rawUrl: string, e?: React.MouseEvent) => {
     if (!rawUrl) return;
+    e?.preventDefault();
+    e?.stopPropagation();
+
+    const a = document.createElement("a");
+    a.href = rawUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    // Optional: avoid leaking referrer and improve compatibility
+    a.referrerPolicy = "no-referrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const downloadMaterial = async (rawUrl?: string, e?: React.MouseEvent) => {
+    if (!rawUrl) return;
+    if (isExternalUrl(rawUrl)) {
+      openInNewTab(rawUrl, e);
+      return;
+    }
     try {
       setDownloading(true);
 
-      const u = new URL(rawUrl);
+      const u = new URL(rawUrl, window.location.origin);
       const pathname = u.pathname;
       const base = pathname.substring(pathname.lastIndexOf("/") + 1) || "file";
       const filename = base.includes(".") ? base : `${base}.download`;
@@ -57,38 +99,45 @@ export default function Material({
       URL.revokeObjectURL(blobUrl);
     } catch (e: any) {
       console.log(e);
-      window.open(rawUrl, "_blank");
+      window.open(rawUrl, "_blank", "noopener");
     } finally {
       setDownloading(false);
     }
   };
 
   const safeFileName = useMemo(() => {
-    if (!fileUrl) return "";
+    if (!sourceUrl) return "";
     try {
       return decodeURIComponent(
-        new URL(fileUrl).pathname.split("/").pop() || ""
+        new URL(sourceUrl, window.location.origin).pathname.split("/").pop() ||
+          ""
       );
     } catch {
-      // if it's not a full URL, show the tail
-      const parts = fileUrl.split("/");
+      const parts = sourceUrl.split("/");
       return parts[parts.length - 1] || "file";
     }
-  }, [fileUrl]);
+  }, [sourceUrl]);
 
-  // Common small download button (top-left)
+  // Small pill: if external-only, make it "open"; otherwise do download
   const DownloadPill = (
     <button
-      onClick={() => downloadMaterial(fileUrl)}
+      type="button"
+      onClick={(e) => downloadMaterial(sourceUrl, e)}
       className="absolute left-3 top-3 z-20 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white"
-      title={downloading ? t("content.downloading") : t("content.download")}
+      title={
+        downloading
+          ? t("content.downloading")
+          : isExternal
+          ? t("content.open")
+          : t("content.download")
+      }
     >
       <Download className="w-5 h-5 text-gray-700" />
     </button>
   );
 
-  // Image preview
-  if (isImg && fileUrl) {
+  // Image preview (only when we truly have an image file/url)
+  if (isImg && sourceUrl) {
     return (
       <div className="relative bg-white rounded-lg p-4 shadow-lg">
         {DownloadPill}
@@ -102,7 +151,7 @@ export default function Material({
             </p>
           )}
           <img
-            src={fileUrl}
+            src={sourceUrl}
             alt={safeFileName || "material image"}
             className="max-h-[70vh] w-auto rounded-lg border border-gray-200 object-contain"
             loading="eager"
@@ -125,8 +174,13 @@ export default function Material({
     );
   }
 
-  // PDF preview
-  if (isPdf && fileUrl) {
+  // PDF preview:
+  // - If it's an EXTERNAL PDF and file is null => show FALLBACK (open in new tab)
+  // - Otherwise embed (same-origin or uploaded)
+  const shouldShowFallbackForExternalPdf =
+    isPdf && sourceUrl && isExternal && fileIsMissing; // NEW
+
+  if (isPdf && sourceUrl && !shouldShowFallbackForExternalPdf) {
     return (
       <div className="relative bg-white rounded-lg p-4 shadow-lg">
         {DownloadPill}
@@ -139,22 +193,18 @@ export default function Material({
               {currentLessonData.description}
             </p>
           )}
-
           <div className="rounded-lg border border-gray-200 overflow-hidden">
-            {/* Use <iframe>. If you later need better UX, swap to react-pdf */}
             <iframe
-              src={fileUrl}
+              src={sourceUrl}
               className="w-full h-[70vh]"
               title={safeFileName || "PDF preview"}
             />
           </div>
-
           {safeFileName && (
             <div className="text-sm text-gray-500 text-center break-all">
               {safeFileName}
             </div>
           )}
-
           <div className="w-full flex justify-end">
             <button
               onClick={() => onArticleComplete(true)}
@@ -168,26 +218,43 @@ export default function Material({
     );
   }
 
-  // Fallback: unknown type → keep current download card
+  // FALLBACK CARD (also used for external-only PDFs when file is null)
   return (
     <div className="relative bg-white rounded-lg p-8 shadow-lg">
-      {DownloadPill /* still show the small top-left download */}
+      {DownloadPill}
       <div className="max-w-4xl mx-auto text-center pt-10">
         <button
-          onClick={() => downloadMaterial(fileUrl)}
+          type="button" // ✅ NEW
+          onClick={(e) =>
+            isExternal
+              ? openInNewTab(sourceUrl, e) // ✅ force new tab
+              : downloadMaterial(sourceUrl, e)
+          }
           className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6"
-          title={downloading ? t("content.downloading") : t("content.download")}
+          title={
+            downloading
+              ? t("content.downloading")
+              : isExternal
+              ? t("content.open")
+              : t("content.download")
+          }
         >
           <Download className="w-10 h-10 text-orange-600" />
         </button>
+
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           {currentLessonData?.title}
         </h1>
+
         <p className="text-gray-600 mb-8">{currentLessonData?.description}</p>
-        {fileUrl && (
-          <div className="text-sm text-gray-500 break-all">{safeFileName}</div>
+
+        {sourceUrl && (
+          <div className="text-sm text-gray-500 break-all">
+            {safeFileName || sourceUrl}
+          </div>
         )}
       </div>
+
       <button
         onClick={() => onArticleComplete(true)}
         className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"

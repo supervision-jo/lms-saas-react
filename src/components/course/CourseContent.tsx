@@ -11,6 +11,7 @@ import {
   HelpCircle,
   CheckCircle,
   ChevronLeft,
+  BookCheck,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
@@ -68,8 +69,18 @@ function AssessmentList({
   return (
     <div className="mt-2 space-y-1">
       {assessments.map((a) => {
-        const Icon = a.type === "exam" ? Award : HelpCircle;
-        const accent = a.type === "exam" ? "text-red-600" : "text-green-600";
+        const Icon =
+          a.type === "exam"
+            ? Award
+            : a.type === "quiz"
+            ? HelpCircle
+            : BookCheck;
+        const accent =
+          a.type === "exam"
+            ? "text-red-600"
+            : a.type === "quiz"
+            ? "text-green-600"
+            : "text-blue-600";
         const isActive =
           currentAssessmentId && String(currentAssessmentId) === String(a.id);
 
@@ -82,7 +93,7 @@ function AssessmentList({
               if (!canAccess) return;
               onOpen(a);
             }}
-            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left transition-all duration-200 ${
+            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 ltr:text-left rtl:text-right transition-all duration-200 ${
               !canAccess
                 ? "opacity-50 cursor-not-allowed bg-gray-100"
                 : isActive
@@ -92,7 +103,9 @@ function AssessmentList({
             title={
               a.type === "exam"
                 ? t("courseContent.openExam")
-                : t("courseContent.openQuiz")
+                : a.type === "quiz"
+                ? t("courseContent.openQuiz")
+                : t("courseContent.openAssessment")
             }
           >
             <div className="flex items-center gap-2">
@@ -105,7 +118,9 @@ function AssessmentList({
                 {a.title ||
                   (a.type === "exam"
                     ? t("courseContent.exam")
-                    : t("courseContent.quiz"))}
+                    : a.type === "quiz"
+                    ? t("courseContent.quiz")
+                    : t("courseContent.assessment"))}
               </span>
             </div>
             <div
@@ -196,8 +211,45 @@ const CourseContent: React.FC<CourseContentProps> = ({
     setExpandedModules(next);
   };
 
-  const handleLessonClick = (lesson: Lesson, moduleLocked: boolean) => {
-    // ★ module lock forces lesson lock only when sequential
+  const getPath = (u?: string) => {
+    if (!u) return "";
+    try {
+      return new URL(u, window.location.origin).pathname.toLowerCase();
+    } catch {
+      return u.toLowerCase();
+    }
+  };
+  const isPdfPath = (p: string) => /\.pdf$/i.test(p);
+  const isExternalUrl = (u?: string) => {
+    if (!u) return false;
+    try {
+      const t = new URL(u, window.location.origin);
+      return t.origin !== window.location.origin;
+    } catch {
+      return false;
+    }
+  };
+  const openInNewTab = (rawUrl: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const a = document.createElement("a");
+    a.href = rawUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.referrerPolicy = "no-referrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleLessonClick = (
+    e: React.MouseEvent,
+    lesson: Lesson,
+    moduleLocked: boolean
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const effectiveLocked =
       (is_sequential && moduleLocked) || !!lesson?.is_locked;
     if (effectiveLocked) return;
@@ -205,17 +257,25 @@ const CourseContent: React.FC<CourseContentProps> = ({
     const canAccess = (isEnrolled || lesson?.free_preview) && !effectiveLocked;
     if (!canAccess) return;
 
-    if (lesson?.content_type === "material" && (lesson as any)?.url) {
-      const link = document.createElement("a");
-      link.href = (lesson as any)?.url;
-      link.download = lesson?.title || "material";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      alert("Download started!");
-    } else {
-      onLessonSelect(String(lesson?.id));
+    const url = (lesson as any)?.url as string | undefined;
+    const file = (lesson as any)?.file as string | undefined;
+
+    // external PDF with file === null → open in new tab AND set current lesson
+    if (
+      (lesson?.content_type || "").toLowerCase() === "material" &&
+      url &&
+      !file
+    ) {
+      const path = getPath(url);
+      if (isPdfPath(path) && isExternalUrl(url)) {
+        openInNewTab(url, e); // open the external file
+        onLessonSelect(String(lesson.id)); // update selected lesson so the player renders fallback
+        return;
+      }
     }
+
+    // default behavior
+    onLessonSelect(String(lesson?.id));
   };
 
   const getLessonIcon = (
@@ -271,6 +331,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
           <Award
             className={`w-4 h-4 ${
               isCurrentLesson ? "text-white" : "text-red-600"
+            }`}
+          />
+        );
+      case "assessment":
+        return (
+          <BookCheck
+            className={`w-4 h-4 ${
+              isCurrentLesson ? "text-white" : "text-blue-600"
             }`}
           />
         );
@@ -371,23 +439,23 @@ const CourseContent: React.FC<CourseContentProps> = ({
                     return (
                       <div key={lesson?.id} className="mb-2">
                         <button
-                          onClick={() =>
-                            handleLessonClick(lesson, moduleLocked)
+                          onClick={(e) =>
+                            handleLessonClick(e, lesson, moduleLocked)
                           }
                           disabled={!canAccess}
                           className={`
-    w-full flex items-center justify-between sm:px-4 px-3 py-3 rounded-xl transition-all duration-200 text-left
-    border
-    ${
-      isCurrentLesson
-        ? "bg-purple-600 border-purple-700 text-white shadow-lg scale-[1.02]"
-        : lesson.completed
-        ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-        : canAccess
-        ? "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
-        : "bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed"
-    }
-  `}
+                            w-full flex items-center justify-between sm:px-4 px-3 py-3 rounded-xl transition-all duration-200 ltr:text-left rtl:text-right
+                            border
+                            ${
+                              isCurrentLesson
+                                ? "bg-purple-600 border-purple-700 text-white shadow-lg scale-[1.02]"
+                                : lesson.completed
+                                ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                : canAccess
+                                ? "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
+                                : "bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed"
+                            }
+                          `}
                         >
                           <div className="flex items-center justify-start gap-3 w-full">
                             <div>
@@ -405,10 +473,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
                               {lesson?.title}
                             </span>
                           </div>
-
-                          <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center w-fit whitespace-nowrap">
                             <div
-                              className={`flex items-center text-xs min-w-16 ${
+                              className={`flex items-center text-xs w-full ${
                                 isCurrentLesson
                                   ? "text-purple-200"
                                   : "text-gray-600"

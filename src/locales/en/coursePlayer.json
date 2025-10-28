@@ -11,6 +11,7 @@
   "QA": "Q&A",
   "groups": "Groups",
   "examSection": {
+    "submitAssessment": "Submitted",
     "submitExam": {
       "success": "Submitted (attempt {{nextAttempt}})",
       "error": "You only have {{MAX_ATTEMPTS}} attempts."
@@ -20,7 +21,8 @@
     "passingScore": "Passing Score",
     "attempt": "Attempt",
     "of": "of,",
-    "ansAll": "Answer all questions to submit. Attempts left",
+    "ansAll": "Answer all questions to submit.",
+    "attemptsLeft": " Attempts left",
     "noAttempts": "No more attempts remaining.",
     "submitting": "Submitting...",
     "submit": "Submit",

@@ -11,7 +11,8 @@ const api_url =
   window.location.href.includes("vercel") ||
   window.location.href.includes("localhost")
     ? "https://ollms-api.vision-jo.com/"
-    : toApiURL(window.location.origin);
+    : // ? "https://test-lms-api.vision-jo.com/"
+      toApiURL(window.location.origin);
 export const BASE_URL = `${api_url}api/`;
 
 export function toApiURL(input: string) {

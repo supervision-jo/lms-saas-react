@@ -281,11 +281,13 @@
     "placeholders": {
       "lessonTitle": {
         "quiz": "أدخل عنوان الاختبار القصير",
-        "exam": "أدخل عنوان الاختبار"
+        "exam": "أدخل عنوان الاختبار",
+        "assessment": "أدخل عنوان التقييم"
       },
       "lessonDescription": {
         "quiz": "وصف مختصر للاختبار القصير",
-        "exam": "وصف مختصر للاختبار"
+        "exam": "وصف مختصر للاختبار",
+        "assessment": "وصف مختصر للتقييم"
       },
       "questionText": "اكتب سؤالك هنا…",
       "option": "الخيار {{letter}}",
@@ -315,7 +317,8 @@
     "summary": {
       "title": {
         "quiz": "ملخص الاختبار القصير",
-        "exam": "ملخص الاختبار"
+        "exam": "ملخص الاختبار",
+        "assessment": "ملخص التقييم"
       },
       "questions": "الأسئلة:",
       "totalPoints": "إجمالي الدرجات:",
@@ -324,7 +327,8 @@
       "minutesSuffix": "د"
     },
     "footer": {
-      "stats": "{{count}} سؤال • {{points}} درجة إجمالية"
+      "stats": "{{count}} سؤال",
+      "pointStats": " • {{points}} درجة إجمالية"
     },
     "errors": {
       "questionRequired": "السؤال {{index}} مطلوب",
@@ -342,7 +346,8 @@
   "quizPreview": {
     "type": {
       "quiz": "اختبار قصير",
-      "exam": "اختبار"
+      "exam": "اختبار",
+      "assessment": "تقييم"
     },
     "completed": "اكتمل",
     "questions": "الأسئلة",
@@ -370,7 +375,8 @@
     "close": "إغلاق",
     "editType": "تعديل {{type}}",
     "takeAgain": "إعادة المحاولة",
-    "meta": "{{count}} سؤال{{qPlural}} • {{points}} درجة{{pPlural}} إجماليًا • نسبة النجاح {{passing}}٪",
+    "meta": "{{count}} سؤال{{qPlural}}",
+    "metaPoints": " • {{points}} درجة{{pPlural}} إجماليًا • نسبة النجاح {{passing}}٪",
     "misc": {
       "sPlural": "",
       "untitled": "سؤال بدون عنوان",

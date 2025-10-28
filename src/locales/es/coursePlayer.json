@@ -11,6 +11,7 @@
   "QA": "Preguntas y respuestas",
   "groups": "Grupos",
   "examSection": {
+    "submitAssessment": "Enviado",
     "submitExam": {
       "success": "Enviado (intento {{nextAttempt}})",
       "error": "Solo tienes {{MAX_ATTEMPTS}} intentos."
@@ -20,7 +21,8 @@
     "passingScore": "Puntuación de aprobación",
     "attempt": "Intento",
     "of": "de,",
-    "ansAll": "Responde todas las preguntas para enviar. Intentos restantes",
+    "ansAll": "Responde todas las preguntas para enviar.",
+    "attemptsLeft": " Intentos restantes",
     "noAttempts": "No quedan más intentos.",
     "submitting": "Enviando...",
     "submit": "Enviar",
