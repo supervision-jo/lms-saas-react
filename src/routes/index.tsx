@@ -22,6 +22,7 @@ import WebView from "../pages/userProfile/WebView";
 import ForgetPassword from "../pages/auth/ForgetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
 import VerifyAccount from "../pages/auth/VerifyAccount";
+import Assessment from "../components/course/course-player-sections/Assessment";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -119,6 +120,10 @@ export default function AppRoutes() {
           {/* Main */}
           <Route path="/catalog" element={<CourseCatalogPage />} />
           <Route path="/catalog/:courseId" element={<CourseDetailPage />} />
+          <Route
+            path="/catalog/:courseId/assessments/:assessmentId"
+            element={<Assessment />}
+          />
           <Route
             path="/catalog/:courseId/player"
             element={

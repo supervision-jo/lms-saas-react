@@ -18,6 +18,7 @@ const PUBLIC_ENDPOINT_PREFIXES: string[] = [
   API_ENDPOINTS.subCategories,
   API_ENDPOINTS.categoriesFilters,
   API_ENDPOINTS.oldCourses,
+  API_ENDPOINTS.courses,
   API_ENDPOINTS.modules,
   API_ENDPOINTS.exams,
   API_ENDPOINTS.featuredCourses,

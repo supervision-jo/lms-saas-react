@@ -86,6 +86,25 @@
     "lessons": "lecciones",
     "free": "gratis"
   },
+  "assessmentsPage": {
+    "emptyState": {
+      "title": "Ninguna evaluación seleccionada",
+      "desc": "Elige una evaluación para ver sus estadísticas.",
+      "back": "Volver"
+    },
+    "statsCards": {
+      "header": "Estadísticas de la evaluación",
+      "questionLabel": "Preguntas",
+      "attemptedLabel": "Estudiantes que intentaron",
+      "totalLabel": "Respuestas totales",
+      "answersLabel": "Promedio de respuestas por pregunta",
+      "title": "Aún no hay respuestas",
+      "desc": "Cuando los estudiantes envíen intentos, verás aquí los gráficos de distribución."
+    },
+    "question": "Pregunta {{qi}}",
+    "answers": "{{total}} respuestas",
+    "top": "Más elegido:"
+  },
   "time": {
     "now": "Ahora"
   }

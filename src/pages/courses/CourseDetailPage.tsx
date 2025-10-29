@@ -32,6 +32,13 @@ import FeatureGate from "../../components/settings/FeatureGate";
 import { useFeatureFlag } from "../../hooks/useSettings";
 import { getCookie } from "../../services/cookies";
 
+interface Assessment {
+  id: string;
+  title: string;
+  description: string;
+  content_type: "assessment";
+}
+
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
   const { t, i18n } = useTranslation("courseDetails");
@@ -79,6 +86,7 @@ const CourseDetailPage: React.FC = () => {
     undefined,
     !!courseId
   );
+
   const modulesData: Module[] = useMemo(
     () => modulesResp?.data ?? [],
     [modulesResp]
@@ -102,14 +110,14 @@ const CourseDetailPage: React.FC = () => {
   );
   const currentCategory = cates?.find((c) => c.id === currentSubCate?.category);
 
-  // const { data: assessmentsData } = useCustomQuery(
-  //   `${API_ENDPOINTS.assessments}${course?.id}/`,
-  //   ["assessments", course?.id],
-  //   undefined,
-  //   !!course?.id && currentUser?.is_instructor
-  // );
+  const { data: assessmentsData } = useCustomQuery(
+    `${API_ENDPOINTS.assessments}?course_id=${course?.id}`,
+    ["assessments", course?.id],
+    undefined,
+    !!course?.id && currentUser?.is_instructor
+  );
 
-  // const assessments: Exam[] = assessmentsData?.data ?? [];
+  const assessments: Assessment[] = assessmentsData?.data ?? [];
 
   const { data: instructorData } = useCustomQuery(
     `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
@@ -681,19 +689,24 @@ const CourseDetailPage: React.FC = () => {
                     {t("tabs.assessments")}
                   </h3>
                   <div className="flex w-full flex-col items-start justify-start gap-4">
-                    {[{ id: 1 }, { id: 2 }, { id: 3 }].map((assessment) => {
+                    {assessments.map((assessment) => {
                       return (
                         <button
                           key={assessment.id}
                           type="button"
-                          // onClick={() => {
-                          //   navigate(
-                          //     `/catalog/${course.id}/assessments/${assessment.id}`
-                          //   );
-                          // }}
-                          className="bg-slate-50 shadow-md rounded-lg w-full p-2 ltr:text-left rtl:text-right"
+                          onClick={() => {
+                            navigate(
+                              `/catalog/${course.id}/assessments/${assessment.id}`
+                            );
+                          }}
+                          className="flex items-start flex-col gap-4 bg-slate-50 hover:bg-slate-100 duration-300 shadow-md rounded-lg w-full p-4 ltr:text-left rtl:text-right"
                         >
-                          {assessment.id}
+                          <p>{assessment.title}</p>
+                          {assessment.description && (
+                            <p className="text-sm text-gray-500">
+                              {assessment.description}
+                            </p>
+                          )}
                         </button>
                       );
                     })}

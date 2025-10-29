@@ -86,6 +86,25 @@
     "lessons": "lessons",
     "free": "free"
   },
+  "assessmentsPage": {
+    "emptyState": {
+      "title": "No assessment selected",
+      "desc": "Choose an assessment to view its statistics.",
+      "back": "Back"
+    },
+    "statsCards": {
+      "header": "Assessment Statistics",
+      "questionLabel": "Questions",
+      "attemptedLabel": "Students attempted",
+      "totalLabel": "Total answers",
+      "answersLabel": "Avg answers / question",
+      "title": "No responses yet",
+      "desc": "When students submit attempts, you’ll see distribution charts here."
+    },
+    "question": "Question {{qi}}",
+    "answers": "{{total}} Answers",
+    "top": "Top:"
+  },
   "time": {
     "now": "Now"
   }
