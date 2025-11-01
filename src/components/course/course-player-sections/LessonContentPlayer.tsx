@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import Material from "./Material";
+import { readUserFromStorage } from "../../../services/auth";
 
 interface LessonContentProps {
   modules: Module[];
@@ -33,6 +34,7 @@ export default function LessonContentPlayer({
   onLessonSelect,
   onAssessmentSubmit,
 }: LessonContentProps) {
+  const currentUser: User = readUserFromStorage();
   const allLessons = useMemo(
     () => modules?.flatMap((m) => m?.lessons ?? []) ?? [],
     [modules]
@@ -187,12 +189,14 @@ export default function LessonContentPlayer({
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => onArticleComplete(true)}
-                    className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
-                  >
-                    {t("content.markComplete")}
-                  </button>
+                  {currentUser.is_student && !currentLessonData?.completed && (
+                    <button
+                      onClick={() => onArticleComplete(true)}
+                      className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+                    >
+                      {t("content.markComplete")}
+                    </button>
+                  )}
                 </div>
               );
             }
@@ -200,7 +204,7 @@ export default function LessonContentPlayer({
               return (
                 <Material
                   currentLessonData={currentLessonData}
-                  onArticleComplete={onArticleComplete}
+                  onMaterialComplete={onArticleComplete}
                 />
               );
             }
@@ -219,6 +223,7 @@ export default function LessonContentPlayer({
               <>
                 <VideoPlayer
                   key={currentLessonId}
+                  watched={currentLessonData?.completed}
                   privacyEnhanced
                   src={safeUrl}
                   poster={poster}

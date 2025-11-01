@@ -12,6 +12,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { readUserFromStorage } from "../../services/auth";
 
 /** Forwarded ref in v3 aims to behave like HTMLMediaElement */
 type PlayerHandle = any;
@@ -23,6 +24,7 @@ type Props = {
   onPrev?: () => void;
   onNext?: () => void;
   startMuted?: boolean;
+  watched?: boolean;
   poster?: string;
   privacyEnhanced?: boolean;
 };
@@ -78,8 +80,10 @@ const VideoPlayer: React.FC<Props> = ({
   onNext,
   startMuted = false,
   // poster,
+  watched,
   privacyEnhanced = false,
 }) => {
+  const currentUser: User = readUserFromStorage();
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<PlayerHandle>(null);
   const lastVolRef = useRef(1);
@@ -194,7 +198,9 @@ const VideoPlayer: React.FC<Props> = ({
             onError={() => setError(t("video.error"))}
             onEnded={() => {
               setPlaying(false);
-              onComplete?.();
+              if (currentUser?.is_student && !watched) {
+                onComplete?.();
+              }
             }}
             onDurationChange={(d: any) =>
               setDuration(

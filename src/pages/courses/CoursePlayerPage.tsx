@@ -194,22 +194,28 @@ export default function CoursePlayerPage() {
 
   const handleComplete = async () => {
     try {
-      if (!currentLesson?.watched && currentUser?.is_student) {
-        const res = await createProgress({
-          lesson: currentLessonId,
-          watched: true,
-        });
+      if (currentUser?.is_student) {
+        if (!currentLesson?.completed) {
+          const res = await createProgress({
+            lesson: currentLessonId,
+            watched: true,
+          });
 
-        queryClient.invalidateQueries({
-          queryKey: ["student-enrollements", courseId],
-        });
+          queryClient.invalidateQueries({
+            queryKey: ["student-enrollements", courseId],
+          });
 
-        queryClient.invalidateQueries({
-          queryKey: ["modules", courseId],
-        });
-        queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+          queryClient.invalidateQueries({
+            queryKey: ["modules", courseId],
+          });
+          queryClient.invalidateQueries({ queryKey: ["course", courseId] });
 
-        if (res?.status) toast.success(t("handleComplete.success"));
+          if (res?.status) toast.success(t("handleComplete.success"));
+        } else {
+          console.log("Lesson already completed!");
+        }
+      } else {
+        console.log("User is instructor!");
       }
     } catch (error: any) {
       toast.error(error?.message ?? t("handleComplete.error"));

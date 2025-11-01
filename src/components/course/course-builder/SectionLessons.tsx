@@ -332,7 +332,7 @@ export default function SectionLessons({
       url: "",
       duration_hours: null,
       file: null as any,
-      watched: false,
+      completed: false,
       section: moduleId,
     };
 
@@ -388,7 +388,7 @@ export default function SectionLessons({
       url: "",
       duration_hours: null,
       file: null as any,
-      watched: false,
+      completed: false,
       section: moduleId,
     };
 

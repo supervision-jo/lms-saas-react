@@ -125,7 +125,7 @@ interface Lesson {
   completed?: boolean;
   description_html?: any;
   content_type: ContentType;
-  watched?: boolean;
+  completed?: boolean;
   string_file?: string | null;
   file_url?: string | null;
   file_base64?: string | null;

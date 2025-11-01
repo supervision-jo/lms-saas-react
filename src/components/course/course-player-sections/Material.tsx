@@ -1,10 +1,11 @@
 import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { readUserFromStorage } from "../../../services/auth";
 
 interface Props {
   currentLessonData: Lesson | undefined;
-  onArticleComplete: (goNext: boolean) => Promise<void>;
+  onMaterialComplete: (goNext: boolean) => Promise<void>;
 }
 
 const getPath = (u?: string) => {
@@ -41,11 +42,11 @@ const isExternalUrl = (u?: string) => {
 
 export default function Material({
   currentLessonData,
-  onArticleComplete,
+  onMaterialComplete,
 }: Props) {
   const { t } = useTranslation("coursePlayer");
 
-  // NEW: use url if file is null
+  const currentUser: User = readUserFromStorage();
   const sourceUrl = pickSourceUrl(currentLessonData);
   const path = getPath(sourceUrl);
   const isImg = isImagePath(path);
@@ -161,14 +162,16 @@ export default function Material({
               {safeFileName}
             </div>
           )}
-          <div className="w-full flex justify-end">
-            <button
-              onClick={() => onArticleComplete(true)}
-              className="inline-flex items-center px-4 mt-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              {t("content.markComplete")}
-            </button>
-          </div>
+          {currentUser.is_student && !currentLessonData?.completed && (
+            <div className="w-full flex justify-end">
+              <button
+                onClick={() => onMaterialComplete(true)}
+                className="inline-flex items-center px-4 mt-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                {t("content.markComplete")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -205,14 +208,17 @@ export default function Material({
               {safeFileName}
             </div>
           )}
-          <div className="w-full flex justify-end">
-            <button
-              onClick={() => onArticleComplete(true)}
-              className="inline-flex items-center px-4 mt-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              {t("content.markComplete")}
-            </button>
-          </div>
+
+          {currentUser.is_student && !currentLessonData?.completed && (
+            <div className="w-full flex justify-end">
+              <button
+                onClick={() => onMaterialComplete(true)}
+                className="inline-flex items-center px-4 mt-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                {t("content.markComplete")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -255,12 +261,14 @@ export default function Material({
         )}
       </div>
 
-      <button
-        onClick={() => onArticleComplete(true)}
-        className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
-      >
-        {t("content.markComplete")}
-      </button>
+      {currentUser.is_student && !currentLessonData?.completed && (
+        <button
+          onClick={() => onMaterialComplete(true)}
+          className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+        >
+          {t("content.markComplete")}
+        </button>
+      )}
     </div>
   );
 }

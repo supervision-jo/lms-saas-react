@@ -289,7 +289,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
     if (effectiveLocked || (!isEnrolled && !lesson?.free_preview))
       return <Lock className="w-4 h-4 text-gray-500" />;
 
-    if ((lesson as any).watched) {
+    if ((lesson as any).completed) {
       return (
         <CheckCircle
           className={`w-4 h-4 ${
