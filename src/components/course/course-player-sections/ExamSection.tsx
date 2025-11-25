@@ -7,7 +7,7 @@ import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useTranslation } from "react-i18next";
 import { formatDateTimeSimple } from "../../../utils/formatDateTime";
 import { Award, RotateCcw, X } from "lucide-react";
-import blankCertificateImage from "../../../assets/blank_certificat.png";
+// import blankCertificateImage from "../../../assets/blank_certificat.png";
 
 interface ExamSectionProps {
   exam: Exam;
@@ -29,7 +29,7 @@ interface StudentAnswers {
 
 export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const { t, i18n } = useTranslation("coursePlayer");
-
+  const isAssessment = exam.type === "assessment";
   const MAX_ATTEMPTS =
     typeof (exam as any)?.max_attempts === "number"
       ? (exam as any).max_attempts
@@ -52,7 +52,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
   const attemptsCount = attempts.length;
   const nextAttempt = Math.min(attemptsCount + 1, MAX_ATTEMPTS);
-  const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
+  // const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsCount);
 
   const questions = useMemo(
     () => (Array.isArray(exam?.questions) ? exam.questions : []),
@@ -121,12 +121,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
   const submitExam = async () => {
     if (!allAnswered || isPending) return;
 
-    // if (reachedMaxAttempts) {
-    //   toast.error(t("examSection.submitExam.error", { MAX_ATTEMPTS }));
-    //   return;
-    // }
-
     try {
+      if (isAssessment) {
+        // Submit behavior locally without any API request
+        setSubmitted(true);
+        setIsRetaking(false);
+        setShowResultModal(false);
+        toast.success(t("examSection.submitAssessment"));
+        return;
+      }
+
       const payload = buildSubmission();
       await mutateAsync(payload);
       setSubmitted(true);
@@ -150,11 +154,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
 
   const handleCloseResultModal = () => setShowResultModal(false);
 
-  const handleViewCertificate = () => {
-    if (!passed) return;
-    setShowResultModal(false);
-    window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
-  };
+  // const handleViewCertificate = () => {
+  //   if (!passed) return;
+  //   setShowResultModal(false);
+  //   window.open(blankCertificateImage, "_blank", "noopener,noreferrer");
+  // };
 
   const submitDisabled = !allAnswered || isPending || !isRetaking;
 
@@ -164,7 +168,12 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
       <div className="flex md:items-center md:flex-row flex-col items-start gap-4 md:justify-between mb-6">
         <div>
           <h3 className="md:text-2xl text-lg font-bold text-gray-900">
-            {exam.title} {exam.type === "quiz" ? "(Quiz)" : "(Exam)"}
+            {exam.title}{" "}
+            {exam.type === "quiz"
+              ? "(Quiz)"
+              : exam.type === "exam"
+              ? "(Exam)"
+              : "(Assessment)"}
           </h3>
           {exam.description && (
             <p className="text-gray-600 md:text-base text-sm">
@@ -172,19 +181,21 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
             </p>
           )}
         </div>
-        <div className="md:text-right">
-          <div className="text-gray-900 font-semibold">
-            {t("examSection.timeLimit")}: {exam.time_limit ?? 0}{" "}
-            {t("examSection.min")}
+        {!isAssessment && (
+          <div className="md:text-right">
+            <div className="text-gray-900 font-semibold">
+              {t("examSection.timeLimit")}: {exam.time_limit ?? 0}{" "}
+              {t("examSection.min")}
+            </div>
+            <div className="text-gray-500 text-sm">
+              {t("examSection.passingScore")}: {passing}%
+            </div>
+            <div className="text-gray-500 text-sm">
+              {t("examSection.attempt")} {Math.min(nextAttempt, MAX_ATTEMPTS)}{" "}
+              {/* {t("examSection.of")} {MAX_ATTEMPTS} */}
+            </div>
           </div>
-          <div className="text-gray-500 text-sm">
-            {t("examSection.passingScore")}: {passing}%
-          </div>
-          <div className="text-gray-500 text-sm">
-            {t("examSection.attempt")} {Math.min(nextAttempt, MAX_ATTEMPTS)}{" "}
-            {t("examSection.of")} {MAX_ATTEMPTS}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Questions */}
@@ -246,9 +257,11 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
         {isRetaking ? (
           <>
             <div className="text-gray-500 text-sm">
-              {attemptsCount < MAX_ATTEMPTS
+              {/* {attemptsCount < MAX_ATTEMPTS
                 ? `${t("examSection.ansAll")}: ${attemptsLeft}`
-                : t("examSection.noAttempts")}
+                : t("examSection.noAttempts")} */}
+              {t("examSection.ansAll")}
+              {!isAssessment && t("examSection.attemptsLeft")}
             </div>
             <button
               onClick={submitExam}
@@ -271,19 +284,23 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                   )}`}
             </div>
 
-            <button
-              onClick={() => setShowResultModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium hover:bg-purple-100 transition-colors"
-            >
-              <Award className="w-4 h-4" />
-              {t("examSection.viewResult")}
-            </button>
+            {!isAssessment && (
+              <>
+                <button
+                  onClick={() => setShowResultModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium hover:bg-purple-100 transition-colors"
+                >
+                  <Award className="w-4 h-4" />
+                  {t("examSection.viewResult")}
+                </button>
 
-            <div className="text-sm text-gray-500">
-              {t("examSection.correct")}: {correct} ·{" "}
-              {t("examSection.incorrect")}: {incorrect} ·{" "}
-              {t("examSection.attempt")} #{latest?.attempt ?? nextAttempt}
-            </div>
+                <div className="text-sm text-gray-500">
+                  {t("examSection.correct")}: {correct} ·{" "}
+                  {t("examSection.incorrect")}: {incorrect} ·{" "}
+                  {t("examSection.attempt")} #{latest?.attempt ?? nextAttempt}
+                </div>
+              </>
+            )}
 
             <div className="flex sm:gap-4 gap-2 items-center flex-col sm:flex-row w-full sm:w-fit">
               <button
@@ -374,7 +391,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <button
+                {/* <button
                   onClick={handleViewCertificate}
                   disabled={!passed}
                   className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors ${
@@ -385,7 +402,7 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                 >
                   <Award className="w-4 h-4" />
                   {t("examSection.resultModal.viewCertificate")}
-                </button>
+                </button> */}
                 <button
                   onClick={() => {
                     handleCloseResultModal();
@@ -401,17 +418,16 @@ export default function ExamSection({ exam, onClose }: ExamSectionProps) {
                   <RotateCcw className="w-4 h-4" />
                   {t("examSection.resultModal.retake")}
                 </button>
+                <button
+                  onClick={() => {
+                    handleCloseResultModal();
+                    onClose();
+                  }}
+                  className="w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  {t("examSection.continue")}
+                </button>
               </div>
-
-              <button
-                onClick={() => {
-                  handleCloseResultModal();
-                  onClose();
-                }}
-                className="w-full rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                {t("examSection.continue")}
-              </button>
             </div>
           </div>
         </div>

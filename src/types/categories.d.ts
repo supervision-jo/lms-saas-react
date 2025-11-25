@@ -5,6 +5,7 @@ interface Category {
   icon: string;
   color: string;
   total_courses: number;
+  sub_categories: SubCategory[];
 }
 
 interface SubCategory {

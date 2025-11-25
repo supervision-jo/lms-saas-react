@@ -2,6 +2,8 @@
   "question": "Question",
   "back": "Back",
   "publish": "Publish",
+  "published": "Published",
+  "unpublish": "Unpublish",
   "validateCourseReady": {
     "titleOK": "Course title is required.",
     "descOK": "Course description is required.",
@@ -32,6 +34,9 @@
   "tryPublish": {
     "success": "Course Published!",
     "error": "Failed to publish"
+  },
+  "tryUnpublish": {
+    "success": "Course Unpublished"
   },
   "handleSettingsChange": {
     "success": "Moved to draft",
@@ -94,6 +99,7 @@
     "noIdReturned": "No id returned",
     "quiz": "Quiz",
     "exam": "Exam",
+    "assessment": "Assessment",
     "created": "created",
     "commitModulesOrderSuccess": "Module order updated",
     "commitModulesOrderError": "Failed to update module order",
@@ -125,12 +131,15 @@
     "failedToSave": "Failed to save",
     "preview": "Preview",
     "moduleDescPlaceholder": "Module description",
+    "lessonDescPlaceholder": "Lesson description",
     "createQuizLesson": "Create a quiz ",
     "createExamLesson": "Create an exam ",
+    "createAssessmentLesson": "Create an assessment ",
     "uploadMaterial": "Upload material",
     "edit": "Edit",
     "examBuilder": "Exam builder",
-    "quizBuilder": "Quiz builder"
+    "quizBuilder": "Quiz builder",
+    "assessmentBuilder": "Assessment builder"
   },
   "userManagement": {
     "active": "Active",
@@ -156,7 +165,8 @@
     "enterUserEmailAddress": "Enter user email address",
     "invitationEmailMessage": "The user will receive an invitation email to join the course.",
     "adding": "Adding...",
-    "removeUser": "Remove user"
+    "removeUser": "Remove user",
+    "of": "of"
   },
   "groupManagement": {
     "studyGroups": "Study Groups",
@@ -197,6 +207,180 @@
     "published": "Published",
     "enrollment": "Enrollment",
     "autoApproveEnrollments": "Auto-approve enrollments",
-    "studentsCanEnrollDesc": "Students can enroll immediately"
+    "studentsCanEnrollDesc": "Students can enroll immediately",
+    "sequential": "Lockstep Mode",
+    "sequentialSubtitle": "Control how learners unlock lessons",
+    "sequentialParagraph": "When enabled, learners must finish each lesson to open the next—perfect for structured learning. When disabled, all lessons are available from the start for free exploration."
+  },
+  "editArticle": {
+    "title": "Edit Article",
+    "subTitle": "Create rich text content for your lesson",
+    "label": "Article Title",
+    "placeholder": "Enter article title",
+    "content": "Article Content",
+    "contentPlaceholder": "Write your article content here…",
+    "contentP1": "This will be sent as",
+    "contentP2": "in thelessons payload.",
+    "time": "Reading Time (hours)",
+    "cancel": "Cancel",
+    "save": "Save Article"
+  },
+  "editLesson": {
+    "title": "Add Video Link",
+    "subTitle": " Add a YouTube link (we’ll save it as",
+    "label": "Video Title",
+    "placeholder": "Enter video title",
+    "youtube": "YouTube Video URL",
+    "youtubePlaceholder": "We auto-fill duration when possible.",
+    "videoPreview": "Video Preview",
+    "noPreviewUrl": "No preview for non-YouTube URL",
+    "noPreview": "No preview",
+    "time": "Video Duration (hours)",
+    "cancel": "Cancel",
+    "save": "Save Video"
+  },
+  "uploadingMaterial": {
+    "title": "Upload Material",
+    "subTitle": "Add downloadable resources for your students",
+    "label": "Material Title",
+    "placeholder": "Enter material title",
+    "uploadFile": "Upload File",
+    "clickOrDrop": "Click to upload or drag and drop.",
+    "fail": "Failed to read file",
+    "selected": "Selected:",
+    "ready": "Ready to encode as base64",
+    "downloadLink": "Or provide a download link",
+    "downloadURL": "Download URL",
+    "description": "Description",
+    "descriptionP": "Describe what this material contains...",
+    "cancel": "Cancel",
+    "save": "Save Material"
+  },
+  "quizBuilder": {
+    "title": {
+      "quiz": "Quiz",
+      "exam": "Exam",
+      "assessment": "Assessment"
+    },
+    "infoTitle": {
+      "quiz": "Quiz Information",
+      "exam": "Exam Information",
+      "assessment": "Assessment Information"
+    },
+    "labels": {
+      "lessonTitle": "Title *",
+      "passingScore": "Passing Score (%)",
+      "totalTimeLimit": "Total Time Limit (minutes) *",
+      "lessonDescription": "Description (optional)",
+      "questionText": "Question Text *",
+      "answerOptions": "Answer Options *",
+      "points": "Points *",
+      "perQuestionTime": "Per-question Time (seconds, optional)",
+      "explanation": "Explanation (optional)"
+    },
+    "placeholders": {
+      "lessonTitle": {
+        "quiz": "Enter quiz title",
+        "exam": "Enter exam title",
+        "assessment": "Enter assessment title"
+      },
+      "lessonDescription": {
+        "quiz": "Brief description of the quiz",
+        "exam": "Brief description of the exam",
+        "assessment": "Brief description of the assessment"
+      },
+      "questionText": "Enter your question here…",
+      "option": "Option {{letter}}",
+      "perQuestionTime": "Optional",
+      "explanation": "Provide an explanation for the correct answer…"
+    },
+    "questions": {
+      "heading": "Questions ({{count}})",
+      "questionLabel": "Question {{index}}",
+      "optionsAndPoints": "{{options}} options • {{points}} point{{plural}}"
+    },
+    "buttons": {
+      "addQuestion": "Add Question",
+      "addOption": "Add Option",
+      "preview": "Preview",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "tooltips": {
+      "minOneQuestion": "Minimum 1 question required",
+      "removeQuestion": "Remove question",
+      "minTwoOptions": "Minimum 2 options required",
+      "removeOption": "Remove option",
+      "correctAnswer": "Correct answer",
+      "markAsCorrect": "Mark as correct"
+    },
+    "summary": {
+      "title": {
+        "quiz": "Quiz Summary",
+        "exam": "Exam Summary",
+        "assessment": "Assessment Summary"
+      },
+      "questions": "Questions:",
+      "totalPoints": "Total Points:",
+      "totalOptions": "Total Options:",
+      "timeLimit": "Time Limit:",
+      "minutesSuffix": "m"
+    },
+    "footer": {
+      "stats": "{{count}} question{{qPlural}}",
+      "pointStats": " • {{points}} total point{{pPlural}}"
+    },
+    "errors": {
+      "questionRequired": "Question {{index}} is required",
+      "optionsTextRequired": "All options in question {{index}} must have text",
+      "correctRequired": "Question {{index}} must have at least one correct answer",
+      "pointsMin": "Question {{index}} points must be ≥ 1",
+      "timeMin": "Time limit must be at least 1 minute",
+      "passRange": "Passing score must be between 0 and 100"
+    },
+    "alerts": {
+      "minOneQuestion": "A quiz must have at least 1 question",
+      "minTwoOptions": "A question must have at least 2 options"
+    }
+  },
+  "quizPreview": {
+    "type": {
+      "quiz": "Quiz",
+      "exam": "Exam",
+      "assessment": "Assessment"
+    },
+    "completed": "Completed",
+    "questions": "Questions",
+    "qShort": "Q",
+    "point": "point",
+    "pts": "pts",
+    "finalScore": "Final Score",
+    "finalScoreInline": "Final Score: {{total}}/{{max}} ({{percent}}%)",
+    "noQuestionsYet": "No questions yet",
+    "addOneToPreview": "Add at least one question to preview this {{type}}.",
+    "questionOf": "Question {{current}} of {{total}}",
+    "timesUp": "Time's up! Your answers have been submitted automatically.",
+    "placeholder": {
+      "typeYourAnswer": "Type your answer…"
+    },
+    "correctHidden": "Correct answer is configured (hidden during attempt).",
+    "noOptions": "No options configured for this question.",
+    "prev": "Previous",
+    "nextQuestion": "Next Question",
+    "submitType": "Submit {{type}}",
+    "completeTitle": "{{type}} Complete!",
+    "yourAnswer": "Your answer",
+    "correct": "Correct:",
+    "explanation": "Explanation:",
+    "close": "Close",
+    "editType": "Edit {{type}}",
+    "takeAgain": "Take Again",
+    "meta": "{{count}} question{{qPlural}}",
+    "metaPoints": " • {{points}} total point{{pPlural}} • Passing {{passing}}%",
+    "misc": {
+      "sPlural": "s",
+      "untitled": "Untitled question",
+      "untitledQuestion": "Question {{index}}"
+    }
   }
 }

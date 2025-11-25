@@ -35,7 +35,7 @@ const CourseCatalogPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   // Read search params from URL
   const searchQuery = searchParams.get("search") ?? "";
-  const selectedCategory = searchParams.get("category") ?? "all";
+  const selectedCategory = searchParams.get("category_id") ?? "all";
   const selectedLevel = searchParams.get("level") ?? "all";
   const priceFilter = (searchParams.get("price") ?? "all") as PriceFilter;
   const sortBy = (searchParams.get("sort") ?? "most_popular") as SortKey;
@@ -72,7 +72,7 @@ const CourseCatalogPage: React.FC = () => {
   //   setSearchParams(next, { replace: true });
   // };
   const setSelectedCategory = (v: string) =>
-    updateParam("category", v === "all" ? undefined : v);
+    updateParam("category_id", v === "all" ? undefined : v);
   const setSelectedLevel = (v: string) =>
     updateParam("level", v === "all" ? undefined : v);
   const setPriceFilter = (v: PriceFilter) =>
@@ -91,7 +91,7 @@ const CourseCatalogPage: React.FC = () => {
   const backendQueryParams = new URLSearchParams();
   if (searchQuery) backendQueryParams.set("search", searchQuery);
   if (selectedCategory !== "all")
-    backendQueryParams.set("category", selectedCategory);
+    backendQueryParams.set("category_id", selectedCategory);
   if (selectedLevel !== "all") backendQueryParams.set("level", selectedLevel);
   if (priceFilter === "free") backendQueryParams.set("is_paid", "false");
   if (priceFilter === "paid") backendQueryParams.set("is_paid", "true");
@@ -156,7 +156,7 @@ const CourseCatalogPage: React.FC = () => {
   // Clear all filters
   const clearAllFilters = () => {
     const next = new URLSearchParams(searchParams);
-    next.delete("category");
+    next.delete("category_id");
     next.delete("level");
     next.delete("price");
     next.delete("search");
@@ -192,11 +192,13 @@ const CourseCatalogPage: React.FC = () => {
   // Set "all" choice in filters as default
   useEffect(() => {
     if (
+      categories &&
+      categories.length > 0 &&
       selectedCategory !== "all" &&
       !categories.some((c) => c.id === selectedCategory)
     ) {
       const next = new URLSearchParams(searchParams);
-      next.delete("category");
+      next.delete("category_id");
       setSearchParams(next, { replace: true });
     }
   }, [selectedCategory, categories]);

@@ -18,6 +18,11 @@ import HomePage from "../pages/home/HomePage";
 import { RequireAuth } from "./requireAuth";
 import { RequireRole } from "./guards";
 import { useFeatureFlag } from "../hooks/useSettings";
+import WebView from "../pages/userProfile/WebView";
+import ForgetPassword from "../pages/auth/ForgetPassword";
+import VerifyEmail from "../pages/auth/VerifyEmail";
+import VerifyAccount from "../pages/auth/VerifyAccount";
+import Assessment from "../components/course/course-player-sections/Assessment";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
 // function DashboardIndexGate() {
@@ -70,6 +75,11 @@ export default function AppRoutes() {
       <Routes>
         {/* Auth */}
         <Route path="" element={<Layout />}>
+          <Route path="/reset-password" element={<ForgetPassword />} />
+          <Route path="/reset-password/:token" element={<ForgetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/verify-account" element={<VerifyAccount />} />
+          <Route path="/verify-account/:token" element={<VerifyAccount />} />
           {shouldShowHomePage ? (
             <Route path="/" element={<HomePage />} />
           ) : (
@@ -77,7 +87,7 @@ export default function AppRoutes() {
               {isAuthenticated ? (
                 <>
                   <Route
-                    path="login"
+                    path="/login"
                     element={<Navigate to="/catalog" replace />}
                   />
 
@@ -103,11 +113,17 @@ export default function AppRoutes() {
             <Route path="/sign-up" element={<SignupPage />} />
           )}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/webview/:id" element={<WebView />} />
+
           {/* Auth */}
 
           {/* Main */}
           <Route path="/catalog" element={<CourseCatalogPage />} />
           <Route path="/catalog/:courseId" element={<CourseDetailPage />} />
+          <Route
+            path="/catalog/:courseId/assessments/:assessmentId"
+            element={<Assessment />}
+          />
           <Route
             path="/catalog/:courseId/player"
             element={
@@ -123,7 +139,6 @@ export default function AppRoutes() {
           {/* Main */}
 
           {/* Courses */}
-
           <Route element={<RequireRole exclude={["instructor"]} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
           </Route>

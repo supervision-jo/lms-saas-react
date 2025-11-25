@@ -44,8 +44,7 @@ export default function CoursesFilter({
   const { t } = useTranslation("courseCatalog");
 
   const { data } = useCustomQuery(API_ENDPOINTS.categories, ["categories"]);
-  const categories: Category[] = data?.data?.data;
-
+  const categories: Category[] = data?.data;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -67,7 +66,13 @@ export default function CoursesFilter({
       el.setAttribute("inert", "");
     }
   }, [mobileOpen, returnFocusRef]);
-
+  if (!categories) {
+  return (
+    <div className="p-4 text-gray-500 text-sm">
+      Loading categories...
+    </div>
+  );
+}
   const Body = ({ group }: { group: string }) => (
     <>
       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
@@ -84,7 +89,7 @@ export default function CoursesFilter({
           <label className="flex items-center cursor-pointer">
             <input
               type="radio"
-              name={`category-${group}`}
+              name={`category_id-${group}`}
               value="all"
               checked={selectedCategory === "all"}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -102,9 +107,9 @@ export default function CoursesFilter({
             >
               <input
                 type="radio"
-                name={`category-${group}`}
+                name={`category_id-${group}`}
                 value={category.id}
-                checked={selectedCategory === category.id}
+                checked={selectedCategory === category?.id}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
               />

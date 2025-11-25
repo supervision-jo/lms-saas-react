@@ -3,7 +3,7 @@ import { Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCustomPatch } from "../../../hooks/useMutation";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import toast from "react-hot-toast";
@@ -28,11 +28,12 @@ export default function CourseInformationForm({ course }: Props) {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
   const { t } = useTranslation("courseBuilder");
+  const isHydratingRef = useRef(true);
 
   const { data: categoriesData } = useCustomQuery(API_ENDPOINTS.categories, [
     "categories",
   ]);
-  const categories: Category[] = categoriesData?.data?.data || [];
+  const categories: Category[] = categoriesData?.data || [];
 
   const {
     reset,
@@ -78,7 +79,9 @@ export default function CourseInformationForm({ course }: Props) {
 
   // When category changes, clear sub_category (only if invalid for category)
   useEffect(() => {
+    if (isHydratingRef.current) return; // ← guard
     if (!selectedCategory || !dirtyFields?.category) return;
+
     const currentSub = getValues("sub_category");
     const currentSubObj = allSubCategories.find((sc) => sc.id === currentSub);
     if (!currentSubObj || currentSubObj.category !== selectedCategory) {
@@ -152,7 +155,6 @@ export default function CourseInformationForm({ course }: Props) {
           return;
         }
         fd.append("price", String(num));
-        fd.append("is_paid", num === 0 ? "false" : "true");
         break;
       }
 
@@ -218,8 +220,7 @@ export default function CourseInformationForm({ course }: Props) {
 
   // PRE-FILL — FIXED: handle both string ID and object for sub_category
   useEffect(() => {
-    if (!course) return;
-    if (!allSubCategories || allSubCategories.length === 0) return;
+    if (!course || !allSubCategories?.length) return;
 
     const subId =
       typeof (course as any)?.sub_category === "string"
@@ -227,20 +228,41 @@ export default function CourseInformationForm({ course }: Props) {
         : (course as any)?.sub_category?.id ?? "";
 
     const subCate = allSubCategories.find((sc) => sc.id === subId);
+    const incomingCategory = subCate?.category ?? "";
 
-    const incoming: Partial<FormValues> = {
-      title: course?.title ?? "",
-      description: course?.description ?? "",
-      level: course?.level ?? "beginner",
-      price: typeof course?.price === "number" ? course?.price : "",
-      sub_category: subCate?.id ?? "",
-      category: subCate?.category ?? "",
-      picture: course?.picture ?? "",
-    };
+    reset(
+      {
+        title: course?.title ?? "",
+        description: course?.description ?? "",
+        level: course?.level ?? "beginner",
+        price: typeof course?.price === "number" ? course?.price : "",
+        sub_category: "", // ← delay this
+        category: incomingCategory, // ← set category first
+        picture: course?.picture ?? "",
+      },
+      { keepDirtyValues: false }
+    );
 
-    reset(incoming, { keepDirtyValues: false });
-    setThumbPreview(incoming.picture || null);
-  }, [allSubCategories, course, reset, setThumbPreview]);
+    setThumbPreview(course?.picture ?? null);
+  }, [course, allSubCategories, reset]);
+
+  useEffect(() => {
+    if (!course) return;
+    if (!selectedCategory) return;
+    if (subCatsLoading) return;
+
+    const subId =
+      typeof (course as any)?.sub_category === "string"
+        ? (course as any).sub_category
+        : (course as any)?.sub_category?.id ?? "";
+
+    const exists = subCategories.some((sc) => sc.id === subId);
+    if (exists) {
+      setValue("sub_category", subId, { shouldDirty: false });
+    }
+
+    isHydratingRef.current = false;
+  }, [course, selectedCategory, subCatsLoading, subCategories, setValue]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-8">

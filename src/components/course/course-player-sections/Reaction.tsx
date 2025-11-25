@@ -118,18 +118,32 @@ export default function ReactionGroup({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onPointerLeave={onPointerLeave}
-        className={`flex items-center gap-1 text-sm px-2 py-1 rounded transition-colors
+        className={`flex items-center gap-1 text-sm px-2 py-1 rounded transition-colors 
           ${my ? "bg-gray-700" : "hover:bg-gray-700"}
           ${colorFor(my)}
         `}
         title={my ? t("reactions.removeReact") : t("reactions.like")}
       >
-        <ThumbsUp
-          className="w-4 h-4"
-          // Fill only when active "like"
-          fill={my === "like" ? "currentColor" : "none"}
-          stroke="currentColor"
-        />
+        {my === "love" ? (
+          <Heart
+            className="w-4 h-4"
+            fill="currentColor"
+            stroke="currentColor"
+          />
+        ) : my === "clap" ? (
+          <Sparkles
+            className="w-4 h-4"
+            fill="currentColor"
+            stroke="currentColor"
+          />
+        ) : (
+          <ThumbsUp
+            className="w-4 h-4"
+            fill={"currentColor"}
+            stroke="currentColor"
+          />
+        )}
+
         <span className="tabular-nums">{total}</span>
       </button>
 

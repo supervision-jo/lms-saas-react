@@ -22,14 +22,6 @@
     "updateProfile": "تحديث الملف الشخصي"
   },
 
-  "thisMonth": {
-    "title": "هذا الشهر",
-    "newCourses": "دورات جديدة",
-    "hoursLearned": "ساعات التعلّم",
-    "certificates": "الشهادات",
-    "streakDays": "أيام السلسلة"
-  },
-
   "achievementsSection": {
     "title": "الإنجازات",
     "items": {
@@ -60,10 +52,11 @@
     }
   },
   "headerStats": {
-    "coursesEnrolled": "الدورات المُسجَّل بها",
-    "hoursLearned": "ساعات التعلّم",
+    "coursesEnrolled": "الدورات المسجَّل بها",
+    "completedCourses": "الدورات المكتملة",
     "certificates": "الشهادات",
-    "streakDays": "أيام السلسلة"
+    "newCourses": "الدورات الجديدة",
+    "thisMonth": "هذا الشهر"
   },
   "enrolledCourses": {
     "continue": "استمرار",

@@ -61,7 +61,7 @@ export default function CoursePlayerPage() {
 
   // course + modules
   const { data: courseRes } = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}/`,
+    `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId
@@ -100,7 +100,7 @@ export default function CoursePlayerPage() {
   const courseData: Course = courseRes?.data;
 
   const modules: Module[] = useMemo(
-    () => modulesData?.data?.data ?? [],
+    () => modulesData?.data ?? [],
     [modulesData]
   );
 
@@ -194,21 +194,28 @@ export default function CoursePlayerPage() {
 
   const handleComplete = async () => {
     try {
-      if (!currentLesson?.watched && currentUser?.is_student) {
-        const res = await createProgress({
-          lesson: currentLessonId,
-          watched: true,
-        });
+      if (currentUser?.is_student) {
+        if (!currentLesson?.completed) {
+          const res = await createProgress({
+            lesson: currentLessonId,
+            watched: true,
+          });
 
-        queryClient.invalidateQueries({
-          queryKey: ["student-enrollements", courseId],
-        });
+          queryClient.invalidateQueries({
+            queryKey: ["student-enrollements", courseId],
+          });
 
-        queryClient.invalidateQueries({
-          queryKey: ["modules", courseId],
-        });
+          queryClient.invalidateQueries({
+            queryKey: ["modules", courseId],
+          });
+          queryClient.invalidateQueries({ queryKey: ["course", courseId] });
 
-        if (res?.status) toast.success(t("handleComplete.success"));
+          if (res?.status) toast.success(t("handleComplete.success"));
+        } else {
+          console.log("Lesson already completed!");
+        }
+      } else {
+        console.log("User is instructor!");
       }
     } catch (error: any) {
       toast.error(error?.message ?? t("handleComplete.error"));
@@ -308,7 +315,10 @@ export default function CoursePlayerPage() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between gap-2 md:gap-4 mb-4">
                   <h2 className="text-2xl font-bold">{currentLesson?.title}</h2>
                   <span className="text-gray-400 flex items-center justify-start">
-                    <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                    {currentLesson?.duration_hours &&
+                      currentLesson?.duration_hours > 0 && (
+                        <Clock className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                      )}
                     {formatDuration(
                       (currentLesson as any)?.duration_hours,
                       i18n.language
@@ -453,6 +463,7 @@ export default function CoursePlayerPage() {
                 modules={modules}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
+                is_sequential={courseData?.is_sequential}
                 isEnrolled={true}
               />
             </div>
@@ -495,6 +506,7 @@ export default function CoursePlayerPage() {
                 modules={modules}
                 currentLessonId={currentLessonId}
                 onLessonSelect={handleLessonSelect}
+                is_sequential={courseData?.is_sequential}
                 isEnrolled={true}
               />
             </div>

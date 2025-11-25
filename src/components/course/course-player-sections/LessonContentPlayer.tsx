@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Download } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import VideoPlayer from "../../reusable-components/VideoPlayer";
 import ExamSection from "./ExamSection";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
+import Material from "./Material";
+import { readUserFromStorage } from "../../../services/auth";
 
 interface LessonContentProps {
   modules: Module[];
@@ -32,6 +34,7 @@ export default function LessonContentPlayer({
   onLessonSelect,
   onAssessmentSubmit,
 }: LessonContentProps) {
+  const currentUser: User = readUserFromStorage();
   const allLessons = useMemo(
     () => modules?.flatMap((m) => m?.lessons ?? []) ?? [],
     [modules]
@@ -93,47 +96,23 @@ export default function LessonContentPlayer({
     beginAutoNext();
   };
 
-  // at top of the component
-  const [downloading, setDownloading] = useState(false);
-
-  const downloadMaterial = async (rawUrl?: string) => {
-    if (!rawUrl) return;
+  const onArticleComplete = async (goNext: boolean) => {
     try {
-      setDownloading(true);
-
-      const u = new URL(rawUrl);
-      const pathname = u.pathname;
-      const base = pathname.substring(pathname.lastIndexOf("/") + 1) || "file";
-      const filename = base.includes(".") ? base : `${base}.download`;
-
-      const res = await fetch(rawUrl, { method: "GET" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-    } catch (e: any) {
-      console.log(e);
-      window.open(rawUrl, "_blank");
+      handleComplete?.();
     } finally {
-      setDownloading(false);
+      if (goNext) proceedNext();
     }
   };
 
-  // NEW: fetch quiz/exam by *lesson id* when lesson is assessment
+  // fetch quiz/exam by *lesson id* when lesson is assessment
   const isAssessment =
     (currentLessonData?.content_type || "").toLowerCase() === "quiz" ||
+    (currentLessonData?.content_type || "").toLowerCase() === "assessment" ||
     (currentLessonData?.content_type || "").toLowerCase() === "exam";
 
   const { data: examResp, isFetching: loadingExam } = useCustomQuery(
     isAssessment ? `${API_ENDPOINTS.exams}${currentLessonId}/` : "",
-    ["exam-by-lesson", currentLessonId],
+    ["exams", String(currentLessonId)],
     undefined,
     isAssessment && !!currentLessonId
   );
@@ -210,48 +189,23 @@ export default function LessonContentPlayer({
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={handleComplete}
-                    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
-                  >
-                    {t("content.markComplete")}
-                  </button>
+                  {currentUser.is_student && !currentLessonData?.completed && (
+                    <button
+                      onClick={() => onArticleComplete(true)}
+                      className="inline-flex items-center px-4 mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 self-end"
+                    >
+                      {t("content.markComplete")}
+                    </button>
+                  )}
                 </div>
               );
             }
-
             if (currentLessonData?.content_type?.toLowerCase() === "material") {
-              const fileUrl = (currentLessonData as any)?.file ?? "";
-
               return (
-                <div className="bg-white rounded-lg p-8 shadow-lg">
-                  <div className="max-w-4xl mx-auto text-center">
-                    <button
-                      onClick={() => downloadMaterial(fileUrl)}
-                      className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6"
-                      title={
-                        downloading
-                          ? t("content.downloading")
-                          : t("content.download")
-                      }
-                    >
-                      <Download className="w-10 h-10 text-orange-600" />
-                    </button>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                      {currentLessonData?.title}
-                    </h1>
-                    <p className="text-gray-600 mb-8">
-                      {currentLessonData?.description}
-                    </p>
-                    {fileUrl && (
-                      <div className="text-sm text-gray-500 break-all">
-                        {decodeURIComponent(
-                          new URL(fileUrl).pathname.split("/").pop() || ""
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <Material
+                  currentLessonData={currentLessonData}
+                  onMaterialComplete={onArticleComplete}
+                />
               );
             }
 
@@ -269,6 +223,7 @@ export default function LessonContentPlayer({
               <>
                 <VideoPlayer
                   key={currentLessonId}
+                  watched={currentLessonData?.completed}
                   privacyEnhanced
                   src={safeUrl}
                   poster={poster}

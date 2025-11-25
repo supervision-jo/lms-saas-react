@@ -1,11 +1,27 @@
-import { Play } from "lucide-react";
+// import { Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
+import { useCustomQuery } from "../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../utils/constants";
 
-export default function HeroSection() {
+export default function HeroSection(dashboardStatsData: dashboardStats) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation("home");
+  const { data } = useCustomQuery(API_ENDPOINTS.lastCourseProgress, [
+    "lastCourseProgress",
+  ]);
+  const lastCourseProgress = data?.data;
+  function formatFractionalHours(fraction: number): {
+    hours: number;
+    minutes: number;
+  } {
+    if (isNaN(fraction) || fraction < 0) return { hours: 0, minutes: 0 };
 
+    const hours = Math.floor(fraction);
+    const minutes = Math.round((fraction - hours) * 60);
+
+    return { hours, minutes };
+  }
   return (
     <section className="relative bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -50,52 +66,94 @@ export default function HeroSection() {
 
             <div className="flex items-center gap-8 pt-8">
               <div className="text-center">
-                <div className="text-3xl font-bold">50M+</div>
+                <div className="text-4xl font-bold">
+                  {dashboardStatsData?.total_students ?? "-"}
+                </div>
                 <div className="text-gray-300">{t("students")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold">190K+</div>
+                <div className="text-4xl font-bold">
+                  {dashboardStatsData?.total_courses ?? "-"}
+                </div>
                 <div className="text-gray-300">{t("courses")}</div>
               </div>
-              <div className="text-center">
+              {/* <div className="text-center">
                 <div className="text-3xl font-bold">70+</div>
                 <div className="text-gray-300">{t("languages")}</div>
-              </div>
+              </div> */}
             </div>
           </div>
+          {lastCourseProgress && (
+            <div className="relative">
+              <div className="relative bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 border border-white border-opacity-20">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                      {/* <Play className="w-6 h-6 text-white" /> */}
+                      <img
+                        src={lastCourseProgress?.picture}
+                        alt={lastCourseProgress?.title}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      {/* <h3 className="font-semibold">{t("featuredCourse")}</h3> */}
+                      <h3 className="font-semibold">{lastCourseProgress?.title}</h3>
+                      {/* <p className="text-gray-300">
+                        {t("completeReactCourse")}
+                      </p> */}
+                      <p className="text-gray-300">
+                        {lastCourseProgress?.category_name}
+                      </p>
+                    </div>
+                  </div>
 
-          <div className="relative">
-            <div className="relative bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 border border-white border-opacity-20">
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                    <Play className="w-6 h-6 text-white" />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-300">{t("progress")}</span>
+                      <span className="text-white font-semibold">
+                        {(
+                          (lastCourseProgress?.completed_lessons /
+                            lastCourseProgress?.total_lessons) *
+                          100
+                        ).toFixed(1)}
+                        %
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div
+                        style={{
+                          width: `${(
+                            (lastCourseProgress?.completed_lessons /
+                              lastCourseProgress?.total_lessons) *
+                            100
+                          ).toFixed(1)}%`,
+                        }}
+                        className={`bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full`}
+                      ></div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{t("featuredCourse")}</h3>
-                    <p className="text-gray-300">{t("completeReactCourse")}</p>
-                  </div>
-                </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">{t("progress")}</span>
-                    <span className="text-white font-semibold">68%</span>
+                  <div className="flex items-center justify-between text-sm text-gray-300">
+                    <span>
+                      {t("lessonsCompleted", {
+                        completed: lastCourseProgress?.completed_lessons,
+                        total: lastCourseProgress?.total_lessons,
+                      })}
+                    </span>
+                    <span>
+                      {t(
+                        "timeRemaining",
+                        formatFractionalHours(
+                          lastCourseProgress?.remaining_hours
+                        )
+                      )}
+                    </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full w-2/3"></div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm text-gray-300">
-                  <span>
-                    {t("lessonsCompleted", { completed: 12, total: 18 })}
-                  </span>
-                  <span>{t("timeRemaining", { hours: 6, minutes: 32 })}</span>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </section>

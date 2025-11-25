@@ -19,7 +19,8 @@
     "overview": "نظرة عامة",
     "curriculum": "المنهج",
     "instructor": "المدرس",
-    "reviews": "التقييمات"
+    "reviews": "التقييمات",
+    "assessments": "الاختبارات"
   },
   "requirements": "المتطلبات:",
   "description": "الوصف:",
@@ -73,8 +74,10 @@
   },
   "courseContent": {
     "openExam": "فتح الاختبار",
+    "openAssessment": "فتح التقييم",
     "openQuiz": "فتح الاختبار القصير",
     "exam": "اختبار",
+    "assessment": "تقييم",
     "quiz": "اختبار قصير",
     "m": "د",
     "pass": "اجتياز",
@@ -82,6 +85,25 @@
     "modules": "وحدات",
     "lessons": "دروس",
     "free": "مجاني"
+  },
+  "assessmentsPage": {
+    "emptyState": {
+      "title": "لم يتم اختيار أي تقييم",
+      "desc": "اختر تقييمًا لعرض إحصاءاته.",
+      "back": "رجوع"
+    },
+    "statsCards": {
+      "header": "إحصاءات التقييم",
+      "questionLabel": "الأسئلة",
+      "attemptedLabel": "الطلاب الذين حاولوا",
+      "totalLabel": "إجمالي الإجابات",
+      "answersLabel": "متوسط الإجابات لكل سؤال",
+      "title": "لا توجد استجابات بعد",
+      "desc": "عندما يقدّم الطلاب محاولاتهم، ستظهر مخططات التوزيع هنا."
+    },
+    "question": "السؤال {{qi}}",
+    "answers": "{{total}} إجابة",
+    "top": "الأكثر اختيارًا:"
   },
   "time": {
     "now": "الآن"

@@ -10,8 +10,9 @@ export const USER_KEY = "lms-user";
 const api_url =
   window.location.href.includes("vercel") ||
   window.location.href.includes("localhost")
-    ? "https://test-lms-api.vision-jo.com/"
-    : toApiURL(window.location.origin);
+    ? "https://ollms-api.vision-jo.com/"
+    : // ? "https://test-lms-api.vision-jo.com/"
+      toApiURL(window.location.origin);
 export const BASE_URL = `${api_url}api/`;
 
 export function toApiURL(input: string) {
@@ -49,6 +50,7 @@ export function toApiURL(input: string) {
 
 export const API_ENDPOINTS = {
   oldCourses: "course/courses/",
+  courseInstructor: "course/course-instructor/",
   courses: "course/v2/courses/",
   createCourse: "course/create-course/",
   updateCourse: "course/update-course/",
@@ -56,16 +58,20 @@ export const API_ENDPOINTS = {
   createSection: "course/create-section/",
   updateSection: "course/update-section/",
   deleteSection: "course/delete-section/",
-  reorderSections: "course/reorder-sections/",
+  reorderLessons: "course/reorder-lessons/",
   lessons: "course/lessons/",
   lesson: "course/lesson/",
   createExam: "course/create-exam/",
   updateExam: "course/update-exam/",
   courseUsers: "course/get-student-courses/",
+  addCourseUser: "course/add-student-to-course/",
+  removeCourseUser: "course/remove-student-from-course/",
   submitExam: "exam/exam-quiz/",
   getStudentAnswers: "exam/get-student-answers/",
   exams: "course/quiz/",
+  assessments: "course/assessments/",
   categories: "course/categories/",
+  categoriesFilters: "course/categories_filters/",
   subCategories: "course/get-sub-categories/",
   featuredCourses: "course/best-sellers/",
   modules: "course/get-sections/",
@@ -93,6 +99,13 @@ export const API_ENDPOINTS = {
   signup: "users/register/",
   login: "users/login/",
   refreshToken: "users/refresh-token/",
+  verifyEmail: "users/send-verification-email/",
+  verifyAccount: "users/verify-account/",
+  resetPassword: "users/reset_password/",
+  webView: "core/webview/",
+  dashboardStats: "core/dashboard_stats/",
+  lastCourseProgress: "course/last-course-progress/",
+  topReviews: "core/top_reviews/",
   updateProfile: "users/update-profile/",
   settings: "tenant/settings",
   studentPresence: "",

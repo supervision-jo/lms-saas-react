@@ -11,6 +11,7 @@ import {
   HelpCircle,
   CheckCircle,
   ChevronLeft,
+  BookCheck,
 } from "lucide-react";
 import { formatDuration } from "../../utils/formatDuration";
 import { useLocation } from "react-router";
@@ -33,12 +34,12 @@ export function findNextLessonId(
 interface CourseContentProps {
   modules: Module[];
   currentLessonId?: string;
-  /** highlight the quiz/exam row itself */
   currentAssessmentId?: string;
   onLessonSelect: (lessonId: string) => void;
   isEnrolled: boolean;
   className?: string;
   onOpenAssessment?: (lessonId: string, assessment: Exam) => void;
+  is_sequential: boolean; // passed in props
 }
 
 function AssessmentList({
@@ -47,28 +48,39 @@ function AssessmentList({
   onOpen,
   currentAssessmentId,
   t,
+  forceLocked = false,
 }: {
   lesson: Lesson;
   isEnrolled: boolean;
   onOpen: (assessment: Exam) => void;
   currentAssessmentId?: string;
   t: (k: string) => string;
+  forceLocked?: boolean;
 }) {
-  const { data } = useCustomQuery(
-    `${API_ENDPOINTS.exams}?lesson=${lesson.id}`,
-    ["exams", String(lesson.id)]
-  );
+  const { data } = useCustomQuery(`${API_ENDPOINTS.exams}${lesson.id}/`, [
+    "exams",
+    String(lesson.id),
+  ]);
   const assessments: Exam[] = data?.data ?? [];
-
   if (!assessments?.length) return null;
-
-  const canAccess = isEnrolled || lesson.free_preview;
+  const canAccess =
+    (isEnrolled || lesson.free_preview) && !forceLocked && !lesson.is_locked;
 
   return (
     <div className="mt-2 space-y-1">
       {assessments.map((a) => {
-        const Icon = a.type === "exam" ? Award : HelpCircle;
-        const accent = a.type === "exam" ? "text-red-600" : "text-green-600";
+        const Icon =
+          a.type === "exam"
+            ? Award
+            : a.type === "quiz"
+            ? HelpCircle
+            : BookCheck;
+        const accent =
+          a.type === "exam"
+            ? "text-red-600"
+            : a.type === "quiz"
+            ? "text-green-600"
+            : "text-blue-600";
         const isActive =
           currentAssessmentId && String(currentAssessmentId) === String(a.id);
 
@@ -78,9 +90,10 @@ function AssessmentList({
             disabled={!canAccess}
             onClick={(e) => {
               e.stopPropagation();
+              if (!canAccess) return;
               onOpen(a);
             }}
-            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 text-left transition-all duration-200 ${
+            className={`w-full flex items-start flex-col gap-2 justify-between rounded-lg py-3 px-4 ltr:text-left rtl:text-right transition-all duration-200 ${
               !canAccess
                 ? "opacity-50 cursor-not-allowed bg-gray-100"
                 : isActive
@@ -90,7 +103,9 @@ function AssessmentList({
             title={
               a.type === "exam"
                 ? t("courseContent.openExam")
-                : t("courseContent.openQuiz")
+                : a.type === "quiz"
+                ? t("courseContent.openQuiz")
+                : t("courseContent.openAssessment")
             }
           >
             <div className="flex items-center gap-2">
@@ -103,7 +118,9 @@ function AssessmentList({
                 {a.title ||
                   (a.type === "exam"
                     ? t("courseContent.exam")
-                    : t("courseContent.quiz"))}
+                    : a.type === "quiz"
+                    ? t("courseContent.quiz")
+                    : t("courseContent.assessment"))}
               </span>
             </div>
             <div
@@ -130,6 +147,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
   isEnrolled,
   className,
   onOpenAssessment,
+  is_sequential, // ★ use this
 }) => {
   const { t, i18n } = useTranslation("courseDetails");
   const safeModules: Module[] = Array.isArray(modules) ? modules : [];
@@ -161,21 +179,29 @@ const CourseContent: React.FC<CourseContentProps> = ({
         nextExpanded.add(String(firstModule.id));
         setExpandedModules(nextExpanded);
 
-        const firstPlayable =
-          (firstModule.lessons ?? []).find(
-            (lesson) => isEnrolled || lesson?.free_preview
-          ) || (firstModule.lessons ?? [])[0];
+        // ★ only block auto-select from a locked module when sequential
+        const moduleAutoBlocked = is_sequential && !!firstModule.is_locked;
 
-        if (firstPlayable?.id) {
-          onLessonSelect(String(firstPlayable.id));
-          autoSelectedOnceRef.current = true;
+        if (!moduleAutoBlocked) {
+          const firstPlayable =
+            (firstModule.lessons ?? []).find(
+              (lesson) =>
+                (isEnrolled || lesson?.free_preview) && !lesson?.is_locked
+            ) || (firstModule.lessons ?? [])[0];
+
+          if (firstPlayable?.id) {
+            onLessonSelect(String(firstPlayable.id));
+            autoSelectedOnceRef.current = true;
+          }
         }
+      } else {
+        setExpandedModules(nextExpanded);
       }
     } else {
       setExpandedModules(nextExpanded);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [safeModules, currentLessonId, isEnrolled]);
+    // ★ include is_sequential in deps
+  }, [safeModules, currentLessonId, isEnrolled, is_sequential, pathname]); // eslint-disable-line
 
   const toggleModule = (moduleId: string | number) => {
     const key = String(moduleId);
@@ -185,28 +211,85 @@ const CourseContent: React.FC<CourseContentProps> = ({
     setExpandedModules(next);
   };
 
-  const handleLessonClick = (lesson: Lesson) => {
-    const canAccess = isEnrolled || lesson?.free_preview;
-    if (!canAccess) return;
-
-    if (lesson?.content_type === "material" && (lesson as any)?.url) {
-      const link = document.createElement("a");
-      link.href = (lesson as any)?.url;
-      link.download = lesson?.title || "material";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      alert("Download started!");
-    } else {
-      onLessonSelect(String(lesson?.id));
+  const getPath = (u?: string) => {
+    if (!u) return "";
+    try {
+      return new URL(u, window.location.origin).pathname.toLowerCase();
+    } catch {
+      return u.toLowerCase();
     }
   };
+  const isPdfPath = (p: string) => /\.pdf$/i.test(p);
+  const isExternalUrl = (u?: string) => {
+    if (!u) return false;
+    try {
+      const t = new URL(u, window.location.origin);
+      return t.origin !== window.location.origin;
+    } catch {
+      return false;
+    }
+  };
+  const openInNewTab = (rawUrl: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const a = document.createElement("a");
+    a.href = rawUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.referrerPolicy = "no-referrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
 
-  const getLessonIcon = (lesson: Lesson, isCurrentLesson: boolean) => {
-    if (!isEnrolled && !lesson?.free_preview)
+  const handleLessonClick = (
+    e: React.MouseEvent,
+    lesson: Lesson,
+    moduleLocked: boolean
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const effectiveLocked =
+      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+    if (effectiveLocked) return;
+
+    const canAccess = (isEnrolled || lesson?.free_preview) && !effectiveLocked;
+    if (!canAccess) return;
+
+    const url = (lesson as any)?.url as string | undefined;
+    const file = (lesson as any)?.file as string | undefined;
+
+    // external PDF with file === null → open in new tab AND set current lesson
+    if (
+      (lesson?.content_type || "").toLowerCase() === "material" &&
+      url &&
+      !file
+    ) {
+      const path = getPath(url);
+      if (isPdfPath(path) && isExternalUrl(url)) {
+        openInNewTab(url, e); // open the external file
+        onLessonSelect(String(lesson.id)); // update selected lesson so the player renders fallback
+        return;
+      }
+    }
+
+    // default behavior
+    onLessonSelect(String(lesson?.id));
+  };
+
+  const getLessonIcon = (
+    lesson: Lesson,
+    isCurrentLesson: boolean,
+    moduleLocked: boolean
+  ) => {
+    // ★ respect is_sequential for module → lesson lock
+    const effectiveLocked =
+      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+    if (effectiveLocked || (!isEnrolled && !lesson?.free_preview))
       return <Lock className="w-4 h-4 text-gray-500" />;
 
-    if ((lesson as any).watched) {
+    if ((lesson as any).completed) {
       return (
         <CheckCircle
           className={`w-4 h-4 ${
@@ -251,6 +334,14 @@ const CourseContent: React.FC<CourseContentProps> = ({
             }`}
           />
         );
+      case "assessment":
+        return (
+          <BookCheck
+            className={`w-4 h-4 ${
+              isCurrentLesson ? "text-white" : "text-blue-600"
+            }`}
+          />
+        );
       default:
         return (
           <Play
@@ -264,9 +355,9 @@ const CourseContent: React.FC<CourseContentProps> = ({
 
   const sumModuleHours = useCallback((mod?: Module): number => {
     if (!mod) return 0;
-    return (mod.lessons ?? []).reduce((sum, l) => {
+    return (mod?.lessons ?? []).reduce((sum, l) => {
       const v = (l as any)?.duration_hours;
-      const n = typeof v === "number" ? v : parseFloat(v ?? "0");
+      const n = typeof v === "number" ? v : parseFloat((v as any) ?? "0");
       return sum + (Number.isFinite(n) ? n : 0);
     }, 0);
   }, []);
@@ -290,6 +381,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
         {safeModules.map((module) => {
           const key = String(module?.id);
           const isExpanded = expandedModules.has(key);
+          const moduleLocked = !!module?.is_locked;
+
           return (
             <div
               key={key}
@@ -297,7 +390,10 @@ const CourseContent: React.FC<CourseContentProps> = ({
             >
               <button
                 onClick={() => toggleModule(module?.id)}
-                className="w-full sm:px-5 px-2 py-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 bg-white"
+                className={`w-full sm:px-5 px-2 py-4 flex items-center justify-between transition-all duration-200 ${
+                  isExpanded ? "bg-gray-50" : "bg-white hover:bg-gray-50"
+                }`}
+                title={t("courseContent.toggleModule")}
               >
                 <div className="flex items-center">
                   {isExpanded ? (
@@ -308,17 +404,33 @@ const CourseContent: React.FC<CourseContentProps> = ({
                     <ChevronRight className="w-5 h-5 text-gray-500 mr-3 transition-transform duration-200" />
                   )}
                   <div className="rtl:text-right ltr:text-left">
-                    <h4 className="font-semibold text-gray-900 text-base">
+                    <h4 className="font-semibold text-gray-900 text-base flex items-center gap-2">
                       {module?.title}
+                      {moduleLocked && (
+                        <span className="inline-flex items-center text-[11px] font-semibold text-gray-700 bg-gray-200 rounded-full px-2 py-0.5">
+                          <Lock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                        </span>
+                      )}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {module?.lessons?.length} {t("courseContent.lessons")} •{" "}
-                      {formatDuration(sumModuleHours(module), i18n.language)}
+                      {module?.lessons?.length} {t("courseContent.lessons")}
+                      {sumModuleHours(module) > 0 && (
+                        <>
+                          {" "}
+                          •{" "}
+                          {formatDuration(
+                            sumModuleHours(module),
+                            i18n.language
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
               </button>
 
+              {/* Always render lessons if expanded.
+                  If sequential AND module is locked → all lessons locked. */}
               {isExpanded && (
                 <div className="sm:px-5 px-2 py-4 bg-gray-50">
                   {(module.lessons ?? []).map((lesson) => {
@@ -326,25 +438,42 @@ const CourseContent: React.FC<CourseContentProps> = ({
                       String(lesson?.id) === String(currentLessonId);
                     const isCurrentLesson =
                       isLessonActive && !currentAssessmentId;
-                    const canAccess = isEnrolled || lesson?.free_preview;
+
+                    // ★ apply module lock only when sequential
+                    const effectiveLocked =
+                      (is_sequential && moduleLocked) || !!lesson?.is_locked;
+                    const canAccess =
+                      (isEnrolled || lesson?.free_preview) && !effectiveLocked;
 
                     return (
                       <div key={lesson?.id} className="mb-2">
                         <button
-                          onClick={() => handleLessonClick(lesson)}
+                          onClick={(e) =>
+                            handleLessonClick(e, lesson, moduleLocked)
+                          }
                           disabled={!canAccess}
-                          className={`w-full flex items-start flex-col gap-2 py-3 sm:px-4 px-2 rounded-lg transition-all duration-200 text-left ${
-                            !isCurrentLesson && (lesson as any)?.watched
-                              ? "bg-green-50"
-                              : isCurrentLesson
-                              ? "bg-purple-600 text-white shadow-lg transform scale-[1.02]"
-                              : canAccess
-                              ? "hover:bg-white hover:shadow-md bg-white"
-                              : "opacity-50 cursor-not-allowed bg-gray-100"
-                          }`}
+                          className={`
+                            w-full flex items-center justify-between sm:px-4 px-3 py-3 rounded-xl transition-all duration-200 ltr:text-left rtl:text-right
+                            border
+                            ${
+                              isCurrentLesson
+                                ? "bg-purple-600 border-purple-700 text-white shadow-lg scale-[1.02]"
+                                : lesson.completed
+                                ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                : canAccess
+                                ? "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
+                                : "bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed"
+                            }
+                          `}
                         >
                           <div className="flex items-center justify-start gap-3 w-full">
-                            <div>{getLessonIcon(lesson, isCurrentLesson)}</div>
+                            <div>
+                              {getLessonIcon(
+                                lesson,
+                                isCurrentLesson,
+                                moduleLocked
+                              )}
+                            </div>
                             <span
                               className={`text-sm font-medium block whitespace-break-spaces ${
                                 isCurrentLesson ? "text-white" : "text-gray-700"
@@ -353,41 +482,48 @@ const CourseContent: React.FC<CourseContentProps> = ({
                               {lesson?.title}
                             </span>
                           </div>
-
-                          <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center w-fit whitespace-nowrap">
                             <div
-                              className={`flex items-center text-xs min-w-16 ${
+                              className={`flex items-center text-xs w-full ${
                                 isCurrentLesson
                                   ? "text-purple-200"
                                   : "text-gray-600"
                               }`}
                             >
-                              <Clock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                              {lesson?.duration_hours &&
+                                lesson?.duration_hours > 0 && (
+                                  <Clock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
+                                )}
                               {formatDuration(
                                 (lesson as any)?.duration_hours,
                                 i18n.language
                               )}
                             </div>
-                            {lesson?.free_preview && !isEnrolled && (
-                              <span className="ltr:ml-2 rtl:mr-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
-                                {t("courseContent.free")}
-                              </span>
-                            )}
+                            {lesson?.free_preview &&
+                              !isEnrolled &&
+                              !effectiveLocked && (
+                                <span className="ltr:ml-2 rtl:mr-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">
+                                  {t("courseContent.free")}
+                                </span>
+                              )}
                           </div>
                         </button>
 
-                        {/* attached assessments: highlight when currentAssessmentId matches */}
-                        {typeof onOpenAssessment === "function" && (
-                          <AssessmentList
-                            lesson={lesson}
-                            isEnrolled={isEnrolled}
-                            currentAssessmentId={currentAssessmentId}
-                            onOpen={(a) =>
-                              onOpenAssessment(String(lesson.id), a)
-                            }
-                            t={(k: string) => t(k)}
-                          />
-                        )}
+                        {typeof onOpenAssessment === "function" &&
+                          ["quiz", "exam"].includes(
+                            (lesson?.content_type || "").toLowerCase()
+                          ) && (
+                            <AssessmentList
+                              lesson={lesson}
+                              isEnrolled={isEnrolled}
+                              currentAssessmentId={currentAssessmentId}
+                              onOpen={(a) =>
+                                onOpenAssessment(String(lesson.id), a)
+                              }
+                              t={(k: string) => t(k)}
+                              forceLocked={is_sequential && moduleLocked}
+                            />
+                          )}
                       </div>
                     );
                   })}

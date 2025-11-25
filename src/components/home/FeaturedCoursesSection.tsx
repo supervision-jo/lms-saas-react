@@ -16,7 +16,7 @@ export default function FeaturedCoursesSection() {
     isLoading,
     isFetching,
     isPending,
-  } = useCustomQuery(`${API_ENDPOINTS.courses}?is_best_seller=true`, [
+  } = useCustomQuery(`${API_ENDPOINTS.courses}?featured_courses=true`, [
     "featured-courses",
   ]);
   const courses: Course[] = featuredCoursesData?.data;

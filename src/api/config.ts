@@ -16,6 +16,7 @@ declare module "axios" {
 const PUBLIC_ENDPOINT_PREFIXES: string[] = [
   API_ENDPOINTS.categories,
   API_ENDPOINTS.subCategories,
+  API_ENDPOINTS.categoriesFilters,
   API_ENDPOINTS.oldCourses,
   API_ENDPOINTS.courses,
   API_ENDPOINTS.modules,
@@ -24,11 +25,16 @@ const PUBLIC_ENDPOINT_PREFIXES: string[] = [
   API_ENDPOINTS.courseReviews,
   API_ENDPOINTS.reviewReasons,
   API_ENDPOINTS.courseStudentReview,
-  API_ENDPOINTS.enrolledCourses,
   API_ENDPOINTS.instructor,
   API_ENDPOINTS.login,
   API_ENDPOINTS.signup,
   API_ENDPOINTS.refreshToken,
+  API_ENDPOINTS.verifyEmail,
+  API_ENDPOINTS.verifyAccount,
+  API_ENDPOINTS.resetPassword,
+  API_ENDPOINTS.webView,
+  API_ENDPOINTS.dashboardStats,
+  API_ENDPOINTS.topReviews,
   API_ENDPOINTS.settings,
 ];
 

@@ -8,10 +8,13 @@ interface Acheivement {
 
 interface Certificate {
   id: string;
-  title: string;
-  issueDate: string;
-  instructor: string;
-  thumbnail: string;
+  course: string;
+  student: string;
+  file: string;
+  title_course: string;
+  date_issued: string;
+  instractor: string;
+  image_course: string;
 }
 
 interface User {
@@ -32,7 +35,9 @@ interface StudentStats {
   id: string;
   first_name: string;
   last_name: string;
+  enrolled_courses: number;
   courses_completed: number;
+  new_courses_this_month: number;
   hours_learned: number | string | null;
   certificates_earned: number;
   current_streak: number;

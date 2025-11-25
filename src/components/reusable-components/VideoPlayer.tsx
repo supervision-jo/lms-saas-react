@@ -12,6 +12,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { readUserFromStorage } from "../../services/auth";
 
 /** Forwarded ref in v3 aims to behave like HTMLMediaElement */
 type PlayerHandle = any;
@@ -23,6 +24,7 @@ type Props = {
   onPrev?: () => void;
   onNext?: () => void;
   startMuted?: boolean;
+  watched?: boolean;
   poster?: string;
   privacyEnhanced?: boolean;
 };
@@ -52,23 +54,23 @@ function toNoCookie(url: string): string {
   }
 }
 
-const isYouTube = (u: string) =>
-  /(?:youtu\.be|youtube\.com\/(?:watch|embed|shorts))/i.test(u);
+// const isYouTube = (u: string) =>
+//   /(?:youtu\.be|youtube\.com\/(?:watch|embed|shorts))/i.test(u);
 
-const getYouTubeId = (u: string) => {
-  try {
-    const url = new URL(u);
-    if (url.hostname.includes("youtu.be"))
-      return url.pathname.replace(/^\//, "").split("/")[0] || "";
-    if (url.pathname.startsWith("/embed/"))
-      return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
-    if (url.pathname.startsWith("/shorts/"))
-      return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
-    return url.searchParams.get("v") || "";
-  } catch {
-    return "";
-  }
-};
+// const getYouTubeId = (u: string) => {
+//   try {
+//     const url = new URL(u);
+//     if (url.hostname.includes("youtu.be"))
+//       return url.pathname.replace(/^\//, "").split("/")[0] || "";
+//     if (url.pathname.startsWith("/embed/"))
+//       return url.pathname.split("/embed/")[1]?.split("/")[0] || "";
+//     if (url.pathname.startsWith("/shorts/"))
+//       return url.pathname.split("/shorts/")[1]?.split("/")[0] || "";
+//     return url.searchParams.get("v") || "";
+//   } catch {
+//     return "";
+//   }
+// };
 
 const VideoPlayer: React.FC<Props> = ({
   src,
@@ -77,9 +79,11 @@ const VideoPlayer: React.FC<Props> = ({
   onPrev,
   onNext,
   startMuted = false,
-  poster,
+  // poster,
+  watched,
   privacyEnhanced = false,
 }) => {
+  const currentUser: User = readUserFromStorage();
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<PlayerHandle>(null);
   const lastVolRef = useRef(1);
@@ -91,12 +95,11 @@ const VideoPlayer: React.FC<Props> = ({
     () => (privacyEnhanced ? toNoCookie(src) : src),
     [src, privacyEnhanced]
   );
-
-  const resolvedPoster =
-    poster ||
-    (isYouTube(safeSrc)
-      ? `https://i.ytimg.com/vi/${getYouTubeId(safeSrc)}/hqdefault.jpg`
-      : "/poster-fallback.jpg");
+  // const resolvedPoster =
+  //   poster ||
+  //   (isYouTube(safeSrc)
+  //     ? `https://i.ytimg.com/vi/${getYouTubeId(safeSrc)}/hqdefault.jpg`
+  //     : "/poster-fallback.jpg");
 
   // UI state
   const [playing, setPlaying] = useState(false);
@@ -172,13 +175,13 @@ const VideoPlayer: React.FC<Props> = ({
 
       {/* Renderer (chromeless) */}
       <div className="w-full h-full aspect-video">
-        {!playing && (
+        {/* {!playing && (
           <img
             src={resolvedPoster}
             alt=""
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
-        )}
+        )} */}
         {canPlay ? (
           <ReactPlayer
             ref={playerRef}
@@ -195,7 +198,9 @@ const VideoPlayer: React.FC<Props> = ({
             onError={() => setError(t("video.error"))}
             onEnded={() => {
               setPlaying(false);
-              onComplete?.();
+              if (currentUser?.is_student && !watched) {
+                onComplete?.();
+              }
             }}
             onDurationChange={(d: any) =>
               setDuration(

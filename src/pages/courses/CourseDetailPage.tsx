@@ -32,6 +32,13 @@ import FeatureGate from "../../components/settings/FeatureGate";
 import { useFeatureFlag } from "../../hooks/useSettings";
 import { getCookie } from "../../services/cookies";
 
+interface Assessment {
+  id: string;
+  title: string;
+  description: string;
+  content_type: "assessment";
+}
+
 const CourseDetailPage: React.FC = () => {
   const { t: y } = useTranslation("courseCatalog");
   const { t, i18n } = useTranslation("courseDetails");
@@ -67,24 +74,23 @@ const CourseDetailPage: React.FC = () => {
   }, [isAuthenticated, queryClient]);
 
   const courseData = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}/`,
+    `${API_ENDPOINTS.courses}${courseId}/`,
     ["course", courseId],
     undefined,
     !!courseId
   );
   const course: Course = courseData?.data?.data;
-
   const { data: modulesResp } = useCustomQuery(
     `${API_ENDPOINTS.modules}?course=${courseId}&include_lessons=true`,
     ["modules", courseId],
     undefined,
     !!courseId
   );
+
   const modulesData: Module[] = useMemo(
-    () => modulesResp?.data?.data ?? [],
+    () => modulesResp?.data ?? [],
     [modulesResp]
   );
-
   const { data: catesData } = useCustomQuery(`${API_ENDPOINTS.categories}`, [
     "categories",
   ]);
@@ -103,6 +109,15 @@ const CourseDetailPage: React.FC = () => {
     (s) => s.id === course?.sub_category
   );
   const currentCategory = cates?.find((c) => c.id === currentSubCate?.category);
+
+  const { data: assessmentsData } = useCustomQuery(
+    `${API_ENDPOINTS.assessments}?course_id=${course?.id}`,
+    ["assessments", course?.id],
+    undefined,
+    !!course?.id && currentUser?.is_instructor
+  );
+
+  const assessments: Assessment[] = assessmentsData?.data ?? [];
 
   const { data: instructorData } = useCustomQuery(
     `${API_ENDPOINTS.instructor}${course?.instructor?.id}/course/${course?.id}/`,
@@ -134,7 +149,6 @@ const CourseDetailPage: React.FC = () => {
 
   const isInstructorCourse =
     currentUser?.is_instructor && course?.instructor?.id === currentUser?.id;
-
   const isEnrolled = isInstructorCourse
     ? true
     : enrolledOptimistic || computedEnrolled;
@@ -418,7 +432,7 @@ const CourseDetailPage: React.FC = () => {
                           ? y("card.viewCourse")
                           : y("card.startLearning")}
                       </button>
-                      {!isInstructorCourse && (
+                      {!course?.has_reviewed && (
                         <FeatureGate
                           flag="is_review_enabled"
                           fallback={null}
@@ -454,10 +468,12 @@ const CourseDetailPage: React.FC = () => {
                       <Smartphone className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
                       <span>{t("details.access")}</span>
                     </div>
-                    <div className="flex items-center text-gray-700">
-                      <Trophy className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
-                      <span>{t("details.certificate")}</span>
-                    </div>
+                    {course?.has_certificate && (
+                      <div className="flex items-center text-gray-700">
+                        <Trophy className="w-4 h-4 ltr:mr-3 rtl:ml-3" />
+                        <span>{t("details.certificate")}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -474,12 +490,13 @@ const CourseDetailPage: React.FC = () => {
             {/* Tabs */}
             <div className="mb-8">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
+                <nav className="-mb-px grid grid-cols-2 sm:grid-cols-5 items-center gap-4">
                   {[
                     { id: "overview", label: t("tabs.overview") },
                     { id: "curriculum", label: t("tabs.curriculum") },
                     { id: "instructor", label: t("tabs.instructor") },
                     { id: "reviews", label: t("tabs.reviews") },
+                    { id: "assessments", label: t("tabs.assessments") },
                   ].map((tab) => {
                     if (
                       (!reviewsEnabled ||
@@ -488,6 +505,9 @@ const CourseDetailPage: React.FC = () => {
                         reviewsLoading) &&
                       tab.id === "reviews"
                     )
+                      return null;
+
+                    if (tab.id === "assessments" && currentUser?.is_student)
                       return null;
                     return (
                       <button
@@ -566,6 +586,7 @@ const CourseDetailPage: React.FC = () => {
                   <CourseContent
                     modules={modulesData}
                     onLessonSelect={handleLessonSelect}
+                    is_sequential={course?.is_sequential}
                     isEnrolled={isEnrolled}
                     onOpenAssessment={handleOpenAssessment}
                   />
@@ -661,6 +682,37 @@ const CourseDetailPage: React.FC = () => {
                   </div>
                 </FeatureGate>
               )}
+
+              {activeTab === "assessments" && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    {t("tabs.assessments")}
+                  </h3>
+                  <div className="flex w-full flex-col items-start justify-start gap-4">
+                    {assessments.map((assessment) => {
+                      return (
+                        <button
+                          key={assessment.id}
+                          type="button"
+                          onClick={() => {
+                            navigate(
+                              `/catalog/${course.id}/assessments/${assessment.id}`
+                            );
+                          }}
+                          className="flex items-start flex-col gap-4 bg-slate-50 hover:bg-slate-100 duration-300 shadow-md rounded-lg w-full p-4 ltr:text-left rtl:text-right"
+                        >
+                          <p>{assessment.title}</p>
+                          {assessment.description && (
+                            <p className="text-sm text-gray-500">
+                              {assessment.description}
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -670,6 +722,7 @@ const CourseDetailPage: React.FC = () => {
               modules={modulesData}
               onLessonSelect={handleLessonSelect}
               isEnrolled={isEnrolled}
+              is_sequential={course?.is_sequential}
               onOpenAssessment={handleOpenAssessment}
             />
           </div>

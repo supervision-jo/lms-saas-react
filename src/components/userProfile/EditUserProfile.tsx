@@ -161,16 +161,16 @@ export default function EditUserProfile({ setIsEditing }: Props) {
           <input
             type="tel"
             {...register("phone", {
-              pattern: {
-                value: /^07\d{8}$/,
-                message: t("editForm.phoneError.pattern"),
-              },
+              // pattern: {
+              //   value: /^07\d{8}$/,
+              //   message: t("editForm.phoneError.pattern"),
+              // },
               minLength: {
-                value: 10,
+                value: 6,
                 message: t("editForm.phoneError.length"),
               },
               maxLength: {
-                value: 10,
+                value: 15,
                 message: t("editForm.phoneError.length"),
               },
             })}
@@ -181,7 +181,7 @@ export default function EditUserProfile({ setIsEditing }: Props) {
               );
             }}
             className={inputClass(!!errors.phone)}
-            placeholder="07XXXXXXXX"
+            placeholder="XXXXXXXXXX"
           />
           {errors.phone && (
             <span className="text-sm text-red-500 mt-1 block">

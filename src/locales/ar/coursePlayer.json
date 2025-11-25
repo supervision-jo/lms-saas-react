@@ -11,6 +11,7 @@
   "QA": "سؤال وجواب",
   "groups": "المجموعات",
   "examSection": {
+    "submitAssessment": "تم الإرسال",
     "submitExam": {
       "success": "تم الإرسال (المحاولة {{nextAttempt}})",
       "error": "لديك فقط {{MAX_ATTEMPTS}} محاولة."
@@ -20,7 +21,8 @@
     "passingScore": "درجة الاجتياز",
     "attempt": "محاولة",
     "of": "من،",
-    "ansAll": "أجب عن جميع الأسئلة للإرسال. المحاولات المتبقية",
+    "ansAll": "أجب عن جميع الأسئلة للإرسال.",
+    "attemptsLeft": " المحاولات المتبقية",
     "noAttempts": "لا توجد محاولات أخرى متبقية.",
     "submitting": "جارٍ الإرسال...",
     "submit": "إرسال",

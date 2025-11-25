@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Eye } from "lucide-react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useCustomQuery } from "../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../utils/constants";
 import CourseInformationForm from "../../components/course/course-builder/CourseInformationForm";
@@ -12,7 +12,7 @@ import GroupManagement from "../../components/course/course-builder/GroupManagem
 import UserManagement from "../../components/course/course-builder/UserManagement";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { get, patch } from "../../api";
+import { patch } from "../../api";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import IssuesModal from "./IssuesModal";
@@ -23,11 +23,10 @@ const CourseBuilderPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("course-info");
   const { courseId } = useParams();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { t } = useTranslation("courseBuilder");
 
   const { data: courseData } = useCustomQuery(
-    `${API_ENDPOINTS.oldCourses}${courseId}`,
+    `${API_ENDPOINTS.courseInstructor}${courseId}`,
     ["course", courseId],
     undefined,
     !!courseId
@@ -41,222 +40,226 @@ const CourseBuilderPage: React.FC = () => {
     setPublished(!!course?.is_published);
   }, [course?.is_published]);
 
+  // sequential flag
+  const [sequential, setSequential] = useState<boolean>(
+    !!course?.is_sequential
+  );
+  useEffect(() => {
+    setSequential(!!course?.is_sequential);
+  }, [course?.is_sequential]);
+
   // validation modal
-  const [issues, setIssues] = useState<string[]>([]);
+  const [issues] = useState<string[]>([]);
   const [showIssues, setShowIssues] = useState(false);
 
   // helpers
-  async function fetchModulesForCourse(cid: string): Promise<Module[]> {
-    const resp = await get(
-      `${API_ENDPOINTS.modules}?course=${cid}&include_lessons=true`
-    );
-    return resp?.data?.data ?? resp?.data ?? resp ?? [];
-  }
+  // async function fetchModulesForCourse(cid: string): Promise<Module[]> {
+  //   const resp = await get(
+  //     `${API_ENDPOINTS.modules}?course=${cid}&include_lessons=true`
+  //   );
+  //   return resp?.data?.data ?? resp?.data ?? resp ?? [];
+  // }
 
   // === NEW: fetch single exam/quiz by lesson id ===
-  async function fetchAssessmentForLesson(
-    lessonId: string
-  ): Promise<any | null> {
-    try {
-      const resp = await get(`${API_ENDPOINTS.exams}/${lessonId}`);
-      return resp ?? null;
-    } catch {
-      return null;
-    }
-  }
+  // async function fetchAssessmentForLesson(
+  //   lessonId: string
+  // ): Promise<any | null> {
+  //   try {
+  //     const resp = await get(`${API_ENDPOINTS.exams}/${lessonId}`);
+  //     return resp ?? null;
+  //   } catch {
+  //     return null;
+  //   }
+  // }
 
   // validation: course + modules + (standalone) assessment lessons
-  async function validateCourseReady(cid: string): Promise<string[]> {
-    const problems: string[] = [];
+  // async function validateCourseReady(cid: string): Promise<string[]> {
+  //   const problems: string[] = [];
 
-    // 1) Course fields
-    const c = course;
-    const titleOK = !!c?.title?.trim();
-    const descOK = !!c?.description?.trim();
-    const levelOK = !!c?.level?.trim();
-    const isPaid =
-      typeof c?.is_paid === "boolean" ? c.is_paid : (c?.price ?? 0) > 0;
-    const subcatOK =
-      !!(c as any)?.sub_category || !!(c as any)?.sub_category_id;
+  //   // 1) Course fields
+  //   const c = course;
+  //   const titleOK = !!c?.title?.trim();
+  //   const descOK = !!c?.description?.trim();
+  //   const levelOK = !!c?.level?.trim();
+  //   const isPaid =
+  //     typeof c?.is_paid === "boolean" ? c.is_paid : (c?.price ?? 0) > 0;
+  //   const subcatOK =
+  //     !!(c as any)?.sub_category || !!(c as any)?.sub_category_id;
 
-    if (!titleOK) problems.push(t("validateCourseReady.titleOK"));
-    if (!descOK) problems.push(t("validateCourseReady.descOK"));
-    if (!levelOK) problems.push(t("validateCourseReady.levelOK"));
-    if (!subcatOK) problems.push(t("validateCourseReady.subcatOK"));
-    if (typeof isPaid !== "boolean") {
-      problems.push(t("validateCourseReady.isPaidOK"));
-    }
+  //   if (!titleOK) problems.push(t("validateCourseReady.titleOK"));
+  //   if (!descOK) problems.push(t("validateCourseReady.descOK"));
+  //   if (!levelOK) problems.push(t("validateCourseReady.levelOK"));
+  //   if (!subcatOK) problems.push(t("validateCourseReady.subcatOK"));
+  //   if (typeof isPaid !== "boolean") {
+  //     problems.push(t("validateCourseReady.isPaidOK"));
+  //   }
 
-    // 2) Modules
-    const modules = await fetchModulesForCourse(cid);
-    if (!Array.isArray(modules) || modules.length === 0) {
-      problems.push(t("validateCourseReady.modulesOK"));
-    } else {
-      modules.forEach((m, idx) => {
-        if (!m?.title?.trim())
-          problems.push(
-            t("validateCourseReady.moduleTitleOK", { idx: idx + 1 })
-          );
-        if (
-          (m as any)?.description != null &&
-          !String((m as any).description).trim()
-        ) {
-          problems.push(
-            t("validateCourseReady.moduleDescrOK", { idx: idx + 1 })
-          );
-        }
-        const lessons = (m?.lessons ?? []) as any[];
-        if (!lessons.length)
-          problems.push(
-            t("validateCourseReady.moduleLessonsOK", { idx: idx + 1 })
-          );
-      });
-    }
+  //   // 2) Modules
+  //   const modules = await fetchModulesForCourse(cid);
+  //   if (!Array.isArray(modules) || modules.length === 0) {
+  //     problems.push(t("validateCourseReady.modulesOK"));
+  //   } else {
+  //     modules.forEach((m, idx) => {
+  //       if (!m?.title?.trim())
+  //         problems.push(
+  //           t("validateCourseReady.moduleTitleOK", { idx: idx + 1 })
+  //         );
+  //       if (
+  //         (m as any)?.description != null &&
+  //         !String((m as any).description).trim()
+  //       ) {
+  //         problems.push(
+  //           t("validateCourseReady.moduleDescrOK", { idx: idx + 1 })
+  //         );
+  //       }
+  //       const lessons = (m?.lessons ?? []) as any[];
+  //       if (!lessons.length)
+  //         problems.push(
+  //           t("validateCourseReady.moduleLessonsOK", { idx: idx + 1 })
+  //         );
+  //     });
+  //   }
 
-    // 3) Assessments: each quiz/exam is its own lesson now
-    const assessmentLessonIds: string[] = [];
-    modules.forEach((m: any) =>
-      (m.lessons || []).forEach((l: any) => {
-        if (l?.content_type === "quiz" || l?.content_type === "exam") {
-          assessmentLessonIds.push(l.id);
-        }
-      })
-    );
+  //   // 3) Assessments: each quiz/exam is its own lesson now
+  //   const assessmentLessonIds: string[] = [];
+  //   modules.forEach((m: any) =>
+  //     (m.lessons || []).forEach((l: any) => {
+  //       if (l?.content_type === "quiz" || l?.content_type === "exam") {
+  //         assessmentLessonIds.push(l.id);
+  //       }
+  //     })
+  //   );
 
-    const settled = await Promise.allSettled(
-      Array.from(new Set(assessmentLessonIds)).map((id) =>
-        fetchAssessmentForLesson(id)
-      )
-    );
+  //   const settled = await Promise.allSettled(
+  //     Array.from(new Set(assessmentLessonIds)).map((id) =>
+  //       fetchAssessmentForLesson(id)
+  //     )
+  //   );
 
-    const assessments: any[] = [];
-    settled.forEach((res) => {
-      if (res.status === "fulfilled" && res.value) assessments.push(res.value);
-    });
+  //   const assessments: any[] = [];
+  //   settled.forEach((res) => {
+  //     if (res.status === "fulfilled" && res.value) assessments.push(res.value);
+  //   });
 
-    assessments.forEach((ex, idx) => {
-      const label =
-        ex?.type === "exam"
-          ? t("labels.exam")
-          : ex?.type === "quiz"
-          ? t("labels.quiz")
-          : t("labels.assessment");
-      const prefix = `${label} "${ex?.title || `#${idx + 1}`}"`;
-      const titleOK = !!ex?.title?.trim();
-      const descOK = !!ex?.description?.trim();
-      const tlimOK = Number.isFinite(Number(ex?.time_limit));
-      const passOK =
-        Number.isFinite(Number(ex?.passing_score)) &&
-        Number(ex?.passing_score) >= 0 &&
-        Number(ex?.passing_score) <= 100;
-      const questions = Array.isArray(ex?.questions) ? ex.questions : [];
+  //   assessments.forEach((ex, idx) => {
+  //     const label =
+  //       ex?.type === "exam"
+  //         ? t("labels.exam")
+  //         : ex?.type === "quiz"
+  //         ? t("labels.quiz")
+  //         : t("labels.assessment");
+  //     const prefix = `${label} "${ex?.title || `#${idx + 1}`}"`;
+  //     const titleOK = !!ex?.title?.trim();
+  //     const descOK = !!ex?.description?.trim();
+  //     const tlimOK = Number.isFinite(Number(ex?.time_limit));
+  //     const passOK =
+  //       Number.isFinite(Number(ex?.passing_score)) &&
+  //       Number(ex?.passing_score) >= 0 &&
+  //       Number(ex?.passing_score) <= 100;
+  //     const questions = Array.isArray(ex?.questions) ? ex.questions : [];
 
-      if (!titleOK) problems.push(t("missingValues.title", { prefix }));
-      if (!descOK) problems.push(t("missingValues.descr", { prefix }));
-      if (!tlimOK) problems.push(t("missingValues.limit", { prefix }));
-      if (!passOK) problems.push(t("missingValues.passingScore", { prefix }));
-      if (!questions.length) {
-        problems.push(t("missingValues.questions", { prefix }));
-      } else {
-        questions.forEach((q: any, qidx: number) => {
-          if (!q?.text?.trim()) {
-            problems.push(
-              `${prefix}: ${t("missingValues.questionTxt", { qidx: qidx + 1 })}`
-            );
-          }
-          const choices = Array.isArray(q?.choices) ? q.choices : [];
-          if (!choices.length) {
-            problems.push(
-              `${prefix}: ${t("missingValues.choices", { qidx: qidx + 1 })}`
-            );
-          } else {
-            let hasCorrect = false;
-            choices.forEach((ch: any, cidx: number) => {
-              if (!ch?.text?.trim()) {
-                problems.push(
-                  `${prefix}: ${t("question")} #${qidx + 1} ${t(
-                    "missingValues.choiceTxt",
-                    { cidx: cidx + 1 }
-                  )}`
-                );
-              }
-              if (ch?.is_correct) hasCorrect = true;
-            });
-            if (!hasCorrect) {
-              problems.push(
-                `${prefix}: ${t("missingValues.hasCorrect", {
-                  qidx: qidx + 1,
-                })}`
-              );
-            }
-          }
-        });
-      }
-    });
+  //     if (!titleOK) problems.push(t("missingValues.title", { prefix }));
+  //     if (!descOK) problems.push(t("missingValues.descr", { prefix }));
+  //     if (!tlimOK) problems.push(t("missingValues.limit", { prefix }));
+  //     if (!passOK) problems.push(t("missingValues.passingScore", { prefix }));
+  //     if (!questions.length) {
+  //       problems.push(t("missingValues.questions", { prefix }));
+  //     } else {
+  //       questions.forEach((q: any, qidx: number) => {
+  //         if (!q?.text?.trim()) {
+  //           problems.push(
+  //             `${prefix}: ${t("missingValues.questionTxt", { qidx: qidx + 1 })}`
+  //           );
+  //         }
+  //         const choices = Array.isArray(q?.choices) ? q.choices : [];
+  //         if (!choices.length) {
+  //           problems.push(
+  //             `${prefix}: ${t("missingValues.choices", { qidx: qidx + 1 })}`
+  //           );
+  //         } else {
+  //           let hasCorrect = false;
+  //           choices.forEach((ch: any, cidx: number) => {
+  //             if (!ch?.text?.trim()) {
+  //               problems.push(
+  //                 `${prefix}: ${t("question")} #${qidx + 1} ${t(
+  //                   "missingValues.choiceTxt",
+  //                   { cidx: cidx + 1 }
+  //                 )}`
+  //               );
+  //             }
+  //             if (ch?.is_correct) hasCorrect = true;
+  //           });
+  //           if (!hasCorrect) {
+  //             problems.push(
+  //               `${prefix}: ${t("missingValues.hasCorrect", {
+  //                 qidx: qidx + 1,
+  //               })}`
+  //             );
+  //           }
+  //         }
+  //       });
+  //     }
+  //   });
 
-    return problems;
-  }
+  //   return problems;
+  // }
 
-  // guarded publish
-  const tryPublish = async () => {
+  // publish/unpublish course
+  const togglePublish = async (shouldPublish: boolean) => {
     if (!courseId) return;
-    const problems = await validateCourseReady(courseId);
-    if (problems.length) {
-      setIssues(problems);
-      setShowIssues(true);
-      return;
-    }
+
     try {
       const fd = new FormData();
-      fd.append("is_published", "true");
-      await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
-      await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      setPublished(true);
-      toast.success(t("tryPublish.success"));
-      navigate(`/catalog/${course?.id}`);
+      fd.append("is_published", shouldPublish ? "true" : "false");
+      const res = await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
+
+      if (res.status === true) {
+        queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        setPublished(shouldPublish);
+        toast.success(
+          shouldPublish ? t("tryPublish.success") : t("tryUnpublish.success")
+        );
+      }
     } catch (e: any) {
       toast.error(e?.response?.data?.error || t("tryPublish.error"));
     }
   };
 
-  const handleSettingsChange = async (next: boolean) => {
+  // sequential/unsequential course
+  const toggleSequential = async (shouldSequential: boolean) => {
     if (!courseId) return;
-
-    if (!next) {
-      try {
-        const fd = new FormData();
-        fd.append("is_published", "false");
-        await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
-        await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-        setPublished(false);
-        toast.success(t("handleSettingsChange.success"));
-      } catch (e: any) {
-        toast.error(
-          e?.response?.data?.error || t("handleSettingsChange.error")
-        );
-      }
-      return;
-    }
-
-    const problems = await validateCourseReady(courseId);
-    if (problems.length) {
-      setIssues(problems);
-      setShowIssues(true);
-      setPublished(false);
-      return;
-    }
 
     try {
       const fd = new FormData();
-      fd.append("is_published", "true");
+      fd.append("is_sequential", shouldSequential ? "true" : "false");
       await patch(`${API_ENDPOINTS.updateCourse}${courseId}/`, fd);
       await queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      setPublished(true);
-      toast.success(t("tryPublish.success"));
+      setPublished(shouldSequential);
+      toast.success(
+        shouldSequential ? t("courseInfo.success") : t("courseInfo.error")
+      );
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("tryPublish.error"));
-      setPublished(false);
+      toast.error(e?.response?.data?.error || t("courseInfo.error"));
     }
+  };
+
+  // toggle publish/unpublish
+  const tryPublish = async () => {
+    console.log("🔍 Course ID:", courseId);
+    console.log("🔍 Current published state:", published);
+    console.log("🔍 Will toggle to:", !published);
+    console.log("🔍 Endpoint:", `${API_ENDPOINTS.updateCourse}${courseId}/`);
+    // Toggle: if published -> unpublish, if not published -> publish
+    await togglePublish(!published);
+  };
+
+  const handleIsPublishedChange = async (next: boolean) => {
+    await togglePublish(next);
+  };
+
+  const handleIsSequentialChange = async (next: boolean) => {
+    await toggleSequential(next);
   };
 
   const { enabled: chatGroupEnabled, isLoading: chatGroupLoading } =
@@ -305,9 +308,14 @@ const CourseBuilderPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={tryPublish}
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className={`inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors ${
+                published
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-gray-600 hover:bg-gray-700"
+              }`}
             >
-              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" /> {t("publish")}
+              <Eye className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {published ? t("unpublish") : t("publish")}
             </button>
           </div>
         </div>
@@ -362,7 +370,9 @@ const CourseBuilderPage: React.FC = () => {
             {activeTab === "settings" && (
               <SettingsForm
                 isPublished={published}
-                onChange={handleSettingsChange}
+                onIsPublishedChange={handleIsPublishedChange}
+                isSequential={sequential}
+                onIsSequentialChange={handleIsSequentialChange}
               />
             )}
           </div>

@@ -22,14 +22,6 @@
     "updateProfile": "Update Profile"
   },
 
-  "thisMonth": {
-    "title": "This Month",
-    "newCourses": "New Courses",
-    "hoursLearned": "Hours Learned",
-    "certificates": "Certificates",
-    "streakDays": "Streak Days"
-  },
-
   "achievementsSection": {
     "title": "Achievements",
     "items": {
@@ -61,9 +53,10 @@
   },
   "headerStats": {
     "coursesEnrolled": "Courses Enrolled",
-    "hoursLearned": "Hours Learned",
+    "completedCourses": "Completed Courses",
     "certificates": "Certificates",
-    "streakDays": "Streak Days"
+    "newCourses": "New Courses",
+    "thisMonth": "This Month"
   },
   "enrolledCourses": {
     "continue": "Continue",

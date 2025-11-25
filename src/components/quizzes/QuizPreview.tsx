@@ -7,6 +7,7 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type RawAnswer = {
   id?: string;
@@ -42,7 +43,7 @@ type RawQuiz = {
   totalPoints?: number;
   totalTimeLimit?: number; // seconds
   // NEW back-end fields
-  type?: "quiz" | "exam";
+  type?: "quiz" | "exam" | "assessment";
   time_limit?: number; // minutes
   passing_score?: number; // 0-100
 };
@@ -75,12 +76,14 @@ type SQuiz = {
   description: string;
   totalTimeLimit: number; // seconds
   totalPoints: number;
-  type: "quiz" | "exam";
+  type: "quiz" | "exam" | "assessment";
   passingScore: number; // 0-100
   questions: SQuestion[];
 };
 
 const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
+  const { t } = useTranslation("courseBuilder");
+
   const safeQuiz: SQuiz = useMemo(() => {
     const qRaw = Array.isArray(quiz?.questions) ? quiz.questions! : [];
 
@@ -119,7 +122,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
           q.question ??
           q.text ??
           q.title ??
-          `Question ${qi + 1}`
+          t("quizPreview.misc.untitledQuestion", { index: qi + 1 })
         ).toString(),
         explanation: (q.explanation ?? "").toString(),
         points: Number(points) || 1,
@@ -136,8 +139,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
             0
           );
 
-    // Prefer new field time_limit (mins) → convert to seconds.
-    // Fallback to legacy totalTimeLimit (already seconds).
     const totalTimeLimit =
       typeof quiz.time_limit === "number"
         ? Math.max(0, Math.floor(quiz.time_limit) * 60)
@@ -148,12 +149,22 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
         ? Math.min(100, Math.max(0, Math.floor(quiz.passing_score)))
         : 0;
 
-    const type: "quiz" | "exam" =
-      quiz.type === "exam" ? "exam" : ("quiz" as const);
+    const type: "quiz" | "exam" | "assessment" =
+      quiz.type === "exam"
+        ? "exam"
+        : quiz.type === "quiz"
+        ? "quiz"
+        : "assessment";
 
     return {
       id: quiz.id ?? "",
-      title: quiz.title ?? (type === "exam" ? "Exam" : "Quiz"),
+      title:
+        quiz.title ??
+        (type === "exam"
+          ? t("quizPreview.type.exam")
+          : type === "quiz"
+          ? t("quizPreview.type.quiz")
+          : t("quizPreview.type.assessment")),
       description: quiz.description ?? "",
       totalTimeLimit,
       totalPoints,
@@ -161,7 +172,9 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
       passingScore,
       questions,
     };
-  }, [quiz]);
+  }, [quiz, t]);
+
+  const isAssessment = safeQuiz.type === "assessment";
 
   const hasQuestions = safeQuiz.questions.length > 0;
 
@@ -170,29 +183,25 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
   const [timeLeft, setTimeLeft] = useState(safeQuiz.totalTimeLimit || 0);
   const [isTimeUp, setIsTimeUp] = useState(false);
 
-  // Multiple-choice answers: Set of option ids per question id
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<string, Set<string>>
   >({});
-  // Short-answer: free text per question id
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
 
   const currentQuestion: SQuestion | undefined = hasQuestions
     ? safeQuiz.questions[currentQuestionIndex]
     : undefined;
 
-  // --- Timer
   useEffect(() => {
     if (safeQuiz.totalTimeLimit && timeLeft > 0 && !showResults) {
-      const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
-      return () => clearTimeout(t);
+      const tmr = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+      return () => clearTimeout(tmr);
     } else if (safeQuiz.totalTimeLimit && timeLeft === 0 && !showResults) {
       setIsTimeUp(true);
       setShowResults(true);
     }
   }, [timeLeft, showResults, safeQuiz.totalTimeLimit]);
 
-  // --- Actions
   const goToQuestion = (i: number) => {
     if (!hasQuestions) return;
     if (i >= 0 && i < safeQuiz.questions.length) setCurrentQuestionIndex(i);
@@ -225,7 +234,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     setCurrentQuestionIndex(0);
   };
 
-  // --- Results
   const { totalScore, maxScore, questionResults } = useMemo(() => {
     if (!showResults)
       return {
@@ -248,7 +256,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
         return;
       }
 
-      // mcq (supports multi-correct)
       const user = selectedAnswers[q.id] ?? new Set<string>();
       const correctOpts = q.options.filter((o) => o.isCorrect).map((o) => o.id);
       const sameSize = user.size === correctOpts.length;
@@ -266,7 +273,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     showResults,
   ]);
 
-  // --- UI helpers
   const formatTime = (s: number) =>
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -282,7 +288,6 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
     return answered ? "answered" : "unanswered";
   };
 
-  // --- Render
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -293,22 +298,39 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
               <h2 className="text-2xl font-bold text-gray-900">
                 {safeQuiz.title}{" "}
                 <span className="text-sm font-semibold text-gray-500">
-                  ({safeQuiz.type === "exam" ? "Exam" : "Quiz"})
+                  (
+                  {safeQuiz.type === "exam"
+                    ? t("quizPreview.type.exam")
+                    : safeQuiz.type === "quiz"
+                    ? t("quizPreview.type.quiz")
+                    : t("quizPreview.type.assessment")}
+                  )
                 </span>
               </h2>
               {!!safeQuiz.description && (
                 <p className="text-gray-600 mt-1">{safeQuiz.description}</p>
               )}
               <p className="text-sm text-gray-500 mt-2">
-                {safeQuiz.questions.length} question
-                {safeQuiz.questions.length !== 1 ? "s" : ""} •{" "}
-                {safeQuiz.totalPoints} total point
-                {safeQuiz.totalPoints !== 1 ? "s" : ""} • Passing{" "}
-                {safeQuiz.passingScore}%
+                {t("quizPreview.meta", {
+                  count: safeQuiz.questions.length,
+                  qPlural:
+                    safeQuiz.questions.length !== 1
+                      ? t("quizPreview.misc.sPlural")
+                      : "",
+                })}
+                {!isAssessment &&
+                  `${t("quizPreview.metaPoints", {
+                    points: safeQuiz.totalPoints,
+                    pPlural:
+                      safeQuiz.totalPoints !== 1
+                        ? t("quizPreview.misc.sPlural")
+                        : "",
+                    passing: safeQuiz.passingScore,
+                  })}`}
               </p>
             </div>
 
-            {!!safeQuiz.totalTimeLimit && (
+            {!!safeQuiz.totalTimeLimit && !isAssessment && (
               <div
                 className={`flex items-center px-4 py-2 rounded-lg ${
                   timeLeft <= 60 && !showResults
@@ -316,9 +338,11 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                     : "bg-blue-100 text-blue-700"
                 }`}
               >
-                <Clock className="w-4 h-4 mr-2" />
+                <Clock className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
                 <span className="font-mono font-semibold">
-                  {showResults ? "Completed" : formatTime(timeLeft)}
+                  {showResults
+                    ? t("quizPreview.completed")
+                    : formatTime(timeLeft)}
                 </span>
               </div>
             )}
@@ -327,76 +351,93 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
 
         <div className="flex">
           {/* Sidebar */}
-          <div className="w-64 bg-gray-50 p-4 border-r border-gray-200">
-            <h3 className="font-semibold text-gray-900 mb-4">Questions</h3>
-            <div className="space-y-2">
-              {safeQuiz.questions.map((q, index) => {
-                const status = getQuestionStatus(index);
-                let statusClass = "bg-white border-gray-200 text-gray-700";
-                if (status === "current")
-                  statusClass =
-                    "bg-purple-100 border-purple-300 text-purple-700";
-                else if (status === "answered")
-                  statusClass = "bg-blue-100 border-blue-300 text-blue-700";
-                else if (status === "correct")
-                  statusClass = "bg-green-100 border-green-300 text-green-700";
-                else if (status === "incorrect")
-                  statusClass = "bg-red-100 border-red-300 text-red-700";
+          {!isAssessment && (
+            <div className="w-64 bg-gray-50 p-4 border-r border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {t("quizPreview.questions")}
+              </h3>
+              <div className="space-y-2">
+                {safeQuiz.questions.map((q, index) => {
+                  const status = getQuestionStatus(index);
+                  let statusClass = "bg-white border-gray-200 text-gray-700";
+                  if (status === "current")
+                    statusClass =
+                      "bg-purple-100 border-purple-300 text-purple-700";
+                  else if (status === "answered")
+                    statusClass = "bg-blue-100 border-blue-300 text-blue-700";
+                  else if (status === "correct")
+                    statusClass =
+                      "bg-green-100 border-green-300 text-green-700";
+                  else if (status === "incorrect")
+                    statusClass = "bg-red-100 border-red-300 text-red-700";
 
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => !showResults && goToQuestion(index)}
-                    disabled={showResults}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${statusClass} ${
-                      showResults ? "cursor-default" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Q{index + 1}</span>
-                      <div className="flex items-center">
-                        {status === "correct" && (
-                          <CheckCircle className="w-4 h-4" />
-                        )}
-                        {status === "incorrect" && (
-                          <XCircle className="w-4 h-4" />
-                        )}
-                        {status === "answered" && !showResults && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                        )}
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => !showResults && goToQuestion(index)}
+                      disabled={showResults}
+                      className={`w-full ltr:text-left rtl:text-right p-3 rounded-lg border-2 transition-colors ${statusClass} ${
+                        showResults ? "cursor-default" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {t("quizPreview.qShort")} {index + 1}
+                        </span>
+                        <div className="flex items-center">
+                          {status === "correct" && (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          {status === "incorrect" && (
+                            <XCircle className="w-4 h-4" />
+                          )}
+                          {status === "answered" && !showResults && (
+                            <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-xs mt-1 opacity-75">
-                      {q?.points} point{q?.points !== 1 ? "s" : ""}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {showResults && (
-              <div className="mt-6 p-4 bg-white rounded-lg border">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Final Score
-                </h4>
-                <div className="text-2xl font-bold text-purple-600">
-                  {totalScore}/{maxScore}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {maxScore ? Math.round((totalScore / maxScore) * 100) : 0}%
-                </div>
+                      <div className="text-xs mt-1 opacity-75">
+                        {q?.points} {t("quizPreview.point")}
+                        {q?.points !== 1 ? t("quizPreview.misc.sPlural") : ""}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </div>
+
+              {showResults && (
+                <div className="mt-6 p-4 bg-white rounded-lg border">
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {t("quizPreview.finalScore")}
+                  </h4>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {totalScore}/{maxScore}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {maxScore ? Math.round((totalScore / maxScore) * 100) : 0}%
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Main */}
           <div className="flex-1 p-6">
             {!showResults ? (
               !hasQuestions ? (
                 <div className="p-8 text-center text-gray-600">
-                  <p className="mb-2 font-semibold">No questions yet</p>
+                  <p className="mb-2 font-semibold">
+                    {t("quizPreview.noQuestionsYet")}
+                  </p>
                   <p>
-                    Add at least one question to preview this {safeQuiz.type}.
+                    {t("quizPreview.addOneToPreview", {
+                      type:
+                        safeQuiz.type === "exam"
+                          ? t("quizPreview.type.exam")
+                          : safeQuiz.type === "quiz"
+                          ? t("quizPreview.type.quiz")
+                          : t("quizPreview.type.assessment"),
+                    })}
                   </p>
                 </div>
               ) : (
@@ -405,26 +446,32 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        Question {currentQuestionIndex + 1} of{" "}
-                        {safeQuiz.questions.length}
+                        {t("quizPreview.questionOf", {
+                          current: currentQuestionIndex + 1,
+                          total: safeQuiz.questions.length,
+                        })}
                       </h3>
-                      <span className="text-sm text-gray-500">
-                        {currentQuestion!.points} point
-                        {currentQuestion!.points !== 1 ? "s" : ""}
-                      </span>
+                      {!isAssessment && (
+                        <span className="text-sm text-gray-500">
+                          {currentQuestion!.points} {t("quizPreview.point")}
+                          {currentQuestion!.points !== 1
+                            ? t("quizPreview.misc.sPlural")
+                            : ""}
+                        </span>
+                      )}
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-6 mb-6">
                       <p className="text-lg text-gray-900">
-                        {currentQuestion!.question || "Untitled question"}
+                        {currentQuestion!.question ||
+                          t("quizPreview.misc.untitled")}
                       </p>
                     </div>
 
-                    {isTimeUp && (
+                    {isTimeUp && !isAssessment && (
                       <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-red-700 font-medium">
-                          Time's up! Your answers have been submitted
-                          automatically.
+                          {t("quizPreview.timesUp")}
                         </p>
                       </div>
                     )}
@@ -439,12 +486,14 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                         onChange={(e) =>
                           handleShortAnswer(currentQuestion!.id, e.target.value)
                         }
-                        placeholder="Type your answer…"
+                        placeholder={t(
+                          "quizPreview.placeholder.typeYourAnswer"
+                        )}
                         className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-400"
                       />
                       {!!currentQuestion!.answer && (
                         <p className="text-xs text-gray-500 mt-2">
-                          Correct answer is configured (hidden during attempt).
+                          {t("quizPreview.correctHidden")}
                         </p>
                       )}
                     </div>
@@ -465,8 +514,8 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                             }`}
                           >
                             <div className="flex items-center">
-                              <div className="flex items-center mr-4">
-                                <span className="text-sm font-medium text-gray-500 mr-3">
+                              <div className="flex items-center ltr:mr-4 rtl:ml-4">
+                                <span className="text-sm font-medium text-gray-500 ltr:mr-3 rtl:ml-3">
                                   {String.fromCharCode(65 + idx)}.
                                 </span>
                                 <div
@@ -482,7 +531,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                                 </div>
                               </div>
                               <span className="text-gray-900 flex-1">
-                                {opt.text || "(empty option)"}
+                                {opt.text || t("quizPreview.misc.emptyOption")}
                               </span>
                             </div>
                           </div>
@@ -491,7 +540,7 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                     </div>
                   ) : (
                     <div className="mb-8 p-4 rounded-lg border-2 border-yellow-300 bg-yellow-50 text-yellow-800">
-                      No options configured for this question.
+                      {t("quizPreview.noOptions")}
                     </div>
                   )}
 
@@ -506,27 +555,34 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
                           : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Previous
+                      <ArrowLeft className="w-4 h-4 ltr:mr-2 rtl:ml-2 rtl:rotate-180" />
+                      {t("quizPreview.prev")}
                     </button>
 
-                    <div className="flex space-x-3">
+                    <div className="flex gap-3">
                       {currentQuestionIndex ===
                       safeQuiz.questions.length - 1 ? (
                         <button
                           onClick={handleSubmit}
                           className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                         >
-                          Submit {safeQuiz.type === "exam" ? "Exam" : "Quiz"}
-                          <ArrowRight className="w-4 h-4 ml-2" />
+                          {t("quizPreview.submitType", {
+                            type:
+                              safeQuiz.type === "exam"
+                                ? t("quizPreview.type.exam")
+                                : safeQuiz.type === "quiz"
+                                ? t("quizPreview.type.quiz")
+                                : t("quizPreview.type.assessment"),
+                          })}
+                          <ArrowRight className="w-4 h-4 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                         </button>
                       ) : (
                         <button
                           onClick={() => goToQuestion(currentQuestionIndex + 1)}
                           className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                         >
-                          Next Question
-                          <ArrowRight className="w-4 h-4 ml-2" />
+                          {t("quizPreview.nextQuestion")}
+                          <ArrowRight className="w-4 h-4 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                         </button>
                       )}
                     </div>
@@ -536,131 +592,174 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
             ) : (
               // Results
               <div>
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                    {safeQuiz.type === "exam" ? "Exam" : "Quiz"} Complete!
-                  </h3>
-                  <div
-                    className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold ${
-                      totalScore === maxScore
-                        ? "bg-green-100 text-green-800"
-                        : totalScore >= maxScore * 0.7
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    Final Score: {totalScore}/{maxScore} (
-                    {maxScore ? Math.round((totalScore / maxScore) * 100) : 0}%)
+                {!isAssessment ? (
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                      {t("quizPreview.completeTitle", {
+                        type:
+                          safeQuiz.type === "exam"
+                            ? t("quizPreview.type.exam")
+                            : safeQuiz.type === "quiz"
+                            ? t("quizPreview.type.quiz")
+                            : t("quizPreview.type.assessment"),
+                      })}
+                    </h3>
+                    <div
+                      className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold ${
+                        totalScore === maxScore
+                          ? "bg-green-100 text-green-800"
+                          : totalScore >= maxScore * 0.7
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {t("quizPreview.finalScoreInline", {
+                        total: totalScore,
+                        max: maxScore,
+                        percent: maxScore
+                          ? Math.round((totalScore / maxScore) * 100)
+                          : 0,
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                      {t("quizPreview.completeTitle", {
+                        type:
+                          safeQuiz.type === "exam"
+                            ? t("quizPreview.type.exam")
+                            : safeQuiz.type === "quiz"
+                            ? t("quizPreview.type.quiz")
+                            : t("quizPreview.type.assessment"),
+                      })}
+                    </h3>
+                    <div
+                      className={`inline-flex items-center px-6 py-3 rounded-lg text-lg font-semibold bg-green-100 text-green-800`}
+                    >
+                      {t("quizPreview.type.assessment")}{" "}
+                      {t("quizPreview.completed")}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-6">
-                  {safeQuiz.questions.map((q, qi) => {
-                    const isCorrect = questionResults[q.id];
-                    return (
-                      <div
-                        key={q.id}
-                        className={`border-2 rounded-lg p-6 ${
-                          isCorrect
-                            ? "border-green-200 bg-green-50"
-                            : "border-red-200 bg-red-50"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <h4 className="font-semibold text-gray-900">
-                            Question {qi + 1}:{" "}
-                            {q.question || "Untitled question"}
-                          </h4>
-                          <div className="flex items-center">
-                            {isCorrect ? (
-                              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-600 mr-2" />
-                            )}
-                            <span
-                              className={`font-semibold ${
-                                isCorrect ? "text-green-800" : "text-red-800"
-                              }`}
-                            >
-                              {isCorrect ? q.points : 0}/{q.points} pts
-                            </span>
-                          </div>
-                        </div>
-
-                        {q.type === "short_answer" ? (
-                          <div className="space-y-2 mb-4">
-                            <div className="p-3 rounded border-2 bg-white">
-                              <div className="text-sm text-gray-500 mb-1">
-                                Your answer
-                              </div>
-                              <div className="text-gray-900">
-                                {textAnswers[q.id] ?? ""}
+                  {!isAssessment && (
+                    <>
+                      {safeQuiz.questions.map((q, qi) => {
+                        const isCorrect = questionResults[q.id];
+                        return (
+                          <div
+                            key={q.id}
+                            className={`border-2 rounded-lg p-6 ${
+                              isCorrect
+                                ? "border-green-200 bg-green-50"
+                                : "border-red-200 bg-red-50"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <h4 className="font-semibold text-gray-900">
+                                {t("quizPreview.questionLabel", {
+                                  index: qi + 1,
+                                })}
+                                : {q.question || t("quizPreview.misc.untitled")}
+                              </h4>
+                              <div className="flex items-center">
+                                {isCorrect ? (
+                                  <CheckCircle className="w-5 h-5 text-green-600 ltr:mr-2 rtl:ml-2" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-600 ltr:mr-2 rtl:ml-2" />
+                                )}
+                                <span
+                                  className={`font-semibold ${
+                                    isCorrect
+                                      ? "text-green-800"
+                                      : "text-red-800"
+                                  }`}
+                                >
+                                  {isCorrect ? q.points : 0}/{q.points}{" "}
+                                  {t("quizPreview.pts")}
+                                </span>
                               </div>
                             </div>
-                            {!!q.answer && (
-                              <div className="p-3 rounded border-2 bg-green-50 border-green-200">
-                                <div className="text-sm text-green-800">
-                                  Correct:{" "}
-                                  <span className="font-semibold">
-                                    {q.answer}
-                                  </span>
+
+                            {q.type === "short_answer" ? (
+                              <div className="space-y-2 mb-4">
+                                <div className="p-3 rounded border-2 bg-white">
+                                  <div className="text-sm text-gray-500 mb-1">
+                                    {t("quizPreview.yourAnswer")}
+                                  </div>
+                                  <div className="text-gray-900">
+                                    {textAnswers[q.id] ?? ""}
+                                  </div>
                                 </div>
+                                {!!q.answer && (
+                                  <div className="p-3 rounded border-2 bg-green-50 border-green-200">
+                                    <div className="text-sm text-green-800">
+                                      {t("quizPreview.correct")}{" "}
+                                      <span className="font-semibold">
+                                        {q.answer}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-2 mb-4">
+                                {q.options.map((opt, oi) => {
+                                  const userSel =
+                                    selectedAnswers[q.id]?.has(opt.id) ?? false;
+                                  const correct = opt.isCorrect;
+                                  let klass = "border-gray-200 bg-white";
+                                  if (correct)
+                                    klass = "border-green-500 bg-green-100";
+                                  else if (userSel && !correct)
+                                    klass = "border-red-500 bg-red-100";
+                                  return (
+                                    <div
+                                      key={opt.id}
+                                      className={`p-3 rounded border-2 ${klass}`}
+                                    >
+                                      <div className="flex items-center">
+                                        <span className="text-sm font-medium text-gray-500 ltr:mr-3 rtl:ml-3">
+                                          {String.fromCharCode(65 + oi)}.
+                                        </span>
+                                        <span className="flex-1">
+                                          {opt.text ||
+                                            t("quizPreview.misc.emptyOption")}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          {userSel && (
+                                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                              {t("quizPreview.yourAnswer")}
+                                            </span>
+                                          )}
+                                          {correct && (
+                                            <CheckCircle className="w-4 h-4 text-green-600" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {!!q.explanation && (
+                              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                <h5 className="font-semibold text-blue-900 mb-1">
+                                  {t("quizPreview.explanation")}
+                                </h5>
+                                <p className="text-blue-800 text-sm">
+                                  {q.explanation}
+                                </p>
                               </div>
                             )}
                           </div>
-                        ) : (
-                          <div className="space-y-2 mb-4">
-                            {q.options.map((opt, oi) => {
-                              const userSel =
-                                selectedAnswers[q.id]?.has(opt.id) ?? false;
-                              const correct = opt.isCorrect;
-                              let klass = "border-gray-200 bg-white";
-                              if (correct)
-                                klass = "border-green-500 bg-green-100";
-                              else if (userSel && !correct)
-                                klass = "border-red-500 bg-red-100";
-                              return (
-                                <div
-                                  key={opt.id}
-                                  className={`p-3 rounded border-2 ${klass}`}
-                                >
-                                  <div className="flex items-center">
-                                    <span className="text-sm font-medium text-gray-500 mr-3">
-                                      {String.fromCharCode(65 + oi)}.
-                                    </span>
-                                    <span className="flex-1">
-                                      {opt.text || "(empty option)"}
-                                    </span>
-                                    <div className="flex items-center space-x-2">
-                                      {userSel && (
-                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                          Your answer
-                                        </span>
-                                      )}
-                                      {correct && (
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {!!q.explanation && (
-                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                            <h5 className="font-semibold text-blue-900 mb-1">
-                              Explanation:
-                            </h5>
-                            <p className="text-blue-800 text-sm">
-                              {q.explanation}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -670,27 +769,34 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quiz, onClose, onEdit }) => {
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="flex space-x-3">
+            <div className="flex gap-3">
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
-                Close
+                {t("quizPreview.close")}
               </button>
               <button
                 onClick={onEdit}
                 className="px-4 py-2 text-purple-600 hover:text-purple-800 transition-colors"
               >
-                Edit {safeQuiz.type === "exam" ? "Exam" : "Quiz"}
+                {t("quizPreview.editType", {
+                  type:
+                    safeQuiz.type === "exam"
+                      ? t("quizPreview.type.exam")
+                      : safeQuiz.type === "quiz"
+                      ? t("quizPreview.type.quiz")
+                      : t("quizPreview.type.assessment"),
+                })}
               </button>
             </div>
-            {showResults && (
+            {(showResults || isAssessment) && (
               <button
                 onClick={handleReset}
                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center"
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Take Again
+                <RotateCcw className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                {t("quizPreview.takeAgain")}
               </button>
             )}
           </div>

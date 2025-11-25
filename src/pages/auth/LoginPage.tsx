@@ -1,13 +1,5 @@
 import React, { useState } from "react";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  ArrowLeft,
-  Phone,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone } from "lucide-react";
 import { API_ENDPOINTS } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import useAuth from "../../store/useAuth";
@@ -26,7 +18,7 @@ interface FormValues {
 }
 
 const LoginPage: React.FC = () => {
-  const { t, i18n } = useTranslation("auth");
+  const { t } = useTranslation("auth");
   const { setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -71,7 +63,7 @@ const LoginPage: React.FC = () => {
   const onSubmit = async (data: FormValues) => {
     try {
       const formData = new FormData();
-      formData.append("email", data.email);
+      formData.append("identifier", data.email);
       formData.append("password", data.password);
 
       const res = await login.mutateAsync(formData);
@@ -92,11 +84,9 @@ const LoginPage: React.FC = () => {
         reset();
       }
     } catch (error: any) {
-      const payload = error?.response?.data;
+      // const payload = error?.response?.data?.non_field_errors[0];
       handleErrorAlerts(
-        payload?.error ||
-          payload.non_field_errors ||
-          "There is an unexpected error occured."
+        error?.response?.data.error || "There is an unexpected error occured."
       );
     }
   };
@@ -113,10 +103,18 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-purple-600 mb-2">
-            LearnHub
+          <div className="text-3xl font-bold text-purple-600 mb-2 text-center">
+            {data?.logo_type === "text" ? (
+              data?.logo_text
+            ) : (
+              <img
+                src={data?.logo_file}
+                alt="logo"
+                className="w-40 block m-auto rounded-full"
+              />
+            )}
           </div>
-          <p className="text-gray-600">{t("Login.welcome")}</p>
+          <p className="text-gray-600 mt-2">{t("Login.welcome")}</p>
         </div>
 
         {/* Login Form */}
@@ -207,12 +205,17 @@ const LoginPage: React.FC = () => {
                   {t("Login.rememberMe")}
                 </label>
               </div>
-              <button
-                type="button"
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                {t("Login.forgotPass")}
-              </button>
+              {!isPhoneLogin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/verify-email?type=password_reset");
+                  }}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  {t("Login.forgotPass")}
+                </button>
+              )}
             </div>
 
             {/* Login Button */}
@@ -226,11 +229,7 @@ const LoginPage: React.FC = () => {
               ) : (
                 <>
                   {t("Login.signin")}
-                  {i18n.language === "ar" ? (
-                    <ArrowLeft className="w-5 h-5 mr-2" />
-                  ) : (
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  )}
+                  <ArrowRight className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180" />
                 </>
               )}
             </button>

@@ -19,7 +19,8 @@
     "overview": "Overview",
     "curriculum": "Curriculum",
     "instructor": "Instructor",
-    "reviews": "Reviews"
+    "reviews": "Reviews",
+    "assessments": "Assessments"
   },
   "requirements": "Requirements:",
   "description": "Description:",
@@ -74,14 +75,35 @@
   "courseContent": {
     "openExam": "Open Exam",
     "openQuiz": "Open Quiz",
+    "openAssessment": "Open Assessment",
     "exam" :"Exam",
     "quiz": "Quiz",
+    "assessment": "Assessment",
     "m": "m",
     "pass": "pass",
     "title": "Course Content",
     "modules": "modules",
     "lessons": "lessons",
     "free": "free"
+  },
+  "assessmentsPage": {
+    "emptyState": {
+      "title": "No assessment selected",
+      "desc": "Choose an assessment to view its statistics.",
+      "back": "Back"
+    },
+    "statsCards": {
+      "header": "Assessment Statistics",
+      "questionLabel": "Questions",
+      "attemptedLabel": "Students attempted",
+      "totalLabel": "Total answers",
+      "answersLabel": "Avg answers / question",
+      "title": "No responses yet",
+      "desc": "When students submit attempts, you’ll see distribution charts here."
+    },
+    "question": "Question {{qi}}",
+    "answers": "{{total}} Answers",
+    "top": "Top:"
   },
   "time": {
     "now": "Now"

@@ -49,7 +49,8 @@
     "coursePerformance": "Rendimiento del curso"
   },
   "recentReviews": {
-    "title": "Reseñas recientes"
+    "title": "Reseñas recientes",
+    "anonymous": "anónimo"
   },
   "sidebar": {
     "quickActions": "Acciones rápidas",

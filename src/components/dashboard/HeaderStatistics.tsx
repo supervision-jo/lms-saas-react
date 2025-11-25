@@ -17,7 +17,7 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           </div>
           <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
-              {stats?.courses_completed ?? 0}
+              {stats?.enrolled_courses ?? 0}
             </p>
             <p className="text-sm text-gray-600 font-medium">
               {t("headerStats.coursesEnrolled")}
@@ -33,10 +33,10 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           </div>
           <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
-              {stats?.hours_learned ?? 0}
+              {stats?.courses_completed ?? 0}
             </p>
             <p className="text-sm text-gray-600 font-medium">
-              {t("headerStats.hoursLearned")}
+              {t("headerStats.completedCourses")}
             </p>
           </div>
         </div>
@@ -65,10 +65,13 @@ export default function HeaderStatistics({ stats }: HeaderStatisticsProps) {
           </div>
           <div className="ltr:ml-4 rtl:mr-4">
             <p className="text-3xl font-bold text-gray-900">
-              {stats?.current_streak ?? 0}
+              {stats?.new_courses_this_month ?? 0}
             </p>
             <p className="text-sm text-gray-600 font-medium">
-              {t("headerStats.streakDays")}
+              {t("headerStats.newCourses")}
+            </p>
+            <p className="text-xs text-gray-500 font-medium">
+              {t("headerStats.thisMonth")}
             </p>
           </div>
         </div>

@@ -29,3 +29,35 @@ interface InstructorStats {
   revenue_this_month: number | null;
   revenue: number | null;
 }
+
+interface InstructorReviews {
+  student_: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    is_student: boolean;
+    is_instructor: boolean;
+    profile_image: string | null;
+    bio: string | null;
+    phone: string | null;
+    location: string | null;
+    data_joined: string;
+  };
+  id: number;
+  course: string;
+  course_title: string;
+  like_course_details: [
+    {
+      id: number;
+      name: string;
+      type: string;
+    }
+  ];
+  rating: number;
+  recommend: boolean;
+  anonymous: boolean;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+}

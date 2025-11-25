@@ -89,6 +89,9 @@ interface Course {
   is_paid: boolean;
   level: string;
   is_published: boolean;
+  has_reviewed: boolean;
+  is_sequential: boolean;
+  has_certificate: boolean;
   created_at: string;
   updated_at: string;
   total_students: number;
@@ -102,7 +105,13 @@ interface Course {
   language: string;
 }
 
-type ContentType = "video" | "article" | "material" | "quiz" | "exam";
+type ContentType =
+  | "video"
+  | "article"
+  | "material"
+  | "quiz"
+  | "exam"
+  | "assessment";
 
 interface Lesson {
   id: string;
@@ -113,11 +122,17 @@ interface Lesson {
   free_preview?: boolean;
   order: number;
   file?: any;
+  completed?: boolean;
   description_html?: any;
   content_type: ContentType;
-  watched?: boolean;
+  completed?: boolean;
   string_file?: string | null;
+  file_url?: string | null;
+  file_base64?: string | null;
+  file_name?: string;
+
   section: string;
+  is_locked?: boolean;
 }
 
 interface Module {
@@ -129,6 +144,10 @@ interface Module {
   lesson_count: number;
   total_hours: number;
   lessons: Lesson[];
+  is_locked?: boolean;
+  total_lessons?: number;
+  completed_lessons?: number;
+  progress_percentage?: number;
 }
 
 interface CourseReview {
@@ -137,7 +156,7 @@ interface CourseReview {
   course: string;
   course_title: string;
   rating: number;
-  tell_about_your_experience: string;
+  // tell_about_your_experience: string;
   like_course_details: {
     id: number;
     name: string;
@@ -154,19 +173,20 @@ interface Exam {
   id: string;
   title: string;
   description: string;
-  type: "quiz" | "exam";
+  type: "quiz" | "exam" | "assessment";
   lesson: string;
-  time_limit: number;
-  passing_score: number;
+  time_limit?: number;
+  passing_score?: number;
   questions: {
     id: string;
     text: string;
     question_type: string;
     explanation: string;
+    points?: number;
     choices: {
       id: string;
       text: string;
-      is_correct: boolean;
+      is_correct?: boolean;
     }[];
   }[];
 }
