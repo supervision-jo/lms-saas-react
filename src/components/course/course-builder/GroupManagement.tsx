@@ -51,6 +51,7 @@ export default function GroupManagement() {
     API_ENDPOINTS.createRoom +
       "?courseId=" +
       courseId +
+      "&not_in_group=false" +
       "&search=" +
       memberSearchQuery,
     ["create-rooms"]
@@ -60,6 +61,7 @@ export default function GroupManagement() {
     API_ENDPOINTS.users +
       "/?group_id=" +
       selectedGroup?.id +
+      "&not_in_group=true" +
       "&page_size=9999" +
       "&search=" +
       searchQuery,
