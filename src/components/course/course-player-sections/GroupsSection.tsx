@@ -1,5 +1,7 @@
 import { Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
 
 const courseGroups = [
   {

@@ -5,6 +5,13 @@ import SearchInput from "../../reusable-components/SearchInput";
 import UserAvatar from "../../reusable-components/UserAvatar";
 import Modal from "../../reusable-components/Modal";
 import { useTranslation } from "react-i18next";
+import { useCustomQuery } from "../../../hooks/useQuery";
+import { API_ENDPOINTS } from "../../../utils/constants";
+import { useCustomPost } from "../../../hooks/useMutation";
+import { useParams } from "react-router";
+import handleErrorAlerts from "../../../utils/showErrorMessages";
+import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 interface User {
   id: string;
@@ -23,7 +30,63 @@ interface Group {
 }
 
 export default function GroupManagement() {
+  const queryClient = useQueryClient();
   const { t } = useTranslation("courseBuilder");
+  const { courseId } = useParams();
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isManageMembersModalOpen, setIsManageMembersModalOpen] =
+    useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+
+  // GET Rooms
+  const { data: rooms } = useCustomQuery(
+    API_ENDPOINTS.rooms + "?courseId=" + courseId + "&search=" + searchQuery,
+    ["rooms"]
+  );
+  const roomsData = rooms?.data || [];
+  // Create Room
+  const { mutateAsync: createRoom } = useCustomPost(
+    API_ENDPOINTS.createRoom +
+      "?courseId=" +
+      courseId +
+      "&search=" +
+      memberSearchQuery,
+    ["create-rooms"]
+  );
+  // GET Available Users
+  const { data: availableUsers } = useCustomQuery(
+    API_ENDPOINTS.users +
+      "/?group_id=" +
+      selectedGroup?.id +
+      "&page_size=9999" +
+      "&search=" +
+      searchQuery,
+    ["available-users", selectedGroup?.id],
+    undefined,
+    !!isManageMembersModalOpen
+  );
+  const availableUsersData = availableUsers?.data || [];
+  // GET Current Members
+  const { data: currentMembers } = useCustomQuery(
+    API_ENDPOINTS.users + "/?group_id=" + selectedGroup?.id + "&page_size=9999",
+    ["current-members", selectedGroup?.id],
+    undefined,
+    !!isManageMembersModalOpen
+  );
+  const currentMembersData = currentMembers?.data || [];
+  console.log(currentMembersData);
+  // Add User To Room
+  const { mutateAsync: addUserToRoom } = useCustomPost(
+    `${API_ENDPOINTS.rooms}${selectedGroup?.id}/add-user/`,
+    ["add-user-to-room"]
+  );
+  // Remove User From Room
+  const { mutateAsync: removeUserFromRoom } = useCustomPost(
+    `${API_ENDPOINTS.rooms}${selectedGroup?.id}/remove-user/`,
+    ["remove-user-from-room"]
+  );
   const [groups, setGroups] = useState<Group[]>([
     {
       id: "1",
@@ -48,20 +111,13 @@ export default function GroupManagement() {
     },
   ]);
 
-  const [availableUsers] = useState<User[]>([
-    { id: "1", name: "John Doe", email: "john.doe@example.com" },
-    { id: "2", name: "Jane Smith", email: "jane.smith@example.com" },
-    { id: "3", name: "Mike Johnson", email: "mike.johnson@example.com" },
-    { id: "4", name: "Sarah Wilson", email: "sarah.wilson@example.com" },
-    { id: "5", name: "Alex Brown", email: "alex.brown@example.com" },
-  ]);
-
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
-  const [isManageMembersModalOpen, setIsManageMembersModalOpen] =
-    useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  // const [availableUsers] = useState<User[]>([
+  //   { id: "1", name: "John Doe", email: "john.doe@example.com" },
+  //   { id: "2", name: "Jane Smith", email: "jane.smith@example.com" },
+  //   { id: "3", name: "Mike Johnson", email: "mike.johnson@example.com" },
+  //   { id: "4", name: "Sarah Wilson", email: "sarah.wilson@example.com" },
+  //   { id: "5", name: "Alex Brown", email: "alex.brown@example.com" },
+  // ]);
 
   const [newGroup, setNewGroup] = useState({
     name: "",
@@ -86,33 +142,47 @@ export default function GroupManagement() {
       group.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateGroup = () => {
-    if (!newGroup.name.trim()) return;
-
-    const group: Group = {
-      id: Date.now().toString(),
-      name: newGroup.name,
-      description: newGroup.description,
-      color: newGroup.color,
-      members: [],
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-
-    setGroups([...groups, group]);
-    setNewGroup({ name: "", description: "", color: "bg-blue-500" });
+  const handleCreateGroup = async () => {
+    try {
+      if (!newGroup.name.trim()) return;
+      const payload = {
+        name: newGroup.name,
+        description: newGroup.description,
+        color: newGroup.color.split("-")[1],
+        course: courseId,
+      };
+      await createRoom(payload);
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+    } catch (error: any) {
+      handleErrorAlerts(error?.response?.data?.error);
+    }
     setIsCreateGroupModalOpen(false);
   };
 
   const handleDeleteGroup = (groupId: string) => {
+    try {
+      // await deleteRoom({ room_id: groupId });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success(t("groupManagement.groupDeletedSuccess"));
+    } catch (error: any) {
+      handleErrorAlerts(error?.response?.data?.error);
+    }
     if (window.confirm(t("groupManagement.confirmDelete"))) {
       setGroups(groups.filter((group) => group.id !== groupId));
     }
   };
 
-  const handleAddMemberToGroup = (userId: string) => {
+  const handleAddMemberToGroup = async (userId: string) => {
     if (!selectedGroup) return;
-
-    const user = availableUsers.find((u) => u.id === userId);
+    try {
+      await addUserToRoom({ user_id: userId });
+      queryClient.invalidateQueries({ queryKey: ["available-users"] });
+      queryClient.invalidateQueries({ queryKey: ["current-members"] });
+      toast.success(t("groupManagement.userAddedSuccess"));
+    } catch (error: any) {
+      handleErrorAlerts(error?.response?.data?.error);
+    }
+    const user = currentMembersData?.find((u: any) => u.id === userId);
     if (!user) return;
 
     const updatedGroups = groups.map((group) => {
@@ -128,11 +198,19 @@ export default function GroupManagement() {
     setGroups(updatedGroups);
     setSelectedGroup({
       ...selectedGroup,
-      members: [...selectedGroup.members, user],
+      members: [...selectedGroup?.members, user],
     });
   };
 
-  const handleRemoveMemberFromGroup = (userId: string) => {
+  const handleRemoveMemberFromGroup = async (userId: string) => {
+    try {
+      await removeUserFromRoom({ user_id: userId });
+      queryClient.invalidateQueries({ queryKey: ["available-users"] });
+      queryClient.invalidateQueries({ queryKey: ["current-members"] });
+      toast.success(t("groupManagement.userRemovedSuccess"));
+    } catch (error: any) {
+      handleErrorAlerts(error?.response?.data?.error);
+    }
     if (!selectedGroup) return;
 
     const updatedGroups = groups.map((group) => {
@@ -155,10 +233,10 @@ export default function GroupManagement() {
   const getAvailableUsersForGroup = () => {
     if (!selectedGroup) return availableUsers;
 
-    const memberIds = selectedGroup.members.map((member) => member.id);
-    return availableUsers.filter(
-      (user) =>
-        !memberIds.includes(user.id) &&
+    const memberIds = selectedGroup?.members?.map((member) => member.id);
+    return availableUsersData?.filter(
+      (user: any) =>
+        !memberIds?.includes(user?.id) &&
         (user.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
           user.email.toLowerCase().includes(memberSearchQuery.toLowerCase()))
     );
@@ -167,8 +245,8 @@ export default function GroupManagement() {
   const getGroupMembers = () => {
     if (!selectedGroup) return [];
 
-    return selectedGroup.members.filter(
-      (member) =>
+    return currentMembersData?.filter(
+      (member: any) =>
         member.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
         member.email.toLowerCase().includes(memberSearchQuery.toLowerCase())
     );
@@ -183,7 +261,7 @@ export default function GroupManagement() {
             {t("groupManagement.studyGroups")}
           </h2>
           <p className="text-gray-600 mt-1">
-            {t("groupManagement.groupsCreated", { count: groups.length })}
+            {t("groupManagement.groupsCreated", { count: rooms?.count })}
           </p>
         </div>
         <Button
@@ -205,18 +283,18 @@ export default function GroupManagement() {
 
       {/* Groups Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredGroups.map((group) => (
+        {roomsData?.map((group: any) => (
           <div
-            key={group.id}
+            key={group?.id}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center">
                 <div
-                  className={`w-4 h-4 rounded-full ${group.color} ltr:mr-3 rtl:ml-3`}
+                  className={`w-4 h-4 rounded-full ${group?.color} ltr:mr-3 rtl:ml-3`}
                 />
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {group.name}
+                  {group?.name}
                 </h3>
               </div>
               <div className="flex items-center gap-1">
@@ -240,26 +318,28 @@ export default function GroupManagement() {
               </div>
             </div>
 
-            <p className="text-gray-600 text-sm mb-4">{group.description}</p>
+            <p className="text-gray-600 text-sm mb-4">
+              {group?.description || "-"}
+            </p>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between">
               <div className="flex items-center text-sm text-gray-500">
                 <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
                 <span>
-                  {group.members.length} {t("groupManagement.member")}
-                  {group.members.length !== 1 ? "s" : ""}
+                  {group?.participants_count} {t("groupManagement.members")}
+                  {/* {group?.participants_count !== 1 ? "s" : ""} */}
                 </span>
               </div>
               <div className="text-xs text-gray-400">
                 {t("groupManagement.created")}{" "}
-                {new Date(group.createdAt).toLocaleDateString()}
+                {new Date(group.created_at).toLocaleDateString()}
               </div>
             </div>
 
             {/* Member Avatars */}
-            {group.members.length > 0 && (
+            {group?.members?.length > 0 && (
               <div className="mt-4 flex -space-x-2">
-                {group.members.slice(0, 5).map((member) => (
+                {group.members.slice(0, 5).map((member: any) => (
                   <UserAvatar
                     key={member.id}
                     name={member.name}
@@ -382,17 +462,16 @@ export default function GroupManagement() {
             onChange={setMemberSearchQuery}
             placeholder={t("groupManagement.searchUsers")}
           />
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Members */}
             <div>
               <h4 className="font-medium text-gray-900 mb-3">
                 {t("groupManagement.currentMembers", {
-                  count: selectedGroup?.members.length || 0,
+                  count: currentMembers?.count || 0,
                 })}
               </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {getGroupMembers().map((member) => (
+                {getGroupMembers()?.map((member: any) => (
                   <div
                     key={member.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -421,7 +500,7 @@ export default function GroupManagement() {
                     </button>
                   </div>
                 ))}
-                {getGroupMembers().length === 0 && (
+                {getGroupMembers()?.length === 0 && (
                   <p className="text-gray-500 text-sm text-center py-4">
                     {memberSearchQuery
                       ? t("groupManagement.noMembersMatch")
@@ -435,11 +514,11 @@ export default function GroupManagement() {
             <div>
               <h4 className="font-medium text-gray-900 mb-3">
                 {t("groupManagement.availableUsers", {
-                  count: getAvailableUsersForGroup().length,
+                  count: getAvailableUsersForGroup()?.length,
                 })}
               </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {getAvailableUsersForGroup().map((user) => (
+                {getAvailableUsersForGroup()?.map((user: any) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -468,7 +547,7 @@ export default function GroupManagement() {
                     </button>
                   </div>
                 ))}
-                {getAvailableUsersForGroup().length === 0 && (
+                {getAvailableUsersForGroup()?.length === 0 && (
                   <p className="text-gray-500 text-sm text-center py-4">
                     {memberSearchQuery
                       ? t("groupManagement.noUsersMatch")
