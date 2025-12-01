@@ -42,7 +42,7 @@ export default function GroupManagement() {
 
   // GET Rooms
   const { data: rooms } = useCustomQuery(
-    API_ENDPOINTS.rooms + "?courseId=" + courseId + "&search=" + searchQuery,
+    API_ENDPOINTS.rooms + "?course_id=" + courseId + "&search=" + searchQuery,
     ["rooms"]
   );
   const roomsData = rooms?.data || [];
