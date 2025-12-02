@@ -47,15 +47,9 @@ export default function GroupManagement() {
   );
   const roomsData = rooms?.data || [];
   // Create Room
-  const { mutateAsync: createRoom } = useCustomPost(
-    API_ENDPOINTS.createRoom +
-      "?courseId=" +
-      courseId +
-      "&not_in_group=false" +
-      "&search=" +
-      memberSearchQuery,
-    ["create-rooms"]
-  );
+  const { mutateAsync: createRoom } = useCustomPost(API_ENDPOINTS.createRoom, [
+    "create-rooms",
+  ]);
   // GET Available Users
   const { data: availableUsers } = useCustomQuery(
     API_ENDPOINTS.users +
@@ -64,7 +58,7 @@ export default function GroupManagement() {
       "&not_in_group=true" +
       "&page_size=9999" +
       "&search=" +
-      searchQuery,
+      memberSearchQuery,
     ["available-users", selectedGroup?.id],
     undefined,
     !!isManageMembersModalOpen
@@ -72,7 +66,13 @@ export default function GroupManagement() {
   const availableUsersData = availableUsers?.data || [];
   // GET Current Members
   const { data: currentMembers } = useCustomQuery(
-    API_ENDPOINTS.users + "/?group_id=" + selectedGroup?.id + "&page_size=9999",
+    API_ENDPOINTS.users +
+      "/?group_id=" +
+      selectedGroup?.id +
+      "&not_in_group=false" +
+      "&page_size=9999" +
+      "&search=" +
+      memberSearchQuery,
     ["current-members", selectedGroup?.id],
     undefined,
     !!isManageMembersModalOpen
@@ -180,7 +180,7 @@ export default function GroupManagement() {
       await addUserToRoom({ user_id: userId });
       queryClient.invalidateQueries({ queryKey: ["available-users"] });
       queryClient.invalidateQueries({ queryKey: ["current-members"] });
-      toast.success(t("groupManagement.userAddedSuccess"));
+      toast.success("the User has been added to the group successfully");
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
@@ -209,7 +209,7 @@ export default function GroupManagement() {
       await removeUserFromRoom({ user_id: userId });
       queryClient.invalidateQueries({ queryKey: ["available-users"] });
       queryClient.invalidateQueries({ queryKey: ["current-members"] });
-      toast.success(t("groupManagement.userRemovedSuccess"));
+      toast.success("the User has been removed from the group successfully");
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }

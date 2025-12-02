@@ -62,6 +62,7 @@ export const API_ENDPOINTS = {
   lessons: "course/lessons/",
   lesson: "course/lesson/",
   rooms: "chat/rooms/",
+  joinAndLeaveRoom: "chat/rooms/",
   createRoom: "chat/rooms/create/",
   createExam: "course/create-exam/",
   users: "chat/users",

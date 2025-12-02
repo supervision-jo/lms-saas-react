@@ -448,7 +448,6 @@ export default function CoursePlayerPage() {
               loadingFallback={null}
             >
               <GroupsSection
-                handleJoinGroup={handleJoinGroup}
                 handleShowChat={handleShowChat}
               />
             </FeatureGate>
