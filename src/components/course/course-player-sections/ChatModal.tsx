@@ -40,7 +40,6 @@ interface ChatModalProps {
 
 export default function ChatModal({
   activeChatGroup,
-  handleSendGroupMessage,
   handleCloseChatModal,
   groupMessage,
   setGroupMessage,

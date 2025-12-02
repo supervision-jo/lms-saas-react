@@ -226,9 +226,6 @@ export default function CoursePlayerPage() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [groupMessage, setGroupMessage] = useState("");
   const [activeChatGroup, setActiveChatGroup] = useState<any>(null);
-  const handleJoinGroup = (groupId: string) => {
-    console.log(groupId);
-  };
   const handleShowChat = (group: any) => {
     setActiveChatGroup(group);
     setShowChatModal(true);
