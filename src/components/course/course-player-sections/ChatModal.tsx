@@ -1,4 +1,15 @@
-import { MessageCircle, Search, Send, Users, X } from "lucide-react";
+import {
+  MessageCircle,
+  Search,
+  Send,
+  Users,
+  X,
+  Paperclip,
+  Smile,
+  Image,
+  FileText,
+  Film,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS, ACCESS_TOKEN_KEY } from "../../../utils/constants";
@@ -7,6 +18,7 @@ import { getCookie } from "../../../services/cookies";
 import { readUserFromStorage } from "../../../services/auth";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 
 // Get WebSocket URL based on current environment
 const getWebSocketURL = () => {
@@ -50,10 +62,18 @@ export default function ChatModal({
   const isCleaningUpRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
   // Get current user to determine message alignment
   const currentUser = readUserFromStorage();
-  console.log("Current User in ChatModal:", currentUser);
+  console.log(
+    "Current User in ChatModal:",
+    currentUser.first_name + " " + currentUser.last_name
+  );
 
   // GET Room Details
   const { data: roomDetails } = useCustomQuery(
@@ -81,6 +101,26 @@ export default function ChatModal({
   useEffect(() => {
     scrollToBottom();
   }, [sortedMessages.length, scrollToBottom]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   // WebSocket connection
   useEffect(() => {
@@ -127,14 +167,14 @@ export default function ChatModal({
       try {
         const payload = JSON.parse(event.data);
         console.log("WebSocket payload received:", payload);
-        
+
         // The actual message is inside payload.data
         const message = payload.data;
-        
+
         if (!message) return;
-        
+
         console.log("Message received:", message);
-        
+
         // Refetch messages to get the new message
         queryClient.invalidateQueries({ queryKey: ["room-messages"] });
       } catch (error) {
@@ -200,6 +240,87 @@ export default function ChatModal({
     console.log("handleSendMessage called, groupMessage:", groupMessage);
     if (!groupMessage?.trim()) return;
     sendMessageViaWebSocket(groupMessage.trim());
+  };
+
+  // Handle emoji selection
+  const handleEmojiSelect = (emojiData: EmojiClickData) => {
+    setGroupMessage((prev: string) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(Array.from(files));
+    }
+  };
+
+  // Send file attachment
+  const handleSendAttachment = async () => {
+    if (
+      selectedFiles.length === 0 ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    )
+      return;
+
+    setIsUploading(true);
+
+    try {
+      // Convert files to base64 for WebSocket transmission
+      const filesData = await Promise.all(
+        selectedFiles.map(async (file) => {
+          return new Promise<{
+            name: string;
+            type: string;
+            data: string;
+            size: number;
+          }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({
+                name: file.name,
+                type: file.type,
+                data: reader.result as string,
+                size: file.size,
+              });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
+      const messageData = {
+        body: "",
+        type: "file",
+        files: filesData,
+      };
+
+      console.log("Sending attachment:", messageData);
+      wsRef.current.send(JSON.stringify(messageData));
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error("Error sending attachment:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Remove selected file
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Get file icon based on type
+  const getFileIcon = (type: string) => {
+    if (type.startsWith("image/")) return <Image className="w-4 h-4" />;
+    if (type.startsWith("video/")) return <Film className="w-4 h-4" />;
+    return <FileText className="w-4 h-4" />;
   };
 
   const { t } = useTranslation("coursePlayer");
@@ -312,7 +433,7 @@ export default function ChatModal({
           </div>
 
           {/* Chat Messages */}
-          <div 
+          <div
             ref={messagesContainerRef}
             className="flex-1 p-6 overflow-y-auto bg-gray-900 flex flex-col"
           >
@@ -321,19 +442,33 @@ export default function ChatModal({
               {sortedMessages?.map((message: any) => {
                 // Find the sender from participants - check both p.id and p.user?.id
                 const sender = roomDetailsData?.participants?.find(
-                  (p: any) => p?.user?.id === message?.sender || p?.id === message?.sender
+                  (p: any) =>
+                    p?.user?.id === message?.sender || p?.id === message?.sender
                 );
                 // Get sender name/image from user object if nested, otherwise from participant directly
-                const senderName = sender?.user?.name || sender?.name;
-                const senderImage = sender?.user?.profile_image || sender?.profile_image;
-                
+                const senderNameFromParticipant =
+                  sender?.user?.name || sender?.name;
+                const senderImage =
+                  sender?.user?.profile_image || sender?.profile_image;
+
                 // Check if this message is from the current user
                 const isCurrentUser = message?.sender === currentUser?.id;
-                
+
+                // Use current user's full name if sender is current user, otherwise use participant name
+                const senderName = isCurrentUser
+                  ? (
+                      currentUser?.first_name +
+                      " " +
+                      currentUser?.last_name
+                    ).trim()
+                  : senderNameFromParticipant;
+
                 return (
-                  <div 
-                    key={message?.id} 
-                    className={`flex items-start gap-4 ${isCurrentUser ? 'flex-row-reverse' : ''}`}
+                  <div
+                    key={message?.id}
+                    className={`flex items-start gap-4 ${
+                      isCurrentUser ? "flex-row-reverse" : ""
+                    }`}
                   >
                     {senderImage ? (
                       <img
@@ -346,8 +481,16 @@ export default function ChatModal({
                         {senderName?.charAt(0)?.toUpperCase() ?? "?"}
                       </div>
                     )}
-                    <div className={`flex-1 min-w-0 ${isCurrentUser ? 'flex flex-col items-end' : ''}`}>
-                      <div className={`flex items-center gap-2 mb-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+                    <div
+                      className={`flex-1 min-w-0 ${
+                        isCurrentUser ? "flex flex-col items-end" : ""
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center gap-2 mb-2 ${
+                          isCurrentUser ? "flex-row-reverse" : ""
+                        }`}
+                      >
                         <span className="font-semibold text-white text-sm">
                           {senderName ?? ""}
                         </span>
@@ -355,10 +498,65 @@ export default function ChatModal({
                           {getTimeAgo(message?.created_at)}
                         </span>
                       </div>
-                      <div className={`rounded-2xl px-4 py-3 max-w-2xl ${isCurrentUser ? 'bg-indigo-600' : 'bg-gray-700'}`}>
-                        <p className={`leading-relaxed ${isCurrentUser ? 'text-white' : 'text-gray-200'}`}>
-                          {message?.content ?? ""}
-                        </p>
+                      <div
+                        className={`rounded-2xl px-4 py-3 max-w-2xl ${
+                          isCurrentUser ? "bg-indigo-600" : "bg-gray-700"
+                        }`}
+                      >
+                        {/* Text content */}
+                        {message?.content && (
+                          <p
+                            className={`leading-relaxed ${
+                              isCurrentUser ? "text-white" : "text-gray-200"
+                            }`}
+                          >
+                            {message?.content}
+                          </p>
+                        )}
+                        {/* File attachments */}
+                        {message?.files && message.files.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {message.files.map((file: any, idx: number) => (
+                              <div key={idx}>
+                                {file.type?.startsWith("image/") ||
+                                file.url?.match(
+                                  /\.(jpg|jpeg|png|gif|webp)$/i
+                                ) ? (
+                                  <img
+                                    src={file.url || file.data}
+                                    alt={file.name || "Image"}
+                                    className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:opacity-90"
+                                    onClick={() =>
+                                      window.open(
+                                        file.url || file.data,
+                                        "_blank"
+                                      )
+                                    }
+                                  />
+                                ) : file.type?.startsWith("video/") ||
+                                  file.url?.match(/\.(mp4|webm|ogg)$/i) ? (
+                                  <video
+                                    src={file.url || file.data}
+                                    controls
+                                    className="max-w-full rounded-lg max-h-64"
+                                  />
+                                ) : (
+                                  <a
+                                    href={file.url || file.data}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 bg-gray-600 px-3 py-2 rounded-lg hover:bg-gray-500 transition-colors"
+                                  >
+                                    <FileText className="w-5 h-5 text-gray-300" />
+                                    <span className="text-sm text-white truncate">
+                                      {file.name || "Download file"}
+                                    </span>
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -382,11 +580,76 @@ export default function ChatModal({
 
           {/* Message Input */}
           <div className="p-6 border-t border-gray-700 bg-gray-800">
+            {/* Selected Files Preview */}
+            {selectedFiles.length > 0 && (
+              <div className="mb-4 p-3 bg-gray-700 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">
+                    {selectedFiles.length} file(s) selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedFiles([])}
+                    className="text-gray-400 hover:text-white text-sm"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 bg-gray-600 px-3 py-2 rounded-lg"
+                    >
+                      {getFileIcon(file.type)}
+                      <span className="text-sm text-white truncate max-w-[150px]">
+                        {file.name}
+                      </span>
+                      <button
+                        onClick={() => removeSelectedFile(index)}
+                        className="text-gray-400 hover:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleSendAttachment}
+                  disabled={isUploading}
+                  className="mt-3 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  {isUploading ? (
+                    "Sending..."
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Attachment(s)
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
             <div className="flex items-end gap-4">
-              <div className="flex-1">
+              <div className="flex-1 relative">
+                {/* Emoji Picker */}
+                {showEmojiPicker && (
+                  <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-10">
+                    <EmojiPicker
+                      onEmojiClick={handleEmojiSelect}
+                      theme={Theme.DARK}
+                      width={350}
+                      height={400}
+                      searchPlaceholder="Search emoji..."
+                      previewConfig={{ showPreview: false }}
+                    />
+                  </div>
+                )}
+
                 <textarea
                   value={groupMessage}
                   onChange={(e) => setGroupMessage(e.target.value)}
+                  onFocus={() => setShowEmojiPicker(false)}
                   placeholder={t("chats.composer.placeholder", {
                     groupName: roomDetailsData?.name ?? "",
                   })}
@@ -401,11 +664,29 @@ export default function ChatModal({
                 />
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-2">
-                    <button className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors">
-                      <span className="text-lg">😊</span>
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        showEmojiPicker
+                          ? "bg-purple-600 text-white"
+                          : "text-gray-400 hover:text-white hover:bg-gray-700"
+                      }`}
+                    >
+                      <Smile className="w-5 h-5" />
                     </button>
-                    <button className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors">
-                      📎
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      multiple
+                      className="hidden"
+                      accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      <Paperclip className="w-5 h-5" />
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
