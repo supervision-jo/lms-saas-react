@@ -29,7 +29,7 @@ type EmailForm = { email: string };
 const SEARCH_PARAM = "search";
 
 export default function UserManagement({ courseId }: { courseId: string }) {
-  const { t } = useTranslation("courseBuilder");
+  const { t, i18n } = useTranslation("courseBuilder");
   const queryClient = useQueryClient();
 
   // --- search with debounce ---
@@ -262,7 +262,7 @@ export default function UserManagement({ courseId }: { courseId: string }) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 flex items-center">
                       <Calendar className="w-3 h-3 ltr:mr-1 rtl:ml-1" />
-                      {formatDateTimeSimple(user?.enrolled_at ?? new Date())}
+                      {formatDateTimeSimple(user?.enrolled_at ?? new Date(), { locale: i18n.language })}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

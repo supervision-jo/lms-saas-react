@@ -64,7 +64,11 @@ export default function ChatModal({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -82,9 +86,9 @@ export default function ChatModal({
   );
   const roomDetailsData = roomDetails?.data || {};
   // GET Room Messages
-  const { data: roomMessages } = useCustomQuery(
-    API_ENDPOINTS.rooms + activeChatGroup?.id + "/messages/?page_size=9999",
-    ["room-messages"]
+  const { data: roomMessages, isLoading: isSearching } = useCustomQuery(
+    API_ENDPOINTS.rooms + activeChatGroup?.id + `/messages/?page_size=9999${debouncedSearchQuery ? `&search=${encodeURIComponent(debouncedSearchQuery)}` : ""}`,
+    ["room-messages", debouncedSearchQuery]
   );
   const roomMessagesData = roomMessages?.data || [];
 
@@ -101,6 +105,22 @@ export default function ChatModal({
   useEffect(() => {
     scrollToBottom();
   }, [sortedMessages.length, scrollToBottom]);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (showSearchInput && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearchInput]);
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -339,7 +359,7 @@ export default function ChatModal({
                 />
                 <div>
                   <h3 className="text-xl font-bold text-white">
-                    {roomDetailsData?.name ?? ""}
+                    {roomDetailsData?.course?.title ?? ""}
                   </h3>
                   <p className="text-gray-400 text-sm">
                     {t(
@@ -412,7 +432,7 @@ export default function ChatModal({
           {/* Chat Header */}
           <div className="p-6 border-b border-gray-700 bg-gray-800">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <h3 className="text-xl font-bold text-white">
                   {t("chats.chatHeader.title")}
                 </h3>
@@ -425,8 +445,47 @@ export default function ChatModal({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition-colors">
-                  <Search className="w-5 h-5" />
+                {/* Search Input */}
+                {showSearchInput && (
+                  <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2">
+                    <Search className="w-4 h-4 text-gray-400" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search messages..."
+                      className="bg-transparent text-white text-sm outline-none w-48 placeholder-gray-400"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setShowSearchInput(false);
+                          setSearchQuery("");
+                        }
+                      }}
+                    />
+                    {isSearching && (
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {searchQuery && !isSearching && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+                <button 
+                  onClick={() => {
+                    setShowSearchInput(!showSearchInput);
+                    if (showSearchInput) {
+                      setSearchQuery("");
+                    }
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${showSearchInput ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                >
+                  {showSearchInput ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
                 </button>
               </div>
             </div>

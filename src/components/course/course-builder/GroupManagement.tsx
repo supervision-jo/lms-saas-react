@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Users, Trash2, UserPlus, UserMinus } from "lucide-react";
 import Button from "../../reusable-components/Button";
 import SearchInput from "../../reusable-components/SearchInput";
@@ -42,8 +42,12 @@ export default function GroupManagement() {
 
   // GET Rooms
   const { data: rooms } = useCustomQuery(
-    API_ENDPOINTS.rooms + "?course_id=" + courseId + "&search=" + searchQuery,
-    ["rooms"]
+    `${API_ENDPOINTS.rooms}?course_id=${courseId}${
+      searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""
+    }`,
+    ["rooms", courseId, searchQuery],
+    undefined,
+    !!courseId
   );
   const roomsData = rooms?.data || [];
   // Create Room
@@ -59,7 +63,7 @@ export default function GroupManagement() {
       "&page_size=9999" +
       "&search=" +
       memberSearchQuery,
-    ["available-users", selectedGroup?.id],
+    ["available-users", selectedGroup?.id, memberSearchQuery],
     undefined,
     !!isManageMembersModalOpen
   );
@@ -73,7 +77,7 @@ export default function GroupManagement() {
       "&page_size=9999" +
       "&search=" +
       memberSearchQuery,
-    ["current-members", selectedGroup?.id],
+    ["current-members", selectedGroup?.id, memberSearchQuery],
     undefined,
     !!isManageMembersModalOpen
   );
@@ -154,7 +158,9 @@ export default function GroupManagement() {
         course: courseId,
       };
       await createRoom(payload);
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms", courseId] });
+      setNewGroup({ name: "", description: "", color: "bg-blue-500" });
+      toast.success(t("groupManagement.groupCreatedSuccess"));
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
@@ -184,24 +190,6 @@ export default function GroupManagement() {
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
-    const user = currentMembersData?.find((u: any) => u.id === userId);
-    if (!user) return;
-
-    const updatedGroups = groups.map((group) => {
-      if (group.id === selectedGroup.id) {
-        return {
-          ...group,
-          members: [...group.members, user],
-        };
-      }
-      return group;
-    });
-
-    setGroups(updatedGroups);
-    setSelectedGroup({
-      ...selectedGroup,
-      members: [...selectedGroup?.members, user],
-    });
   };
 
   const handleRemoveMemberFromGroup = async (userId: string) => {
@@ -213,23 +201,6 @@ export default function GroupManagement() {
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
     }
-    if (!selectedGroup) return;
-
-    const updatedGroups = groups.map((group) => {
-      if (group.id === selectedGroup.id) {
-        return {
-          ...group,
-          members: group.members.filter((member) => member.id !== userId),
-        };
-      }
-      return group;
-    });
-
-    setGroups(updatedGroups);
-    setSelectedGroup({
-      ...selectedGroup,
-      members: selectedGroup.members.filter((member) => member.id !== userId),
-    });
   };
 
   const getAvailableUsersForGroup = () => {
@@ -239,8 +210,12 @@ export default function GroupManagement() {
     return availableUsersData?.filter(
       (user: any) =>
         !memberIds?.includes(user?.id) &&
-        (user.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+        (user?.name
+          ?.toLowerCase()
+          ?.includes(memberSearchQuery?.toLowerCase()) ||
+          user?.email
+            ?.toLowerCase()
+            ?.includes(memberSearchQuery?.toLowerCase()))
     );
   };
 
@@ -249,8 +224,10 @@ export default function GroupManagement() {
 
     return currentMembersData?.filter(
       (member: any) =>
-        member.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(memberSearchQuery.toLowerCase())
+        member?.name
+          .toLowerCase()
+          ?.includes(memberSearchQuery?.toLowerCase()) ||
+        member?.email?.toLowerCase()?.includes(memberSearchQuery?.toLowerCase())
     );
   };
 
@@ -361,7 +338,7 @@ export default function GroupManagement() {
         ))}
       </div>
 
-      {filteredGroups.length === 0 && (
+      {roomsData?.length === 0 && (
         <div className="text-center py-12">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
