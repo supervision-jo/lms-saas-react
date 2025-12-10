@@ -19,6 +19,7 @@ import { readUserFromStorage } from "../../../services/auth";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
+import { useCustomPost } from "../../../hooks/useMutation";
 
 // Get WebSocket URL based on current environment
 const getWebSocketURL = () => {
@@ -71,6 +72,11 @@ export default function ChatModal({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    [key: string]: number;
+  }>({});
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
   // Get current user to determine message alignment
   const currentUser = readUserFromStorage();
@@ -87,11 +93,16 @@ export default function ChatModal({
   const roomDetailsData = roomDetails?.data || {};
   // GET Room Messages
   const { data: roomMessages, isLoading: isSearching } = useCustomQuery(
-    API_ENDPOINTS.rooms + activeChatGroup?.id + `/messages/?page_size=9999${debouncedSearchQuery ? `&search=${encodeURIComponent(debouncedSearchQuery)}` : ""}`,
+    API_ENDPOINTS.rooms +
+      activeChatGroup?.id +
+      `/messages/?page_size=9999${
+        debouncedSearchQuery
+          ? `&search=${encodeURIComponent(debouncedSearchQuery)}`
+          : ""
+      }`,
     ["room-messages", debouncedSearchQuery]
   );
   const roomMessagesData = roomMessages?.data || [];
-
   // Sort messages by created_at (oldest first, newest at bottom)
   const sortedMessages = [...roomMessagesData].sort((a: any, b: any) => {
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -276,7 +287,62 @@ export default function ChatModal({
     }
   };
 
-  // Send file attachment
+  // Get message type based on file
+  const getMessageType = (file: File): "image" | "video" | "file" => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("video/")) return "video";
+    return "file";
+  };
+
+  // Generate S3 presigned URL from backend
+  const { mutateAsync: generateFilePath } = useCustomPost(
+    API_ENDPOINTS.generateS3Path,
+    ["generate-file-path"]
+  );
+
+  // Upload file directly to S3
+  const uploadToS3 = async (
+    presignedUrl: string,
+    file: File
+  ): Promise<void> => {
+    const response = await fetch(presignedUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload file to S3");
+    }
+  };
+
+  // Upload a single file and return its file_id
+  const uploadFile = async (file: File, index: number): Promise<string> => {
+    try {
+      setUploadProgress((prev) => ({ ...prev, [index]: 10 }));
+
+      // Step 1: Get presigned URL
+      const response = await generateFilePath({
+        name: file.name,
+        content_length: file.size,
+      });
+      const { url, file_id } = response?.data;
+      setUploadProgress((prev) => ({ ...prev, [index]: 50 }));
+
+      // Step 2: Upload to S3
+      await uploadToS3(url, file);
+      setUploadProgress((prev) => ({ ...prev, [index]: 100 }));
+
+      return file_id;
+    } catch (error) {
+      console.error(`Error uploading file ${file.name}:`, error);
+      throw error;
+    }
+  };
+
+  // Send file attachment using S3 presigned URL flow
   const handleSendAttachment = async () => {
     if (
       selectedFiles.length === 0 ||
@@ -285,47 +351,50 @@ export default function ChatModal({
     )
       return;
 
+    // Validate file sizes
+    const oversizedFiles = selectedFiles.filter((f) => f.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      setUploadError(
+        `File(s) too large (max 25MB): ${oversizedFiles
+          .map((f) => f.name)
+          .join(", ")}`
+      );
+      return;
+    }
+
     setIsUploading(true);
+    setUploadError(null);
+    setUploadProgress({});
 
     try {
-      // Convert files to base64 for WebSocket transmission
-      const filesData = await Promise.all(
-        selectedFiles.map(async (file) => {
-          return new Promise<{
-            name: string;
-            type: string;
-            data: string;
-            size: number;
-          }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              resolve({
-                name: file.name,
-                type: file.type,
-                data: reader.result as string,
-                size: file.size,
-              });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        })
+      // Upload all files to S3 and collect file IDs
+      const fileIds = await Promise.all(
+        selectedFiles.map((file, index) => uploadFile(file, index))
       );
 
+      // Determine message type based on first file
+      const messageType = getMessageType(selectedFiles[0]);
+
+      // Step 3: Send message via WebSocket with file IDs
       const messageData = {
-        body: "",
-        type: "file",
-        files: filesData,
+        body: groupMessage?.trim() || "",
+        type: messageType,
+        files: fileIds,
       };
 
-      console.log("Sending attachment:", messageData);
+      console.log("Sending attachment message:", messageData);
       wsRef.current.send(JSON.stringify(messageData));
+
+      // Clear state
       setSelectedFiles([]);
+      setGroupMessage("");
+      setUploadProgress({});
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending attachment:", error);
+      setUploadError(error.message || "Failed to upload files");
     } finally {
       setIsUploading(false);
     }
@@ -476,16 +545,24 @@ export default function ChatModal({
                     )}
                   </div>
                 )}
-                <button 
+                <button
                   onClick={() => {
                     setShowSearchInput(!showSearchInput);
                     if (showSearchInput) {
                       setSearchQuery("");
                     }
                   }}
-                  className={`p-2 rounded-lg transition-colors ${showSearchInput ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                  className={`p-2 rounded-lg transition-colors ${
+                    showSearchInput
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-400 hover:text-white hover:bg-gray-700"
+                  }`}
                 >
-                  {showSearchInput ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                  {showSearchInput ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Search className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -639,6 +716,21 @@ export default function ChatModal({
 
           {/* Message Input */}
           <div className="p-6 border-t border-gray-700 bg-gray-800">
+            {/* Upload Error */}
+            {uploadError && (
+              <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-red-300">{uploadError}</span>
+                  <button
+                    onClick={() => setUploadError(null)}
+                    className="text-red-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Selected Files Preview */}
             {selectedFiles.length > 0 && (
               <div className="mb-4 p-3 bg-gray-700 rounded-xl">
@@ -647,38 +739,85 @@ export default function ChatModal({
                     {selectedFiles.length} file(s) selected
                   </span>
                   <button
-                    onClick={() => setSelectedFiles([])}
+                    onClick={() => {
+                      setSelectedFiles([]);
+                      setUploadProgress({});
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
                     className="text-gray-400 hover:text-white text-sm"
+                    disabled={isUploading}
                   >
                     Clear all
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {selectedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 bg-gray-600 px-3 py-2 rounded-lg"
-                    >
-                      {getFileIcon(file.type)}
-                      <span className="text-sm text-white truncate max-w-[150px]">
-                        {file.name}
-                      </span>
-                      <button
-                        onClick={() => removeSelectedFile(index)}
-                        className="text-gray-400 hover:text-red-400"
+                  {selectedFiles.map((file, index) => {
+                    const progress = uploadProgress[index];
+                    const isOversize = file.size > MAX_FILE_SIZE;
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg relative overflow-hidden ${
+                          isOversize
+                            ? "bg-red-900/50 border border-red-700"
+                            : "bg-gray-600"
+                        }`}
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                        {/* Progress bar background */}
+                        {progress !== undefined && progress < 100 && (
+                          <div
+                            className="absolute inset-0 bg-purple-600/30 transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                          />
+                        )}
+                        <div className="relative flex items-center gap-2">
+                          {getFileIcon(file.type)}
+                          <div className="flex flex-col">
+                            <span className="text-sm text-white truncate max-w-[150px]">
+                              {file.name}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                              {isOversize && (
+                                <span className="text-red-400 ml-1">
+                                  (too large)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          {progress !== undefined && progress < 100 ? (
+                            <span className="text-xs text-purple-300">
+                              {progress}%
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => removeSelectedFile(index)}
+                              className="text-gray-400 hover:text-red-400"
+                              disabled={isUploading}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={handleSendAttachment}
-                  disabled={isUploading}
-                  className="mt-3 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                  disabled={
+                    isUploading ||
+                    selectedFiles.some((f) => f.size > MAX_FILE_SIZE)
+                  }
+                  className="mt-3 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
-                    "Sending..."
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Uploading...
+                    </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
@@ -693,7 +832,10 @@ export default function ChatModal({
               <div className="flex-1 relative">
                 {/* Emoji Picker */}
                 {showEmojiPicker && (
-                  <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-10">
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-full left-0 mb-2 z-10"
+                  >
                     <EmojiPicker
                       onEmojiClick={handleEmojiSelect}
                       theme={Theme.DARK}

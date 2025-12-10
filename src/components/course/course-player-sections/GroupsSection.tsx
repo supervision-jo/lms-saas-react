@@ -8,10 +8,12 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface GroupsProps {
+  setGroupsCount: React.Dispatch<React.SetStateAction<number | undefined>>;
   handleShowChat: any;
 }
 
 export default function GroupsSection({
+  setGroupsCount,
   handleShowChat,
 }: GroupsProps) {
   const { courseId } = useParams();
@@ -23,6 +25,7 @@ export default function GroupsSection({
     ["rooms"]
   );
   const courseRooms = rooms?.data || [];
+  setGroupsCount(courseRooms?.length);
   console.log("Course Rooms:", courseRooms);
   // Join Room
   const { mutateAsync: joinRoom } = useCustomPost(

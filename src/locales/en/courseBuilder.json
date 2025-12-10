@@ -382,5 +382,8 @@
       "untitled": "Untitled question",
       "untitledQuestion": "Question {{index}}"
     }
+  },
+  "time": {
+    "now": "now"
   }
 }

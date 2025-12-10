@@ -232,126 +232,127 @@ export default function GroupManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {t("groupManagement.studyGroups")}
-          </h2>
-          <p className="text-gray-600 mt-1">
-            {t("groupManagement.groupsCreated", { count: rooms?.count })}
-          </p>
-        </div>
-        <Button
-          onClick={() => setIsCreateGroupModalOpen(true)}
-          icon={Plus}
-          variant="primary"
-        >
-          {t("groupManagement.createGroup")}
-        </Button>
-      </div>
-
-      {/* Search */}
-      <SearchInput
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder={t("groupManagement.searchGroups")}
-        className="max-w-md"
-      />
-
-      {/* Groups Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roomsData?.map((group: any) => (
-          <div
-            key={group?.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center">
-                <div
-                  className={`w-4 h-4 rounded-full ${group?.color} ltr:mr-3 rtl:ml-3`}
-                />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {group?.name}
-                </h3>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    setSelectedGroup(group);
-                    setIsManageMembersModalOpen(true);
-                  }}
-                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                  title="Manage members"
-                >
-                  <UserPlus className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteGroup(group.id)}
-                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                  title="Delete group"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <p className="text-gray-600 text-sm mb-4">
-              {group?.description || "-"}
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {t("groupManagement.studyGroups")}
+            </h2>
+            <p className="text-gray-600 mt-1">
+              {t("groupManagement.groupsCreated", { count: rooms?.count })}
             </p>
-
-            <div className="flex flex-wrap items-center justify-between">
-              <div className="flex items-center text-sm text-gray-500">
-                <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
-                <span>
-                  {group?.participants_count} {t("groupManagement.members")}
-                  {/* {group?.participants_count !== 1 ? "s" : ""} */}
-                </span>
-              </div>
-              <div className="text-xs text-gray-400">
-                {t("groupManagement.created")}{" "}
-                {new Date(group.created_at).toLocaleDateString()}
-              </div>
-            </div>
-
-            {/* Member Avatars */}
-            {group?.members?.length > 0 && (
-              <div className="mt-4 flex -space-x-2">
-                {group.members.slice(0, 5).map((member: any) => (
-                  <UserAvatar
-                    key={member.id}
-                    name={member.name}
-                    avatar={member.avatar}
-                    size="sm"
-                    className="border-2 border-white"
-                  />
-                ))}
-                {group.members.length > 5 && (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600">
-                    +{group.members.length - 5}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        ))}
-      </div>
-
-      {roomsData?.length === 0 && (
-        <div className="text-center py-12">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {t("groupManagement.noGroupsFound")}
-          </h3>
-          <p className="text-gray-500">
-            {searchQuery
-              ? t("groupManagement.tryAdjustingSearch")
-              : t("groupManagement.createFirstGroup")}
-          </p>
+          <Button
+            onClick={() => setIsCreateGroupModalOpen(true)}
+            icon={Plus}
+            variant="primary"
+          >
+            {t("groupManagement.createGroup")}
+          </Button>
         </div>
-      )}
 
+        {/* Search */}
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("groupManagement.searchGroups")}
+          className="max-w-md"
+        />
+
+        {/* Groups Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {roomsData?.map((group: any) => (
+            <div
+              key={group?.id}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center">
+                  <div
+                    className={`w-4 h-4 rounded-full ${group?.color} ltr:mr-3 rtl:ml-3`}
+                  />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {group?.name}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setSelectedGroup(group);
+                      setIsManageMembersModalOpen(true);
+                    }}
+                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Manage members"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGroup(group.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete group"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-gray-600 text-sm mb-4">
+                {group?.description || "-"}
+              </p>
+
+              <div className="flex flex-wrap items-center justify-between">
+                <div className="flex items-center text-sm text-gray-500">
+                  <Users className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                  <span>
+                    {group?.participants_count} {t("groupManagement.members")}
+                    {/* {group?.participants_count !== 1 ? "s" : ""} */}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 flex gap-1">
+                  <p>{t("groupManagement.created")}</p>
+                  <p dir="rtl">{new Date(group.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Member Avatars */}
+              {group?.members?.length > 0 && (
+                <div className="mt-4 flex -space-x-2">
+                  {group.members.slice(0, 5).map((member: any) => (
+                    <UserAvatar
+                      key={member.id}
+                      name={member.name}
+                      avatar={member.avatar}
+                      size="sm"
+                      className="border-2 border-white"
+                    />
+                  ))}
+                  {group.members.length > 5 && (
+                    <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600">
+                      +{group.members.length - 5}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {roomsData?.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {t("groupManagement.noGroupsFound")}
+            </h3>
+            <p className="text-gray-500">
+              {searchQuery
+                ? t("groupManagement.tryAdjustingSearch")
+                : t("groupManagement.createFirstGroup")}
+            </p>
+          </div>
+        )}
+      </div>
       {/* Create Group Modal */}
       <Modal
         isOpen={isCreateGroupModalOpen}
@@ -547,6 +548,6 @@ export default function GroupManagement() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

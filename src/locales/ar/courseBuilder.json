@@ -382,5 +382,8 @@
       "untitled": "سؤال بدون عنوان",
       "untitledQuestion": "السؤال {{index}}"
     }
+  },
+  "time": {
+    "now": "الآن"
   }
 }

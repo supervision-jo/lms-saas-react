@@ -64,6 +64,7 @@ export const API_ENDPOINTS = {
   rooms: "chat/rooms/",
   joinAndLeaveRoom: "chat/rooms/",
   createRoom: "chat/rooms/create/",
+  generateS3Path: "chat/generate_s3_path",
   createExam: "course/create-exam/",
   users: "chat/users",
   updateExam: "course/update-exam/",

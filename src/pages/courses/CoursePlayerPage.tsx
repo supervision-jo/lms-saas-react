@@ -53,6 +53,7 @@ export default function CoursePlayerPage() {
   const [showQA, setShowQA] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
   const [notes, setNotes] = useState("");
+  const [groupsCount, setGroupsCount] = useState<number>();
   const [noteTitle, setNoteTitle] = useState("");
   const [notesCount, setNotesCount] = useState<number>(0);
 
@@ -397,7 +398,7 @@ export default function CoursePlayerPage() {
                     }`}
                   >
                     <Users size={16} />
-                    <span>{t("groups")} (2)</span>
+                    <span>{t("groups")} ({groupsCount ?? 0})</span>
                   </button>
                 </FeatureGate>
               </div>
@@ -445,6 +446,7 @@ export default function CoursePlayerPage() {
               loadingFallback={null}
             >
               <GroupsSection
+                setGroupsCount={setGroupsCount}
                 handleShowChat={handleShowChat}
               />
             </FeatureGate>
