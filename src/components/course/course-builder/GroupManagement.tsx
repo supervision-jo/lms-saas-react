@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Users, Trash2, UserPlus, UserMinus } from "lucide-react";
 import Button from "../../reusable-components/Button";
 import SearchInput from "../../reusable-components/SearchInput";
@@ -141,12 +141,6 @@ export default function GroupManagement() {
     "bg-indigo-500",
     "bg-teal-500",
   ];
-
-  const filteredGroups = groups.filter(
-    (group) =>
-      group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      group.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleCreateGroup = async () => {
     try {
