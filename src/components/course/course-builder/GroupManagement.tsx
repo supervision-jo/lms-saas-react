@@ -7,7 +7,7 @@ import Modal from "../../reusable-components/Modal";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
 import { API_ENDPOINTS } from "../../../utils/constants";
-import { useCustomPost } from "../../../hooks/useMutation";
+import { useCustomPost, useCustomRemove } from "../../../hooks/useMutation";
 import { useParams } from "react-router";
 import handleErrorAlerts from "../../../utils/showErrorMessages";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ export default function GroupManagement() {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isManageMembersModalOpen, setIsManageMembersModalOpen] =
     useState(false);
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
@@ -54,6 +55,11 @@ export default function GroupManagement() {
   const { mutateAsync: createRoom } = useCustomPost(API_ENDPOINTS.createRoom, [
     "create-rooms",
   ]);
+  // Delete Room
+  const { mutateAsync: deleteRoom } = useCustomRemove(
+    `${API_ENDPOINTS.rooms}${selectedGroup?.id}/`,
+    ["delete-room"]
+  );
   // GET Available Users
   const { data: availableUsers } = useCustomQuery(
     API_ENDPOINTS.users +
@@ -93,37 +99,6 @@ export default function GroupManagement() {
     `${API_ENDPOINTS.rooms}${selectedGroup?.id}/remove-user/`,
     ["remove-user-from-room"]
   );
-  const [groups, setGroups] = useState<Group[]>([
-    {
-      id: "1",
-      name: "Frontend Developers",
-      description: "Students focusing on React and frontend technologies",
-      color: "bg-blue-500",
-      members: [
-        { id: "1", name: "John Doe", email: "john.doe@example.com" },
-        { id: "2", name: "Jane Smith", email: "jane.smith@example.com" },
-      ],
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "2",
-      name: "Backend Engineers",
-      description: "Students working on server-side development",
-      color: "bg-green-500",
-      members: [
-        { id: "3", name: "Mike Johnson", email: "mike.johnson@example.com" },
-      ],
-      createdAt: "2024-01-20",
-    },
-  ]);
-
-  // const [availableUsers] = useState<User[]>([
-  //   { id: "1", name: "John Doe", email: "john.doe@example.com" },
-  //   { id: "2", name: "Jane Smith", email: "jane.smith@example.com" },
-  //   { id: "3", name: "Mike Johnson", email: "mike.johnson@example.com" },
-  //   { id: "4", name: "Sarah Wilson", email: "sarah.wilson@example.com" },
-  //   { id: "5", name: "Alex Brown", email: "alex.brown@example.com" },
-  // ]);
 
   const [newGroup, setNewGroup] = useState({
     name: "",
@@ -161,16 +136,15 @@ export default function GroupManagement() {
     setIsCreateGroupModalOpen(false);
   };
 
-  const handleDeleteGroup = (groupId: string) => {
+  const handleDeleteGroup = async () => {
     try {
-      // await deleteRoom({ room_id: groupId });
+      await deleteRoom();
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success(t("groupManagement.groupDeletedSuccess"));
+      setIsDeleteConfirmModalOpen(false);
+      setSelectedGroup(null);
     } catch (error: any) {
       handleErrorAlerts(error?.response?.data?.error);
-    }
-    if (window.confirm(t("groupManagement.confirmDelete"))) {
-      setGroups(groups.filter((group) => group.id !== groupId));
     }
   };
 
@@ -283,7 +257,10 @@ export default function GroupManagement() {
                     <UserPlus className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteGroup(group.id)}
+                    onClick={() => {
+                      setSelectedGroup(group);
+                      setIsDeleteConfirmModalOpen(true);
+                    }}
                     className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                     title="Delete group"
                   >
@@ -306,7 +283,9 @@ export default function GroupManagement() {
                 </div>
                 <div className="text-xs text-gray-400 flex gap-1">
                   <p>{t("groupManagement.created")}</p>
-                  <p dir="rtl">{new Date(group.created_at).toLocaleDateString()}</p>
+                  <p dir="rtl">
+                    {new Date(group.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
@@ -538,6 +517,67 @@ export default function GroupManagement() {
               variant="primary"
             >
               {t("groupManagement.done")}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteConfirmModalOpen}
+        onClose={() => {
+          setIsDeleteConfirmModalOpen(false);
+          setSelectedGroup(null);
+        }}
+        title={t("groupManagement.deleteGroupTitle")}
+      >
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600 mt-0.5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-red-900 mb-2">
+                  {t("groupManagement.deleteGroupTitle")}
+                </h4>
+                <p className="text-sm text-red-800 mb-3">
+                  {t("groupManagement.deleteGroupMessage")}
+                </p>
+                {selectedGroup && (
+                  <div className="bg-white rounded-md p-3 border border-red-200">
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedGroup.name}
+                    </p>
+                    {selectedGroup.description && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        {selectedGroup.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row-reverse items-center gap-3 justify-end">
+            <Button
+              onClick={handleDeleteGroup}
+              variant="danger"
+              className="w-full sm:w-auto"
+              icon={Trash2}
+            >
+              {t("groupManagement.delete")}
+            </Button>
+            <Button
+              onClick={() => {
+                setIsDeleteConfirmModalOpen(false);
+                setSelectedGroup(null);
+              }}
+              variant="secondary"
+              className="w-full sm:w-auto"
+            >
+              {t("groupManagement.cancel")}
             </Button>
           </div>
         </div>

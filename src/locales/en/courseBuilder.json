@@ -196,7 +196,12 @@
     "noUsersMatch": "No users match your search",
     "allUsersInGroup": "All users are already in this group",
     "done": "Done",
-    "confirmDelete": "Are you sure you want to delete this group?"
+    "confirmDelete": "Are you sure you want to delete this group?",
+    "deleteGroupTitle": "Delete Group",
+    "deleteGroupMessage": "This action cannot be undone. All members will be removed from this group.",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "groupDeletedSuccess": "Group deleted successfully"
   },
   "settings": {
     "courseSettings": "Course Settings",

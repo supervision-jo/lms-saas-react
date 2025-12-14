@@ -130,7 +130,8 @@
     "showChat": "Mostrar chat",
     "noMessages": "Aún no hay mensajes. ¡Inicia la conversación!",
     "emptyTitle": "Aún no hay grupos de estudio",
-    "emptySubtitle": "Los grupos de estudio aparecerán aquí cuando los cree tu instructor."
+    "emptySubtitle": "Los grupos de estudio aparecerán aquí cuando los cree tu instructor.",
+    "hasAccess": "Tienes acceso"
   },
   "chats": {
     "groupHeader": {
@@ -141,7 +142,8 @@
       "membersTitle": "Miembros",
       "online": "En línea",
       "offline": "Desconectado",
-      "leaveGroup": "Salir del grupo"
+      "leaveGroup": "Salir del grupo",
+      "you": "Tú"
     },
     "chatHeader": {
       "title": "Chat del grupo",

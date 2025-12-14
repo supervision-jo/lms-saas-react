@@ -1,11 +1,12 @@
-import { Users } from "lucide-react";
+import { Users, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCustomQuery } from "../../../hooks/useQuery";
-import { useCustomPost } from "../../../hooks/useMutation";
+// import { useCustomPost } from "../../../hooks/useMutation";
 import { API_ENDPOINTS } from "../../../utils/constants";
 import { useParams } from "react-router";
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { getTimeAgo } from "../../../utils/getTimeAgo";
+// import { useState } from "react";
+// import { useQueryClient } from "@tanstack/react-query";
 
 interface GroupsProps {
   setGroupsCount: React.Dispatch<React.SetStateAction<number | undefined>>;
@@ -17,8 +18,8 @@ export default function GroupsSection({
   handleShowChat,
 }: GroupsProps) {
   const { courseId } = useParams();
-  const queryClient = useQueryClient();
-  const [selectedGroup, setSelectedGroup] = useState("");
+  // const queryClient = useQueryClient();
+  // const [selectedGroup, setSelectedGroup] = useState("");
   // GET Rooms
   const { data: rooms } = useCustomQuery(
     API_ENDPOINTS.rooms + "?course_id=" + courseId,
@@ -27,37 +28,39 @@ export default function GroupsSection({
   const courseRooms = rooms?.data || [];
   setGroupsCount(courseRooms?.length);
   console.log("Course Rooms:", courseRooms);
+  
+  // Join/Leave functionality disabled - joining status is now determined only by teacher in dashboard
   // Join Room
-  const { mutateAsync: joinRoom } = useCustomPost(
-    API_ENDPOINTS.joinAndLeaveRoom + selectedGroup + "/join/",
-    ["join-room"]
-  );
+  // const { mutateAsync: joinRoom } = useCustomPost(
+  //   API_ENDPOINTS.joinAndLeaveRoom + selectedGroup + "/join/",
+  //   ["join-room"]
+  // );
   // Leave Room
-  const { mutateAsync: leaveRoom } = useCustomPost(
-    API_ENDPOINTS.joinAndLeaveRoom + selectedGroup + "/leave/",
-    ["leave-room"]
-  );
+  // const { mutateAsync: leaveRoom } = useCustomPost(
+  //   API_ENDPOINTS.joinAndLeaveRoom + selectedGroup + "/leave/",
+  //   ["leave-room"]
+  // );
   const { t } = useTranslation("coursePlayer");
 
-  const handleJoinRoom = async (groupId: string) => {
-    setSelectedGroup(groupId);
-    try {
-      await joinRoom({});
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    } catch (error) {
-      console.error("Error joining room:", error);
-    }
-  };
+  // const handleJoinRoom = async (groupId: string) => {
+  //   setSelectedGroup(groupId);
+  //   try {
+  //     await joinRoom({});
+  //     queryClient.invalidateQueries({ queryKey: ["rooms"] });
+  //   } catch (error) {
+  //     console.error("Error joining room:", error);
+  //   }
+  // };
 
-  const handleLeaveRoom = async (groupId: string) => {
-    setSelectedGroup(groupId);
-    try {
-      await leaveRoom({});
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    } catch (error) {
-      console.error("Error leaving room:", error);
-    }
-  };
+  // const handleLeaveRoom = async (groupId: string) => {
+  //   setSelectedGroup(groupId);
+  //   try {
+  //     await leaveRoom({});
+  //     queryClient.invalidateQueries({ queryKey: ["rooms"] });
+  //   } catch (error) {
+  //     console.error("Error leaving room:", error);
+  //   }
+  // };
 
   return (
     <div className="bg-gray-800 rounded-lg p-6">
@@ -79,8 +82,16 @@ export default function GroupsSection({
                     className="w-4 h-4 rounded-full ltr:mr-3 rtl:ml-3"
                     style={{ backgroundColor: group?.color }}
                   />
-                  <div>
-                    <h4 className="font-semibold text-white">{group?.name}</h4>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-white">{group?.name}</h4>
+                      {group?.is_joined && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600/20 text-green-400 text-xs font-medium rounded-full border border-green-600/30">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {t("groupsSection.hasAccess")}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-300 text-sm">
                       {group?.description}
                     </p>
@@ -95,7 +106,8 @@ export default function GroupsSection({
                       { count: group?.participants_count ?? 0 }
                     )}
                   </span>
-                  {group?.is_joined ? (
+                  {/* Join/Leave buttons disabled - joining status is now determined only by teacher in dashboard */}
+                  {/* {group?.is_joined ? (
                     <button
                       onClick={() => handleLeaveRoom(group?.id)}
                       className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors"
@@ -109,7 +121,7 @@ export default function GroupsSection({
                     >
                       {t("groupsSection.join")}
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -154,12 +166,14 @@ export default function GroupsSection({
                   <span className="text-gray-400 text-sm">
                     {t("groupsSection.recentDiscussion")}
                   </span>
-                  <button
-                    onClick={() => handleShowChat(group)}
-                    className="text-purple-400 hover:text-purple-300 text-xs"
-                  >
-                    {t("groupsSection.showChat")}
-                  </button>
+                  {group?.is_joined && (
+                    <button
+                      onClick={() => handleShowChat(group)}
+                      className="text-purple-400 hover:text-purple-300 text-xs"
+                    >
+                      {t("groupsSection.showChat")}
+                    </button>
+                  )}
                 </div>
 
                 {group?.last_two_messages &&
@@ -185,7 +199,7 @@ export default function GroupsSection({
                               {message?.sender?.name ?? ""}
                             </span>
                             <span className="text-gray-400 text-xs">
-                              {message?.created_at ?? ""}
+                              {getTimeAgo(message?.created_at) ?? t("time.now")}
                             </span>
                           </div>
                           <p className="text-gray-300 text-sm">

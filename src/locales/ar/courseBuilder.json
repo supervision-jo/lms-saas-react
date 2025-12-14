@@ -196,7 +196,12 @@
     "noUsersMatch": "لا يوجد مستخدمين يطابقون بحثك",
     "allUsersInGroup": "جميع المستخدمين موجودين بالفعل في هذه المجموعة",
     "done": "تم",
-    "confirmDelete": "هل أنت متأكد من حذف هذه المجموعة؟"
+    "confirmDelete": "هل أنت متأكد من حذف هذه المجموعة؟",
+    "deleteGroupTitle": "حذف المجموعة",
+    "deleteGroupMessage": "لا يمكن التراجع عن هذا الإجراء. سيتم إزالة جميع الأعضاء من هذه المجموعة.",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "groupDeletedSuccess": "تم حذف المجموعة بنجاح"
   },
   "settings": {
     "courseSettings": "إعدادات الكورس",

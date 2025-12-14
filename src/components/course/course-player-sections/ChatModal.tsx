@@ -85,13 +85,42 @@ export default function ChatModal({
     currentUser.first_name + " " + currentUser.last_name
   );
 
-  // GET Room Details
+  // Check if user is joined - if not, close the modal
+  useEffect(() => {
+    if (activeChatGroup && !activeChatGroup?.is_joined) {
+      handleCloseChatModal();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChatGroup?.is_joined]);
+
+  // GET Room Details - only fetch if user is joined
   const { data: roomDetails } = useCustomQuery(
     API_ENDPOINTS.rooms + activeChatGroup?.id + "/detail/",
-    ["room-details"]
+    ["room-details", activeChatGroup?.id],
+    undefined,
+    !!activeChatGroup?.id && !!activeChatGroup?.is_joined
   );
   const roomDetailsData = roomDetails?.data || {};
-  // GET Room Messages
+  
+  // Create current user object for members list
+  const currentUserForMembers = {
+    id: currentUser?.id,
+    name: `${currentUser?.first_name || ""} ${currentUser?.last_name || ""}`.trim(),
+    profile_image: currentUser?.profile_image || currentUser?.avatar,
+    isCurrentUser: true,
+  };
+  
+  // Filter out current user from participants to avoid duplicates, then add current user at the beginning
+  const otherParticipants = (roomDetailsData?.participants || []).filter(
+    (p: any) => p?.user?.id !== currentUser?.id && p?.id !== currentUser?.id
+  );
+  
+  // Combine current user with other participants, placing current user first
+  const allMembers = currentUserForMembers.id
+    ? [currentUserForMembers, ...otherParticipants]
+    : otherParticipants;
+  
+  // GET Room Messages - only fetch if user is joined
   const { data: roomMessages, isLoading: isSearching } = useCustomQuery(
     API_ENDPOINTS.rooms +
       activeChatGroup?.id +
@@ -100,7 +129,9 @@ export default function ChatModal({
           ? `&search=${encodeURIComponent(debouncedSearchQuery)}`
           : ""
       }`,
-    ["room-messages", debouncedSearchQuery]
+    ["room-messages", debouncedSearchQuery, activeChatGroup?.id],
+    undefined,
+    !!activeChatGroup?.id && !!activeChatGroup?.is_joined
   );
   const roomMessagesData = roomMessages?.data || [];
   // Sort messages by created_at (oldest first, newest at bottom)
@@ -153,9 +184,9 @@ export default function ChatModal({
     };
   }, [showEmojiPicker]);
 
-  // WebSocket connection
+  // WebSocket connection - only connect if user is joined
   useEffect(() => {
-    if (!activeChatGroup?.id) return;
+    if (!activeChatGroup?.id || !activeChatGroup?.is_joined) return;
 
     const token = getCookie(ACCESS_TOKEN_KEY);
     if (!token) {
@@ -428,14 +459,14 @@ export default function ChatModal({
                 />
                 <div>
                   <h3 className="text-xl font-bold text-white">
-                    {roomDetailsData?.course?.title ?? ""}
+                    {roomDetailsData?.name ?? ""}
                   </h3>
                   <p className="text-gray-400 text-sm">
                     {t(
-                      roomDetailsData?.participants?.length === 1
+                      allMembers.length === 1
                         ? "chats.groupHeader.membersCount_one"
                         : "chats.groupHeader.membersCount_other",
-                      { count: roomDetailsData?.participants?.length ?? 0 }
+                      { count: allMembers.length }
                     )}
                   </p>
                 </div>
@@ -456,35 +487,62 @@ export default function ChatModal({
           <div className="flex-1 p-6 overflow-y-auto">
             <h4 className="text-white font-semibold mb-4 flex items-center">
               <Users className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
-              {t("chats.sidebar.membersTitle")} (
-              {roomDetailsData?.participants?.length ?? 0})
+              {t("chats.sidebar.membersTitle")} ({allMembers.length})
             </h4>
             <div className="space-y-3">
-              {roomDetailsData?.participants?.map((participant: any) => (
-                <div
-                  key={participant?.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  <div className="relative">
-                    {participant?.profile_image ? (
-                      <img
-                        src={participant.profile_image}
-                        alt={participant?.name ?? ""}
-                        className="w-10 h-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white">
-                        {participant?.name?.charAt(0)?.toUpperCase() ?? "?"}
+              {allMembers.map((participant: any) => {
+                const isCurrentUser = participant?.isCurrentUser || participant?.id === currentUser?.id;
+                return (
+                  <div
+                    key={participant?.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                      isCurrentUser
+                        ? "bg-indigo-600/20 border border-indigo-500/50 hover:bg-indigo-600/30"
+                        : "hover:bg-gray-700"
+                    }`}
+                  >
+                    <div className="relative">
+                      {participant?.profile_image || participant?.user?.profile_image ? (
+                        <img
+                          src={participant?.profile_image || participant?.user?.profile_image}
+                          alt={participant?.name || participant?.user?.name || ""}
+                          className={`w-10 h-10 rounded-full ${
+                            isCurrentUser ? "ring-2 ring-indigo-400" : ""
+                          }`}
+                        />
+                      ) : (
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
+                            isCurrentUser
+                              ? "bg-indigo-500 ring-2 ring-indigo-400"
+                              : "bg-gray-500"
+                          }`}
+                        >
+                          {(participant?.name || participant?.user?.name || "?")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`font-medium text-sm ${
+                            isCurrentUser ? "text-indigo-300" : "text-white"
+                          }`}
+                        >
+                          {participant?.name || participant?.user?.name || ""}
+                        </div>
+                        {isCurrentUser && (
+                          <span className="text-xs px-1.5 py-0.5 bg-indigo-500/30 text-indigo-300 rounded">
+                            {t("chats.sidebar.you")}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-white font-medium text-sm">
-                      {participant?.name ?? ""}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

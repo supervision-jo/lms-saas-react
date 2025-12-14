@@ -130,7 +130,8 @@
     "showChat": "Show Chat",
     "noMessages": "No messages yet. Start the conversation!",
     "emptyTitle": "No Study Groups Yet",
-    "emptySubtitle": "Study groups will appear here when they're created by your instructor."
+    "emptySubtitle": "Study groups will appear here when they're created by your instructor.",
+    "hasAccess": "You have access"
   },
   "chats": {
     "groupHeader": {
@@ -141,7 +142,8 @@
       "membersTitle": "Members",
       "online": "Online",
       "offline": "Offline",
-      "leaveGroup": "Leave Group"
+      "leaveGroup": "Leave Group",
+      "you": "You"
     },
     "chatHeader": {
       "title": "Group Chat",
