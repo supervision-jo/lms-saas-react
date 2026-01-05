@@ -4,7 +4,7 @@ import { API_ENDPOINTS, USER_KEY } from "../../utils/constants";
 import { useNavigate } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import handleErrorAlerts from "../../utils/showErrorMessages";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast";
 import { useCustomPost } from "../../hooks/useMutation";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "../../hooks/useSettings";
@@ -107,12 +107,12 @@ const SignupPage: React.FC = () => {
       const res = await signUp.mutateAsync(formData);
 
       if (res?.status) {
-        toast.success(t("Signup.success"));
+        // toast.success(t("Signup.success"));
         const user = res.data.user;
         localStorage.setItem(USER_KEY, JSON.stringify(user));
 
         reset();
-        navigate("/login");
+        navigate("/check-email");
       } else {
         handleErrorAlerts(res?.data?.detail);
       }

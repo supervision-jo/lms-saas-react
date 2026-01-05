@@ -103,14 +103,23 @@ export default function CourseInformationForm({ course }: Props) {
 
   const rehydrateFromServer = (serverCourse?: any) => {
     if (!serverCourse) return;
+    
+    // Convert price to number if it's a string
+    let priceValue: number | "" = "";
+    if (serverCourse?.price !== undefined && serverCourse?.price !== null) {
+      if (typeof serverCourse.price === "number") {
+        priceValue = serverCourse.price;
+      } else if (typeof serverCourse.price === "string") {
+        const parsed = parseFloat(serverCourse.price);
+        priceValue = !Number.isNaN(parsed) ? parsed : "";
+      }
+    }
+    
     const updated: Partial<FormValues> = {
       title: serverCourse?.title ?? getValues("title"),
       description: serverCourse?.description ?? getValues("description"),
       level: serverCourse?.level ?? getValues("level"),
-      price:
-        typeof serverCourse?.price === "number"
-          ? serverCourse?.price
-          : getValues("price"),
+      price: priceValue !== "" ? priceValue : getValues("price"),
       sub_category:
         serverCourse?.sub_category_id ??
         serverCourse?.sub_category ??
@@ -230,12 +239,23 @@ export default function CourseInformationForm({ course }: Props) {
     const subCate = allSubCategories.find((sc) => sc.id === subId);
     const incomingCategory = subCate?.category ?? "";
 
+    // Convert price to number if it's a string
+    let priceValue: number | "" = "";
+    if (course?.price !== undefined && course?.price !== null) {
+      if (typeof course.price === "number") {
+        priceValue = course.price;
+      } else if (typeof course.price === "string") {
+        const parsed = parseFloat(course.price);
+        priceValue = !Number.isNaN(parsed) ? parsed : "";
+      }
+    }
+
     reset(
       {
         title: course?.title ?? "",
         description: course?.description ?? "",
         level: course?.level ?? "beginner",
-        price: typeof course?.price === "number" ? course?.price : "",
+        price: priceValue,
         sub_category: "", // ← delay this
         category: incomingCategory, // ← set category first
         picture: course?.picture ?? "",

@@ -22,6 +22,7 @@ import WebView from "../pages/userProfile/WebView";
 import ForgetPassword from "../pages/auth/ForgetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
 import VerifyAccount from "../pages/auth/VerifyAccount";
+import CheckEmailPage from "../pages/auth/CheckEmailPage";
 import Assessment from "../components/course/course-player-sections/Assessment";
 // import { readUserFromStorage, roleOf } from "@/services/auth";
 
@@ -80,6 +81,7 @@ export default function AppRoutes() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify-account" element={<VerifyAccount />} />
           <Route path="/verify-account/:token" element={<VerifyAccount />} />
+          <Route path="/check-email" element={<CheckEmailPage />} />
           {shouldShowHomePage ? (
             <Route path="/" element={<HomePage />} />
           ) : (

@@ -77,7 +77,6 @@ axiosInstance.interceptors.request.use(
         const newAccess = await refreshAccessToken();
         if (!newAccess) {
           await removeTokens();
-          window.location.href = "/login";
           return Promise.reject(new Error("Auth required"));
         }
       }

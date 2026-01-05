@@ -6,11 +6,12 @@ export const USER_KEY = "lms-user";
 // export const BASE_URL = "https://backend.iraqform.com/api/";
 // export const BASE_URL = "https://ollms-api.vision-jo.com/api/";
 // export const BASE_URL = "https://test-lms-api.vision-jo.com/api/";
+// export const BASE_URL = "https://key-academy-api.vision-jo.com/";
 
 const api_url =
   window.location.href.includes("vercel") ||
   window.location.href.includes("localhost")
-    ? "https://ollms-api.vision-jo.com/"
+    ? "https://api.ollms.org/"
     : // ? "https://test-lms-api.vision-jo.com/"
       toApiURL(window.location.origin);
 export const BASE_URL = `${api_url}api/`;
@@ -112,6 +113,6 @@ export const API_ENDPOINTS = {
   lastCourseProgress: "course/last-course-progress/",
   topReviews: "core/top_reviews/",
   updateProfile: "users/update-profile/",
-  settings: "tenant/settings",
+  settings: "tenant/settings/",
   studentPresence: "",
 };
