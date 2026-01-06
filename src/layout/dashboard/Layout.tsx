@@ -80,7 +80,8 @@ const Layout = () => {
         !pathname.includes("verify-account") &&
         !pathname.includes("reset-password") &&
         !pathname.includes("login") &&
-        !pathname.includes("sign-up") && (
+        !pathname.includes("sign-up") &&
+        !pathname.includes("check-email") && (
           <Header
             onSearch={handleSearch}
             onLogout={handleLogout}
