@@ -70,7 +70,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   async (config) => {
-    config.baseURL = BASE_URL;
+    config.baseURL = "https://key-academy-api.vision-jo.com/api/";
 
     if (shouldAttachAuth(config)) {
       if (isAccessExpired()) {
